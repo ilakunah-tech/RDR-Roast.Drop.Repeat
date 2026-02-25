@@ -81,8 +81,19 @@
                     style="-fx-background-color: #0f3460; -fx-text-fill: white; -fx-padding: 8 16;"/>
         </HBox>
 
+        <!-- Server (reference profiles) -->
+        <Label text="Server (reference)" GridPane.columnIndex="0" GridPane.rowIndex="4"
+               style="-fx-text-fill: white; -fx-font-size: 14;"/>
+        <TextField fx:id="txtServerBaseUrl" promptText="https://example.com/api/v1" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                   style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+
+        <Label text="API token (optional)" GridPane.columnIndex="0" GridPane.rowIndex="5"
+               style="-fx-text-fill: white; -fx-font-size: 14;"/>
+        <TextField fx:id="txtServerToken" promptText="Bearer token" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="5"
+                   style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+
         <!-- Buttons -->
-        <HBox spacing="12" alignment="CENTER_RIGHT" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="4">
+        <HBox spacing="12" alignment="CENTER_RIGHT" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="6">
             <Button fx:id="btnSave" text="Save"
                     style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-padding: 8 24;"/>
             <Button fx:id="btnCancel" text="Cancel"
