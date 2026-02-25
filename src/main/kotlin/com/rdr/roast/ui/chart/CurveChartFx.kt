@@ -4,8 +4,15 @@ import com.rdr.roast.domain.curves.CurveModel
 import com.rdr.roast.domain.curves.CurveModelListener
 import javafx.application.Platform
 import org.jfree.chart.JFreeChart
+import org.jfree.chart.annotations.AbstractXYAnnotation
+import org.jfree.chart.annotations.XYAnnotation
 import org.jfree.chart.annotations.XYShapeAnnotation
 import org.jfree.chart.axis.AxisLocation
+import org.jfree.chart.axis.ValueAxis
+import org.jfree.chart.plot.Plot
+import org.jfree.chart.plot.PlotOrientation
+import org.jfree.chart.plot.PlotRenderingInfo
+import org.jfree.chart.ui.RectangleEdge
 import org.jfree.chart.axis.NumberAxis
 import org.jfree.chart.axis.NumberTickUnit
 import org.jfree.chart.axis.TickUnits
@@ -19,9 +26,12 @@ import org.jfree.chart.ui.RectangleInsets
 import org.jfree.chart.ui.TextAnchor
 import org.jfree.data.xy.XYSeries
 import org.jfree.data.xy.XYSeriesCollection
+import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.Color
+import java.awt.Composite
 import java.awt.Font
+import java.awt.Graphics2D
 import java.awt.geom.Rectangle2D
 import java.text.DecimalFormat
 import java.text.FieldPosition
@@ -60,12 +70,17 @@ class CurveChartFx : CurveModelListener {
         val COLOR_MARKER    = Color.BLACK
         val COLOR_EVENT     = Color(230, 126, 34)
         val COLOR_TRANSPARENT = Color(0, 0, 0, 0)
+        // Phase strip (Cropster-style)
+        val COLOR_DRYING      = Color(173, 209, 143)
+        val COLOR_MAILLARD    = Color(245, 224, 148)
+        val COLOR_DEVELOPMENT = Color(206, 173, 120)
 
         val STROKE_CURVE    = BasicStroke(2f)
         val STROKE_ROR      = BasicStroke(1.5f)
         val STROKE_MARKER   = BasicStroke(1f)
 
         private val CHART_FONT = Font(null, Font.PLAIN, 11)
+        private const val PHASE_STRIP_HEIGHT = 10
     }
 
     // ── Series ────────────────────────────────────────────────────────────────
@@ -85,6 +100,9 @@ class CurveChartFx : CurveModelListener {
 
     /** Single-marker event types: adding the same type again removes the previous marker. */
     private val markersByType = mutableMapOf<String, ValueMarker>()
+
+    /** Phase strip annotations (Drying, Maillard, Development) at bottom of chart. */
+    private val phaseStripAnnotations = mutableListOf<XYAnnotation>()
 
     init {
         // ── X axis — fixed 0..TIME_RANGE_MS, MM:SS labels ─────────────────────
@@ -279,23 +297,69 @@ class CurveChartFx : CurveModelListener {
     fun setEndMarker(timeMs: Long, label: String = "Drop") =
         addEventMarker(timeMs, label, COLOR_MARKER)
 
-    // ── Phase area annotations ────────────────────────────────────────────────
+    // ── Phase strip (Cropster-style bar at bottom of chart) ─────────────────────
+
+    private inner class PhaseStripAnnotation(
+        private val x1Ms: Double,
+        private val x2Ms: Double,
+        private val color: Color
+    ) : AbstractXYAnnotation() {
+        override fun draw(
+            g2: Graphics2D,
+            plot: XYPlot,
+            dataArea: Rectangle2D,
+            domainAxis: ValueAxis,
+            rangeAxis: ValueAxis,
+            rendererIndex: Int,
+            info: PlotRenderingInfo?
+        ) {
+            val edge = Plot.resolveDomainAxisLocation(plot.domainAxisLocation, PlotOrientation.VERTICAL)
+            val j2dx1 = domainAxis.valueToJava2D(x1Ms, dataArea, edge)
+            val j2dx2 = domainAxis.valueToJava2D(x2Ms, dataArea, edge)
+            val y = dataArea.maxY - PHASE_STRIP_HEIGHT
+            val w = j2dx2 - j2dx1
+            val savedComposite = g2.composite
+            g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.85f)
+            g2.paint = color
+            g2.fill(java.awt.geom.Rectangle2D.Double(j2dx1, y, w, PHASE_STRIP_HEIGHT.toDouble()))
+            g2.composite = savedComposite
+        }
+    }
 
     /**
-     * Annotate a roast phase as a semi-transparent filled rectangle.
-     * [startMs]/[endMs] in milliseconds.
+     * Update the phase strip (Drying / Maillard / Development) from profile events.
+     * Boundaries: Drying 0..DE (or FC if no DE), Maillard DE..FC (or end), Development FC..end.
+     * [endMs] is roast end time in ms (e.g. last sample or drop).
      */
-    fun annotatePhase(startMs: Long, endMs: Long,
-                      @Suppress("UNUSED_PARAMETER") text: String, color: Color) {
+    fun updatePhaseStrip(endMs: Long, deMs: Long?, fcMs: Long?) {
         Platform.runLater {
-            val rect = Rectangle2D.Double(
-                startMs.toDouble(), TEMP_MIN,
-                (endMs - startMs).toDouble(), TEMP_MAX - TEMP_MIN
-            )
-            val annotation = XYShapeAnnotation(
-                rect, BasicStroke(0f), color.withAlpha(0), color.withAlpha(55)
-            )
-            plot.getRenderer(0).addAnnotation(annotation, Layer.BACKGROUND)
+            phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
+            phaseStripAnnotations.clear()
+            if (endMs <= 0) return@runLater
+            val end = endMs.toDouble()
+            val de = deMs?.toDouble()
+            val fc = fcMs?.toDouble()
+            // Drying: 0 .. DE or FC or end
+            val dryingEnd = de ?: fc ?: end
+            if (dryingEnd > 0) {
+                val a = PhaseStripAnnotation(0.0, dryingEnd, COLOR_DRYING)
+                plot.getRenderer(0).addAnnotation(a, Layer.BACKGROUND)
+                phaseStripAnnotations.add(a)
+            }
+            // Maillard: DE (or 0) .. FC or end
+            val maillardStart = de ?: 0.0
+            val maillardEnd = fc ?: end
+            if (maillardEnd > maillardStart) {
+                val a = PhaseStripAnnotation(maillardStart, maillardEnd, COLOR_MAILLARD)
+                plot.getRenderer(0).addAnnotation(a, Layer.BACKGROUND)
+                phaseStripAnnotations.add(a)
+            }
+            // Development: FC .. end
+            if (fc != null && end > fc) {
+                val a = PhaseStripAnnotation(fc, end, COLOR_DEVELOPMENT)
+                plot.getRenderer(0).addAnnotation(a, Layer.BACKGROUND)
+                phaseStripAnnotations.add(a)
+            }
         }
     }
 
@@ -309,7 +373,8 @@ class CurveChartFx : CurveModelListener {
             rorBtSeries.clear()
             rorEtSeries.clear()
             plot.clearDomainMarkers()
-            plot.clearAnnotations()
+            phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
+            phaseStripAnnotations.clear()
             markersByType.clear()
             markerOffset = 20.0
             chart.isNotify = true

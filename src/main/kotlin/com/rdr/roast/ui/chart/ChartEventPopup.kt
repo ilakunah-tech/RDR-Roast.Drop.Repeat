@@ -21,7 +21,7 @@ import javafx.stage.Popup
  * - Custom comment + Add
  * - Close
  *
- * Charge is applied on Start; Drop on Space; TP is auto-computed.
+ * Charge = hotkey C; Drop = hotkey D; TP is auto-computed.
  */
 class ChartEventPopup(
     private val timeMs: Long,

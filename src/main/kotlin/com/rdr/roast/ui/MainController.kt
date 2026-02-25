@@ -5,6 +5,7 @@ import com.rdr.roast.app.RecorderState
 import com.rdr.roast.app.RoastRecorder
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.domain.EventType
+import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.TemperatureSample
 import com.rdr.roast.domain.curves.MovingAverageCurveModel
 import com.rdr.roast.domain.metrics.findTurningPointIndex
@@ -22,6 +23,7 @@ import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
+import javafx.scene.layout.BorderPane
 import javafx.scene.layout.StackPane
 import javafx.stage.Modality
 import javafx.stage.Stage
@@ -35,6 +37,7 @@ import java.nio.file.Paths
 
 class MainController {
 
+    @FXML lateinit var centerPane: BorderPane
     @FXML lateinit var chartContainer: StackPane
     @FXML lateinit var lblBT: Label
     @FXML lateinit var lblET: Label
@@ -106,6 +109,16 @@ class MainController {
         setupSettingsButton()
         btnShortcuts.setOnAction { showShortcutsHelp() }
         setupSpaceHotkey()
+
+        // When user adds DE/FC from chart popup, store in profile and refresh phase strip
+        chartPanel.onEventAdded = { timeMs, label ->
+            val timeSec = timeMs / 1000.0
+            when {
+                label.startsWith("DE @") -> recorder.markEventAt(timeSec, EventType.DE)
+                label.startsWith("FC @") -> recorder.markEventAt(timeSec, EventType.FC)
+            }
+            updatePhaseStrip()
+        }
     }
 
     // ── Sample handling ───────────────────────────────────────────────────────
@@ -124,12 +137,7 @@ class MainController {
         lblRoRET.text = "%.1f °C/min".format(rorEt.getValue(timeMs) ?: 0.0)
         chartPanel.lastDataTimeMs = timeMs
 
-        // Charge on first sample (Cropster: Start = start recording, charge at first data point)
-        if (profile.timex.size == 1 && profile.eventByType(EventType.CHARGE) == null) {
-            recorder.markEvent(EventType.CHARGE)
-            curveChart.addEventMarker(timeMs, "Charge @ %.1f °C".format(sample.bt),
-                com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
-        }
+        // Charge and Drop are set by hotkeys (C / D), not automatically.
 
         // TP once: place marker only after the first 3 min have passed (min BT in 0..3 min is then final)
         if (!tpMarkerPlaced && profile.timex.isNotEmpty() && profile.timex.last() >= TP_WINDOW_SEC) {
@@ -142,6 +150,17 @@ class MainController {
                     com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
             }
         }
+
+        updatePhaseStrip()
+    }
+
+    private fun updatePhaseStrip() {
+        val profile = recorder.currentProfile.value
+        if (profile.timex.isEmpty()) return
+        val endMs = (profile.timex.maxOrNull()!! * 1000).toLong()
+        val deMs = (profile.eventByType(EventType.DE) ?: profile.eventByType(EventType.CC))?.timeSec?.times(1000)?.toLong()
+        val fcMs = profile.eventByType(EventType.FC)?.timeSec?.times(1000)?.toLong()
+        curveChart.updatePhaseStrip(endMs, deMs, fcMs)
     }
 
     private var tpMarkerPlaced = false
@@ -202,14 +221,7 @@ class MainController {
 
         btnStop.setOnAction {
             val profile = recorder.stop()
-            val savePath = SettingsManager.load().savePath
-            val path = Paths.get(savePath).resolve(ProfileStorage.generateFileName())
-            try {
-                java.nio.file.Files.createDirectories(path.parent)
-                ProfileStorage.saveProfile(profile, path)
-            } catch (_: Exception) {
-                // TODO: show error dialog
-            }
+            showFinishRoastDialog(profile)
         }
 
         btnAbort.setOnAction {
@@ -221,7 +233,7 @@ class MainController {
         }
     }
 
-    /** Hotkeys: Cropster-style Ctrl+Enter (Start), Space (Start/Drop), Ctrl+Escape (Abort), F1 (shortcuts help). */
+    /** Hotkeys: Ctrl+Enter / Space = Start; C = Charge (when recording); D = Drop (when recording); Alt+Escape = Abort; F1 = Help. */
     private fun setupSpaceHotkey() {
         chartContainer.sceneProperty().addListener { _, _, scene ->
             scene?.addEventHandler(KeyEvent.KEY_PRESSED) { e ->
@@ -230,12 +242,24 @@ class MainController {
                         e.consume()
                         triggerStart()
                     }
-                    e.code == KeyCode.SPACE -> {
+                    e.code == KeyCode.SPACE && !e.isShortcutDown && !e.isAltDown -> {
                         e.consume()
-                        if (recorder.stateFlow.value == RecorderState.RECORDING) triggerDrop()
+                        if (recorder.stateFlow.value == RecorderState.RECORDING) { /* Space does nothing while recording */ }
                         else triggerStart()
                     }
-                    e.code == KeyCode.ESCAPE && e.isShortcutDown -> {
+                    e.code == KeyCode.C && !e.isShortcutDown && !e.isAltDown -> {
+                        if (recorder.stateFlow.value == RecorderState.RECORDING) {
+                            e.consume()
+                            triggerCharge()
+                        }
+                    }
+                    e.code == KeyCode.D && !e.isShortcutDown && !e.isAltDown -> {
+                        if (recorder.stateFlow.value == RecorderState.RECORDING) {
+                            e.consume()
+                            triggerDrop()
+                        }
+                    }
+                    e.code == KeyCode.ESCAPE && e.isAltDown -> {
                         e.consume()
                         if (recorder.stateFlow.value == RecorderState.RECORDING) {
                             recorder.abort()
@@ -272,11 +296,54 @@ class MainController {
         }
     }
 
+    private fun triggerCharge() {
+        val profile = recorder.currentProfile.value
+        if (profile.eventByType(EventType.CHARGE) != null) return
+        val sample = recorder.currentSample.value ?: return
+        recorder.markEvent(EventType.CHARGE)
+        val timeMs = (sample.timeSec * 1000).toLong()
+        curveChart.addEventMarker(timeMs, "Charge @ %.1f °C".format(sample.bt),
+            com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
+    }
+
     private fun triggerDrop() {
         val sample = recorder.currentSample.value ?: return
         recorder.markEvent(EventType.DROP)
         curveChart.addEventMarker((sample.timeSec * 1000).toLong(), "Drop @ %.1f °C".format(sample.bt),
             com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
+        val profile = recorder.stop()
+        showFinishRoastDialog(profile)
+    }
+
+    /** Cropster-style: after Stop/Drop show finish panel on the left of the chart (no modal). */
+    private fun showFinishRoastDialog(profile: RoastProfile) {
+        val loader = FXMLLoader(javaClass.getResource("/com/rdr/roast/ui/FinishRoastView.fxml"))
+        val root = loader.load<Parent>()
+        val controller = loader.getController<FinishRoastController>()
+        controller.setProfile(profile)
+        controller.onSave = {
+            val savePath = SettingsManager.load().savePath
+            val path = Paths.get(savePath).resolve(ProfileStorage.generateFileName())
+            try {
+                java.nio.file.Files.createDirectories(path.parent)
+                ProfileStorage.saveProfile(profile, path)
+            } catch (e: Exception) {
+                // TODO: show error dialog
+            }
+            hideFinishPanel()
+            recorder.reset()
+            resetCurvePipeline()
+            curveChart.clearAll()
+            chartPanel.lastDataTimeMs = null
+            tpMarkerPlaced = false
+        }
+        controller.onDontSave = { hideFinishPanel() }
+        controller.setStage(null) // inline panel, no dialog
+        centerPane.left = root
+    }
+
+    private fun hideFinishPanel() {
+        centerPane.left = null
     }
 
     private fun showShortcutsHelp() {
