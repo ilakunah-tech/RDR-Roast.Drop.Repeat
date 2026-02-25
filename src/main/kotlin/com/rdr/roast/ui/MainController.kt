@@ -9,9 +9,11 @@ import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.TemperatureSample
 import com.rdr.roast.domain.curves.MovingAverageCurveModel
+import com.rdr.roast.domain.metrics.findChargeDropIndex
 import com.rdr.roast.domain.metrics.findTurningPointIndex
 import com.rdr.roast.domain.curves.RorCurveModel
 import com.rdr.roast.domain.curves.StandardCurveModel
+import com.rdr.roast.driver.simulator.AlogReplaySource
 import com.rdr.roast.driver.simulator.SimulatorSource
 import com.rdr.roast.ui.chart.ChartPanelFx
 import com.rdr.roast.ui.chart.CurveChartFx
@@ -40,6 +42,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.javafx.JavaFx
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.nio.file.Files
 import java.nio.file.Paths
 
 class MainController {
@@ -79,7 +82,12 @@ class MainController {
     private val chartPanel = ChartPanelFx(curveChart)
 
     // ── App ──────────────────────────────────────────────────────────────────
-    private val recorder = RoastRecorder(SimulatorSource())
+    private val recorder = RoastRecorder(createDemoDataSource())
+
+    /** Demo/simulator: replay real .alog if present, else synthetic S-curve. */
+    private fun createDemoDataSource() =
+        if (Files.exists(DEMO_PROFILE_PATH)) AlogReplaySource(DEMO_PROFILE_PATH)
+        else SimulatorSource()
     private val scope = CoroutineScope(Dispatchers.JavaFx + SupervisorJob())
     private var shouldAutoStartAfterConnect = false
 
@@ -150,11 +158,35 @@ class MainController {
         lblRoRET.text = "%.1f °C/min".format(rorEt.getValue(timeMs) ?: 0.0)
         chartPanel.lastDataTimeMs = timeMs
 
-        // Charge and Drop are set by hotkeys (C / D), not automatically.
+        // Auto-detect Charge once: BT drop ≥ 6°C over 30s (Cropster-style); manual C overrides
+        if (profile.eventByType(EventType.CHARGE) == null) {
+            val chargeIdx = findChargeDropIndex(
+                profile,
+                windowSec = AUTO_CHARGE_WINDOW_SEC,
+                minDropC = AUTO_CHARGE_MIN_DROP_C,
+                minElapsedSec = AUTO_CHARGE_MIN_ELAPSED_SEC
+            )
+            if (chargeIdx != null && chargeIdx < profile.timex.size) {
+                val chargeTimeSec = profile.timex[chargeIdx]
+                recorder.markEventAt(chargeTimeSec, EventType.CHARGE)
+                val chargeBt = profile.temp1[chargeIdx]
+                curveChart.addEventMarker((chargeTimeSec * 1000).toLong(), "Charge @ %.1f °C".format(chargeBt),
+                    com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
+            }
+        }
 
-        // TP once: place marker only after the first 3 min have passed (min BT in 0..3 min is then final)
-        if (!tpMarkerPlaced && profile.timex.isNotEmpty() && profile.timex.last() >= TP_WINDOW_SEC) {
-            val tpIdx = findTurningPointIndex(profile, searchWindowSec = TP_WINDOW_SEC)
+        // TP once: min BT after charge in [charge, charge+120s], or [0, 180s] if no charge
+        val chargeTimeSec = profile.eventByType(EventType.CHARGE)?.timeSec
+        val tpSearchDone = chargeTimeSec != null && profile.timex.lastOrNull() != null &&
+            profile.timex.last() >= chargeTimeSec + TP_WINDOW_AFTER_CHARGE_SEC
+        val tpSearchDoneNoCharge = chargeTimeSec == null && profile.timex.isNotEmpty() && profile.timex.last() >= TP_WINDOW_SEC
+        if (!tpMarkerPlaced && (tpSearchDone || tpSearchDoneNoCharge)) {
+            val tpIdx = findTurningPointIndex(
+                profile,
+                chargeTimeSec = chargeTimeSec,
+                searchWindowAfterChargeSec = TP_WINDOW_AFTER_CHARGE_SEC,
+                fallbackWindowSec = TP_WINDOW_SEC
+            )
             if (tpIdx != null && profile.temp1.size > tpIdx) {
                 tpMarkerPlaced = true
                 val tpSec = profile.timex[tpIdx]
@@ -177,7 +209,17 @@ class MainController {
     }
 
     private var tpMarkerPlaced = false
-    private companion object { const val TP_WINDOW_SEC = 180.0 }
+    private companion object {
+        const val TP_WINDOW_SEC = 180.0
+        const val TP_WINDOW_AFTER_CHARGE_SEC = 120.0
+        const val AUTO_CHARGE_WINDOW_SEC = 30.0
+        const val AUTO_CHARGE_MIN_DROP_C = 6.0
+        const val AUTO_CHARGE_MIN_ELAPSED_SEC = 18.0
+        /** Real profile for demo mode; if file exists, replay it instead of synthetic simulator. */
+        val DEMO_PROFILE_PATH = Paths.get(
+            "C:\\Users\\ilaku\\Documents\\Projects\\BESCA\\16 Ethiopia, Ethiopia Yirgacheffe 213 12.5%.alog"
+        )
+    }
 
     private fun updateButtonStates(state: RecorderState) {
         when (state) {

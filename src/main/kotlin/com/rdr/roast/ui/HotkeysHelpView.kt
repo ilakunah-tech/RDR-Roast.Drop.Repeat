@@ -3,6 +3,7 @@ package com.rdr.roast.ui
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.control.Label
+import javafx.scene.layout.ColumnConstraints
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.VBox
 import javafx.scene.text.Font
@@ -19,11 +20,11 @@ object HotkeysHelpView {
     private data class Row(val keys: String, val action: String)
 
     private fun rows(): List<Row> = listOf(
-        Row("$modifier+Enter", "Start (Connect / Start recording / New roast)"),
-        Row("Space", "Start when idle (no effect while recording)"),
-        Row("C", "Charge — mark charge at current time (once, while recording)"),
-        Row("D", "Drop — mark drop and finish roast (while recording)"),
-        Row("Alt+Escape", "Abort roast (while recording)"),
+        Row("$modifier+Enter", "Start (Connect / Start / New roast)"),
+        Row("Space", "Start when idle; Drop when recording"),
+        Row("C", "Charge — mark charge at current time"),
+        Row("D", "Drop — mark drop and finish roast"),
+        Row("$modifier+Esc", "Abort roast (while recording)"),
         Row("F1", "Show this shortcuts help"),
     )
 
@@ -36,6 +37,10 @@ object HotkeysHelpView {
             vgap = 8.0
             padding = Insets(8.0, 16.0, 16.0, 16.0)
             alignment = Pos.TOP_LEFT
+            columnConstraints.addAll(
+                ColumnConstraints(100.0),  // keys column
+                ColumnConstraints(280.0)   // description column
+            )
         }
         rows().forEachIndexed { i, row ->
             grid.add(Label(row.keys).apply { style = "-fx-font-family: monospace; -fx-font-weight: bold;" }, 0, i)
