@@ -33,6 +33,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.9.0")
 
+    // Chart — JFreeChart + JavaFX bridge
+    implementation("org.jfree:jfreechart:1.5.4")
+    implementation("org.jfree:org.jfree.fxgraphics2d:2.1.5")
+    implementation("org.jfree:org.jfree.chart.fx:2.0.1")
+    implementation("org.apache.commons:commons-math3:3.6.1")
+
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testImplementation("io.mockk:mockk:1.13.14")

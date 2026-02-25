@@ -1,50 +1,64 @@
 package com.rdr.roast.domain.metrics
 
+import com.rdr.roast.domain.curves.RorCurveModel
+import com.rdr.roast.domain.curves.StandardCurveModel
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
+/**
+ * Tests for the RorCurveModel (polynomial fit Rate-of-Rise).
+ * Timestamps in milliseconds; values in °C; expected results in °C/min.
+ */
 class RoRTest {
+
+    private fun buildModels(windowMs: Long = 30_000L): Pair<StandardCurveModel, RorCurveModel> {
+        val raw = StandardCurveModel("BT")
+        val ror = RorCurveModel(raw, windowMs)
+        return raw to ror
+    }
 
     @Test
     fun `linear series rising 1 degree per second yields RoR ~60 per minute`() {
-        val timex = (0..60).map { it.toDouble() }
-        val series = timex.map { 100.0 + it }
-        val ror = computeRoR(series, timex, atIndex = 60, windowSec = 30.0)
-        assertEquals(60.0, ror, 0.01)
+        val (raw, ror) = buildModels(windowMs = 30_000L)
+        // Feed 61 samples at 1-second intervals, each rising 1°C
+        for (i in 0..60) {
+            raw.put(i * 1000L, 100.0 + i)
+        }
+        val result = ror.getValue(60_000L)
+        assertEquals(60.0, result!!, 0.5)
     }
 
     @Test
-    fun `empty list returns 0`() {
-        assertEquals(0.0, computeRoR(emptyList(), emptyList(), atIndex = 0))
+    fun `empty model returns null for any time`() {
+        val (_, ror) = buildModels()
+        assertNull(ror.getValue(0L))
+        assertNull(ror.getValue(30_000L))
     }
 
     @Test
-    fun `at index 0 returns 0`() {
-        val timex = listOf(0.0, 10.0, 20.0)
-        val series = listOf(100.0, 110.0, 120.0)
-        assertEquals(0.0, computeRoR(series, timex, atIndex = 0))
+    fun `single point produces no RoR (needs at least 2 samples in window)`() {
+        val (raw, ror) = buildModels()
+        raw.put(0L, 100.0)
+        assertNull(ror.getValue(0L))
     }
 
     @Test
-    fun `short window handles gracefully`() {
-        val timex = listOf(0.0, 5.0, 10.0)
-        val series = listOf(100.0, 105.0, 110.0)
-        val ror = computeRoR(series, timex, atIndex = 2, windowSec = 30.0)
-        assertEquals(0.0, ror)
+    fun `two points in window produce correct RoR`() {
+        val (raw, ror) = buildModels(windowMs = 30_000L)
+        raw.put(0L, 100.0)
+        raw.put(10_000L, 110.0)   // +10°C in 10 s → 60°C/min
+        val result = ror.getValue(10_000L)
+        assertEquals(60.0, result!!, 0.5)
     }
 
     @Test
-    fun `short window with enough data uses available window`() {
-        val timex = listOf(0.0, 10.0, 20.0, 30.0)
-        val series = listOf(100.0, 110.0, 120.0, 130.0)
-        val ror = computeRoR(series, timex, atIndex = 3, windowSec = 30.0)
-        assertEquals(60.0, ror, 0.01)
-    }
-
-    @Test
-    fun `single point returns 0`() {
-        val timex = listOf(0.0)
-        val series = listOf(100.0)
-        assertEquals(0.0, computeRoR(series, timex, atIndex = 0))
+    fun `flat series yields RoR near zero`() {
+        val (raw, ror) = buildModels(windowMs = 30_000L)
+        for (i in 0..30) {
+            raw.put(i * 1000L, 200.0)
+        }
+        val result = ror.getValue(30_000L)
+        assertEquals(0.0, result!!, 0.1)
     }
 }
