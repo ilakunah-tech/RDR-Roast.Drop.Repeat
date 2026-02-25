@@ -127,7 +127,17 @@ class RoastRecorder(
         sampleCollectionJob?.cancel()
         sampleCollectionJob = null
         _stateFlow.value = RecorderState.STOPPED
-        return _currentProfile.value
+        // Snapshot: copy mutable lists to guarantee thread-visibility on FX thread
+        val live = _currentProfile.value
+        val snapshot = RoastProfile(
+            timex = ArrayList(live.timex),
+            temp1 = ArrayList(live.temp1),
+            temp2 = ArrayList(live.temp2),
+            events = ArrayList(live.events),
+            mode = live.mode
+        )
+        _currentProfile.value = snapshot
+        return snapshot
     }
 
     fun abort() {

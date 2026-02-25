@@ -447,6 +447,7 @@ class CurveChartFx : CurveModelListener {
                 }
             }
             chart.isNotify = true
+            chart.fireChartChanged()
         }
     }
 
