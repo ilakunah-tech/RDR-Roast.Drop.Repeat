@@ -71,8 +71,8 @@
                          style="-fx-text-fill: white;"/>
         </HBox>
 
-        <!-- Save Path -->
-        <Label text="Save Path" GridPane.columnIndex="0" GridPane.rowIndex="3"
+        <!-- Folder for .alog files -->
+        <Label text="Save folder (.alog)" GridPane.columnIndex="0" GridPane.rowIndex="3"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
         <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="3">
             <TextField fx:id="txtSavePath" prefWidth="220" HBox.hgrow="ALWAYS"

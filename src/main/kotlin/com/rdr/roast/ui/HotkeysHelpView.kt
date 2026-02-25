@@ -19,9 +19,11 @@ object HotkeysHelpView {
     private data class Row(val keys: String, val action: String)
 
     private fun rows(): List<Row> = listOf(
-        Row("$modifier+Enter", "Start roast (Connect / Start / New roast)"),
-        Row("Space", "Start roast when idle; Drop when recording"),
-        Row("$modifier+Escape", "Abort roast (while recording)"),
+        Row("$modifier+Enter", "Start (Connect / Start recording / New roast)"),
+        Row("Space", "Start when idle (no effect while recording)"),
+        Row("C", "Charge — mark charge at current time (once, while recording)"),
+        Row("D", "Drop — mark drop and finish roast (while recording)"),
+        Row("Alt+Escape", "Abort roast (while recording)"),
         Row("F1", "Show this shortcuts help"),
     )
 

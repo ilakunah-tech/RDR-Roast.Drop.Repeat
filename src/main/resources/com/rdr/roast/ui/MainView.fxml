@@ -29,12 +29,16 @@
         </HBox>
     </top>
 
-    <!-- Center: Chart area -->
+    <!-- Center: optional finish panel (left) + chart (center), Cropster-style -->
     <center>
-        <StackPane fx:id="chartContainer"
-                   style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
-            <padding><Insets top="4" right="4" bottom="4" left="4"/></padding>
-        </StackPane>
+        <BorderPane fx:id="centerPane" style="-fx-background-color: transparent;">
+            <center>
+                <StackPane fx:id="chartContainer"
+                           style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                    <padding><Insets top="4" right="4" bottom="4" left="4"/></padding>
+                </StackPane>
+            </center>
+        </BorderPane>
     </center>
 
     <!-- Right: Current values panel -->

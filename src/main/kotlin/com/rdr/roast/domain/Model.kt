@@ -15,6 +15,8 @@ enum class EventType {
     CHARGE,
     TP,
     CC,
+    DE,   // Dry End (same as CC / color change)
+    FC,   // First Crack
     DROP
 }
 

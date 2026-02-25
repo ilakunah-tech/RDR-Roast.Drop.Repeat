@@ -110,6 +110,15 @@ class RoastRecorder(
         _currentProfile.value.addEvent(event)
     }
 
+    /** Add an event at a specific time (e.g. DE/FC from chart popup). Allowed when RECORDING or STOPPED. */
+    fun markEventAt(timeSec: Double, type: EventType) {
+        val state = _stateFlow.value
+        if (state != RecorderState.RECORDING && state != RecorderState.STOPPED) return
+        val profile = _currentProfile.value
+        val event = RoastEvent(timeSec = timeSec, type = type, tempBT = null, tempET = null)
+        profile.addEvent(event)
+    }
+
     fun stop(): RoastProfile {
         if (_stateFlow.value != RecorderState.RECORDING) {
             log.warn("stop ignored: state is {}", _stateFlow.value)
