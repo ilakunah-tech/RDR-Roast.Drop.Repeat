@@ -1,0 +1,35 @@
+---
+description: Kotlin and Java coding standards for the roasting app
+globs: "**/*.kt,**/*.java"
+alwaysApply: false
+---
+
+# Kotlin / Java Standards
+
+## Kotlin
+
+- Prefer `data class` for profile, events, and DTOs.
+- Use `sealed class` or `sealed interface` for result types and state (e.g. connection status).
+- Coroutines for background work (device polling, file I/O); expose `Flow<T>` from drivers.
+- Prefer `object` for stateless utilities; avoid global mutable state.
+- Use `require`/`check` for invariants; fail fast with clear messages.
+- Nullability: use `?` only where null is valid; avoid `!!` where avoidable.
+
+```kotlin
+// Good: data + sealed
+data class RoastEvent(val timeSec: Double, val type: EventType, val value: Double?)
+sealed interface ConnectionState { object Disconnected : ConnectionState; data class Connected(val device: String) : ConnectionState }
+
+// Good: Flow from driver
+fun temperatureStream(): Flow<TemperatureSample> = flow { ... }
+```
+
+## Java (if used)
+
+- Prefer records for DTOs (Java 16+). Immutable value objects.
+- Use `Optional` for return types that can be absent; avoid null returns in public API where possible.
+
+## General
+
+- Keep packages by layer: `*.domain`, `*.driver.*`, `*.app`, `*.ui`.
+- Name test classes `*Test` or `*Spec`; place under `src/test/kotlin` mirroring `src/main`.

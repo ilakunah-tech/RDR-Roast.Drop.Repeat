@@ -1,0 +1,28 @@
+---
+description: Hardware and protocol driver layer for MODBUS, S7, serial
+globs: "**/driver/**/*.kt,**/**/modbus/**/*.kt,**/**/s7/**/*.kt,**/**/serial/**/*.kt,**/**/phidget/**/*.kt"
+alwaysApply: false
+---
+
+# Hardware / Drivers
+
+## Interface
+
+- All drivers implement a common interface (e.g. `RoastDataSource` or `TemperatureSource`) that exposes a stream of samples (time, temperature, optional events) and connection state.
+- The application layer depends only on this interface; it does not depend on j2mod, moka7, or jSerialComm directly.
+
+## Timeouts and resilience
+
+- Every read/connect must have a timeout. On timeout or disconnect, emit an error or disconnected state and allow automatic or manual reconnect.
+- Do not let a hung driver block the UI; run all I/O off the FX thread (e.g. coroutines, dedicated thread pool).
+
+## Protocols
+
+- **MODBUS**: Use j2mod; wrap in a small adapter that maps registers to temperature (and optionally events) and implements the project's data-source interface.
+- **S7**: Use moka7 (or equivalent); same: map DB/addresses to samples and implement the same interface.
+- **Serial**: Use jSerialComm; define a simple protocol (e.g. line-based or binary) and map to the same sample type.
+- **Phidget / Yoctopuce**: Same pattern: adapter that implements the common interface.
+
+## Configuration
+
+- Port names, addresses, register/DB mappings come from config or settings (not hardcoded). Validate on connect and log clearly on failure.

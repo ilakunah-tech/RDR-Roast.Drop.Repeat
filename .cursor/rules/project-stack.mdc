@@ -1,0 +1,32 @@
+---
+description: Stack, architecture and conventions for the roasting desktop app
+alwaysApply: true
+---
+
+# Project: Roasting Desktop App (Cropster-like stack)
+
+## Stack
+
+- **Language**: Kotlin 1.9+ (preferred), Java 17+ where needed
+- **Build**: Gradle (Kotlin DSL)
+- **GUI**: JavaFX 21+, ControlSFX, JFreeChart / JFreeChart-FX or JavaFX Canvas for roast curves
+- **Network**: OkHttp, Retrofit, Jackson
+- **Hardware**: j2mod (MODBUS), moka7 (S7), jSerialComm, Phidget22, yoctolib — behind a single "data source" interface
+- **DI/Config**: Micronaut or minimal Spring Boot
+- **Reactive**: Kotlin Flow or RxJava 3 for device → UI data stream
+- **Packaging**: jpackage + jlink (installers with bundled JRE)
+- **Tests**: JUnit 5, Mockk (Kotlin) or Mockito, mock hardware/ports
+
+## Architecture
+
+- **Domain**: Roast profile, events (charge, crack, drop), metrics (RoR, development time). No UI or I/O here.
+- **Drivers**: Implement a single interface (e.g. `RoastDataSource`) that yields time/temperature/events; implementations for MODBUS, S7, serial, file replay, simulator.
+- **Application**: Services that use domain + drivers; coordinate recording, saving, loading.
+- **UI**: JavaFX Views/Controllers; bind to application layer via properties or reactive streams. No business logic in controllers.
+
+## Conventions
+
+- One main data type for a live/recorded profile (e.g. `RoastProfile` with series and events).
+- Store profiles in a simple format (JSON or SQLite) locally first; no cloud in MVP.
+- Use SLF4J + Logback for logging. No `println` in production paths.
+- Sensitive config (tokens, credentials) must not be committed; use env or encrypted local config.

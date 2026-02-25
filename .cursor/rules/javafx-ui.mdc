@@ -1,0 +1,26 @@
+---
+description: JavaFX UI and chart patterns for the roasting app
+globs: "**/*Controller*.kt,**/*View*.kt,**/ui/**/*.kt,**/view/**/*.kt"
+alwaysApply: false
+---
+
+# JavaFX UI
+
+## Structure
+
+- Controllers/Views only handle UI state and user actions; they call application services, never domain or drivers directly.
+- Bind UI to ViewModels or observable properties (e.g. `Property<Double>`, `ObservableList`) so the chart and labels update when the service pushes new data.
+
+## Threading
+
+- All UI updates must run on JavaFX Application Thread. When receiving data from a driver or Flow, use `Platform.runLater { ... }` or `runOnFxThread` equivalent before updating controls.
+- Do not block the FX thread: move I/O and device communication to coroutines or background threads.
+
+## Charts
+
+- Use one main chart for temperature vs time (and optionally RoR). Prefer a library that supports live updates (e.g. JFreeChart-FX or JavaFX Canvas). Avoid rebuilding the whole chart on every sample; append points or update last segment.
+- Keep chart configuration (axis labels, units °C/°F) in a single place or injected from app settings.
+
+## Naming and files
+
+- FXML (if used) next to or under the same package as the controller. One controller per screen or major widget. Use ControlSFX where it fits (e.g. extra controls); fallback to standard JavaFX controls.

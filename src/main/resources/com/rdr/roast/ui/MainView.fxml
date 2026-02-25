@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.rdr.roast.ui.MainController"
+            style="-fx-background-color: #f5f5f5;">
+
+    <!-- Top: Menu-like bar -->
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12"
+              style="-fx-background-color: #ffffff; -fx-padding: 6 16; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 1 0;">
+            <Label text="RDR - Roast.Drop.Repeat"
+                   style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #333333;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnSettings" text="⚙ Settings"
+                    style="-fx-font-size: 12; -fx-background-color: #e8e8e8; -fx-text-fill: #555555; -fx-cursor: hand; -fx-background-radius: 4;"/>
+        </HBox>
+    </top>
+
+    <!-- Center: Chart area -->
+    <center>
+        <StackPane fx:id="chartContainer"
+                   style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+            <padding><Insets top="4" right="4" bottom="4" left="4"/></padding>
+        </StackPane>
+    </center>
+
+    <!-- Right: Current values panel -->
+    <right>
+        <VBox fx:id="valuesPanel" spacing="8" alignment="TOP_CENTER"
+              prefWidth="180" minWidth="180"
+              style="-fx-background-color: #ffffff; -fx-padding: 16; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 1 1;">
+
+            <Label text="Bean temp." style="-fx-text-fill: #888888; -fx-font-size: 11;"/>
+            <Label fx:id="lblBT" text="--.- °C"
+                   style="-fx-text-fill: #d4483b; -fx-font-size: 36; -fx-font-weight: bold;"/>
+
+            <Label text="RoR" style="-fx-text-fill: #888888; -fx-font-size: 10;"/>
+            <Label fx:id="lblRoRBT" text="--.-"
+                   style="-fx-text-fill: #d4483b; -fx-font-size: 18;"/>
+
+            <Separator style="-fx-padding: 4 0;"/>
+
+            <Label text="Exhaust" style="-fx-text-fill: #888888; -fx-font-size: 11;"/>
+            <Label fx:id="lblET" text="--.- °C"
+                   style="-fx-text-fill: #3498db; -fx-font-size: 36; -fx-font-weight: bold;"/>
+
+            <Label text="RoR" style="-fx-text-fill: #888888; -fx-font-size: 10;"/>
+            <Label fx:id="lblRoRET" text="--.-"
+                   style="-fx-text-fill: #3498db; -fx-font-size: 18;"/>
+        </VBox>
+    </right>
+
+    <!-- Bottom: Controls -->
+    <bottom>
+        <VBox style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">
+            <!-- Event buttons row -->
+            <HBox spacing="8" alignment="CENTER" style="-fx-padding: 8 16;">
+                <Button fx:id="btnCharge" text="Charge" disable="true"
+                        style="-fx-background-color: #f0f0f0; -fx-text-fill: #555555; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-radius: 4;"/>
+                <Button fx:id="btnTP" text="TP" disable="true"
+                        style="-fx-background-color: #f0f0f0; -fx-text-fill: #555555; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-radius: 4;"/>
+                <Button fx:id="btnCC" text="CC" disable="true"
+                        style="-fx-background-color: #f0f0f0; -fx-text-fill: #555555; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-radius: 4;"/>
+                <Button fx:id="btnDrop" text="Drop" disable="true"
+                        style="-fx-background-color: #f0f0f0; -fx-text-fill: #555555; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-radius: 4;"/>
+            </HBox>
+            <!-- Main controls row -->
+            <HBox spacing="20" alignment="CENTER" style="-fx-padding: 4 16 10 16;">
+                <Button fx:id="btnAbort" text="✕ Abort" disable="true"
+                        style="-fx-background-color: #ffffff; -fx-text-fill: #e74c3c; -fx-font-size: 13; -fx-padding: 8 20; -fx-background-radius: 4; -fx-border-color: #e74c3c; -fx-border-radius: 4;"/>
+
+                <Button fx:id="btnStart" text="Start"
+                        style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14; -fx-font-weight: bold; -fx-padding: 8 32; -fx-background-radius: 4;"/>
+
+                <Label fx:id="lblDuration" text="00:00"
+                       style="-fx-text-fill: #333333; -fx-font-size: 28; -fx-font-weight: bold;"/>
+
+                <Button fx:id="btnStop" text="■ Stop" disable="true"
+                        style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14; -fx-font-weight: bold; -fx-padding: 8 32; -fx-background-radius: 4;"/>
+            </HBox>
+        </VBox>
+    </bottom>
+</BorderPane>

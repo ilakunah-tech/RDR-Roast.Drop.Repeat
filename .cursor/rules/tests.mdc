@@ -1,0 +1,24 @@
+---
+description: Testing standards for the roasting app
+globs: "**/test/**/*.kt,**/**/*Test.kt,**/**/*Spec.kt"
+alwaysApply: false
+---
+
+# Tests
+
+## Scope
+
+- **Domain**: Unit test all metric calculations (RoR, development time, event detection). Use plain Kotlin/Java; no JavaFX or real hardware.
+- **Drivers**: Test via mocks or in-memory/fake implementations of the data-source interface. Optionally use Testcontainers or a simulator for integration tests later.
+- **Application**: Test services with mocked drivers and in-memory storage. No UI in unit tests.
+- **UI**: Prefer testing ViewModels or logic extracted from controllers; full UI tests only where necessary (e.g. critical flows).
+
+## Style
+
+- JUnit 5; Kotlin: use `@Test`, `assertThat` or Kotlin assertions. Mockk for mocks in Kotlin; Mockito for Java.
+- One focused test per behavior; name tests to describe the scenario (e.g. `roR_at_first_crack_returns_expected_value`).
+- Do not depend on order of execution; avoid shared mutable state between tests.
+
+## Fixtures
+
+- Use small, readable fixtures for profiles (e.g. a short list of time/temperature pairs and events). Prefer builder or factory methods in test scope.
