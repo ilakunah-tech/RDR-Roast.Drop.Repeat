@@ -81,11 +81,18 @@ class CurveChartFx : CurveModelListener {
         val STROKE_MARKER   = BasicStroke(1f)
         /** Dashed stroke for reference/background curve. */
         val STROKE_REF      = BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f, floatArrayOf(8f, 4f), 0f)
-        val COLOR_REF_BT    = Color(180, 80, 70)
-        val COLOR_REF_ET    = Color(80, 120, 180)
+        /** Muted reference colors (Artisan/Cropster-style: background less bright than foreground). Alpha ~0.5. */
+        val COLOR_REF_BT    = Color(200, 110, 100, 140)
+        val COLOR_REF_ET    = Color(120, 150, 210, 140)
+        val COLOR_REF_ROR_BT = Color(100, 120, 140, 120)
+        val COLOR_REF_ROR_ET = Color(160, 170, 175, 120)
+        /** Reference event markers: subtle gray. */
+        val COLOR_REF_MARKER = Color(140, 140, 140, 180)
 
         private val CHART_FONT = Font(null, Font.PLAIN, 11)
         private const val PHASE_STRIP_HEIGHT = 10
+        /** RoR window in seconds (Artisan-style). */
+        private const val ROR_DELTA_SEC = 30
     }
 
     // ── Series ────────────────────────────────────────────────────────────────
@@ -95,8 +102,12 @@ class CurveChartFx : CurveModelListener {
     private val rorEtSeries = XYSeries("RoR ET", false, true)
     private val refBtSeries = XYSeries("Ref BT", false, true)
     private val refEtSeries = XYSeries("Ref ET", false, true)
+    private val refRorBtSeries = XYSeries("Ref RoR BT", false, true)
+    private val refRorEtSeries = XYSeries("Ref RoR ET", false, true)
 
     private val seriesMap = mutableMapOf<CurveModel, XYSeries>()
+    /** Reference profile markers (Charge, TP, DE, FC, Drop) — removed when reference is cleared. */
+    private val refMarkers = mutableListOf<Marker>()
 
     // ── The single plot (exposed for ChartPanelFx toolbar/reset) ─────────────
     val plot: XYPlot
@@ -166,8 +177,16 @@ class CurveChartFx : CurveModelListener {
             setSeriesPaint(0, COLOR_REF_ET)
             setSeriesStroke(0, STROKE_REF)
         }
+        val refRorBtRenderer = XYLineAndShapeRenderer(true, false).apply {
+            setSeriesPaint(0, COLOR_REF_ROR_BT)
+            setSeriesStroke(0, STROKE_REF)
+        }
+        val refRorEtRenderer = XYLineAndShapeRenderer(true, false).apply {
+            setSeriesPaint(0, COLOR_REF_ROR_ET)
+            setSeriesStroke(0, STROKE_REF)
+        }
 
-        // ── Single XYPlot with 6 datasets (4 live + 2 reference) ─────────────
+        // ── Single XYPlot with 8 datasets (4 live + 2 ref temp + 2 ref RoR) ──
         plot = XYPlot().apply {
             domainAxis     = timeAxis
             setRangeAxis(0, tempAxis)
@@ -202,6 +221,14 @@ class CurveChartFx : CurveModelListener {
             setDataset(5, XYSeriesCollection(refEtSeries))
             setRenderer(5, refEtRenderer)
             mapDatasetToRangeAxis(5, 0)
+            // dataset 6 → Ref RoR BT  → right axis
+            setDataset(6, XYSeriesCollection(refRorBtSeries))
+            setRenderer(6, refRorBtRenderer)
+            mapDatasetToRangeAxis(6, 1)
+            // dataset 7 → Ref RoR ET  → right axis
+            setDataset(7, XYSeriesCollection(refRorEtSeries))
+            setRenderer(7, refRorEtRenderer)
+            mapDatasetToRangeAxis(7, 1)
 
             isOutlineVisible = false
             setBackgroundPaint(Color.WHITE)
@@ -390,23 +417,96 @@ class CurveChartFx : CurveModelListener {
 
     /**
      * Set or clear the reference/background profile curve (Artisan/Cropster-style).
-     * Time in profile is in seconds; we convert to ms for the chart.
+     * Fills ref BT/ET, ref RoR, and reference event markers (Charge, TP, DE, FC, Drop).
      */
     fun setReferenceProfile(profile: RoastProfile?) {
         Platform.runLater {
             chart.isNotify = false
+            refMarkers.forEach { plot.removeDomainMarker(it) }
+            refMarkers.clear()
             refBtSeries.clear()
             refEtSeries.clear()
+            refRorBtSeries.clear()
+            refRorEtSeries.clear()
             if (profile != null && profile.timex.isNotEmpty()) {
                 val n = minOf(profile.timex.size, profile.temp1.size, profile.temp2.size)
+                val timex = profile.timex.take(n)
+                val bt = profile.temp1.take(n)
+                val et = profile.temp2.take(n)
                 for (i in 0 until n) {
-                    val timeMs = (profile.timex[i] * 1000).toLong()
-                    refBtSeries.add(timeMs.toDouble(), profile.temp1[i])
-                    refEtSeries.add(timeMs.toDouble(), profile.temp2[i])
+                    val timeMs = (timex[i] * 1000).toLong()
+                    refBtSeries.add(timeMs.toDouble(), bt[i])
+                    refEtSeries.add(timeMs.toDouble(), et[i])
+                }
+                computeAndFillRorSeries(timex, bt, refRorBtSeries, ROR_DELTA_SEC)
+                computeAndFillRorSeries(timex, et, refRorEtSeries, ROR_DELTA_SEC)
+                profile.events.forEach { event ->
+                    val timeMs = (event.timeSec * 1000).toLong()
+                    val label = refEventLabel(event.type, event.timeSec, event.tempBT, event.tempET)
+                    addReferenceEventMarker(timeMs, label)
                 }
             }
             chart.isNotify = true
         }
+    }
+
+    private fun refEventLabel(type: com.rdr.roast.domain.EventType, timeSec: Double, bt: Double?, et: Double?): String {
+        val t = formatSecMmSs(timeSec)
+        return when (type) {
+            com.rdr.roast.domain.EventType.CHARGE -> "Ref: Charge @ $t"
+            com.rdr.roast.domain.EventType.TP    -> "Ref: TP @ $t · ${bt?.let { "%.1f".format(it) } ?: "-"} °C"
+            com.rdr.roast.domain.EventType.DE, com.rdr.roast.domain.EventType.CC -> "Ref: DE @ $t"
+            com.rdr.roast.domain.EventType.FC    -> "Ref: FC @ $t"
+            com.rdr.roast.domain.EventType.DROP -> "Ref: Drop @ $t"
+            else -> "Ref @ $t"
+        }
+    }
+
+    private fun addReferenceEventMarker(timeMs: Long, label: String) {
+        val marker = ValueMarker(timeMs.toDouble()).apply {
+            stroke = STROKE_MARKER
+            paint = COLOR_REF_MARKER
+            labelPaint = COLOR_REF_MARKER
+            labelBackgroundColor = COLOR_TRANSPARENT
+            this.label = label
+            labelAnchor = RectangleAnchor.TOP_RIGHT
+            labelTextAnchor = TextAnchor.TOP_LEFT
+            labelOffset = RectangleInsets(5.0, 0.0, 0.0, 5.0)
+            labelFont = CHART_FONT
+        }
+        plot.addDomainMarker(marker)
+        refMarkers.add(marker)
+    }
+
+    /** RoR °C/min over [deltaSec] window (Artisan-style). Fills series with (timeMs, ror). */
+    private fun computeAndFillRorSeries(timex: List<Double>, temp: List<Double>, series: XYSeries, deltaSec: Int) {
+        if (timex.size < 2 || temp.size < 2) return
+        for (i in timex.indices) {
+            val targetT = timex[i] - deltaSec
+            var prevIdx = 0
+            for (j in i - 1 downTo 0) {
+                if (timex[j] <= targetT) {
+                    prevIdx = j
+                    break
+                }
+                prevIdx = j
+            }
+            val ror = when {
+                i == 0 || timex[i] == timex[prevIdx] -> 0.0
+                else -> {
+                    val dtMin = (timex[i] - timex[prevIdx]) / 60.0
+                    if (dtMin <= 0) 0.0 else (temp[i] - temp[prevIdx]) / dtMin
+                }
+            }
+            series.add(timex[i] * 1000, ror.coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble()))
+        }
+    }
+
+    private fun formatSecMmSs(sec: Double): String {
+        val totalSec = sec.toLong().coerceAtLeast(0)
+        val m = totalSec / 60
+        val s = totalSec % 60
+        return "%02d:%02d".format(m, s)
     }
 
     fun clearAll() {
@@ -418,6 +518,10 @@ class CurveChartFx : CurveModelListener {
             rorEtSeries.clear()
             refBtSeries.clear()
             refEtSeries.clear()
+            refRorBtSeries.clear()
+            refRorEtSeries.clear()
+            refMarkers.forEach { plot.removeDomainMarker(it) }
+            refMarkers.clear()
             plot.clearDomainMarkers()
             phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             phaseStripAnnotations.clear()
