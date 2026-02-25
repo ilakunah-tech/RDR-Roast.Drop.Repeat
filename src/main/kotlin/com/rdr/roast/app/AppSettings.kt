@@ -23,7 +23,11 @@ data class MachineConfig(
 data class AppSettings(
     val machineConfig: MachineConfig = MachineConfig(),
     val unit: String = "C",
-    val savePath: String = System.getProperty("user.home") + "/roasts"
+    val savePath: String = System.getProperty("user.home") + "/roasts",
+    /** Base URL of the roast server (e.g. https://artqqplus.ru/api/v1) for loading reference profiles. */
+    val serverBaseUrl: String = "",
+    /** Optional Bearer token for server API auth. */
+    val serverToken: String = ""
 )
 
 object SettingsManager {

@@ -2,6 +2,7 @@ package com.rdr.roast.ui
 
 import com.rdr.roast.app.ProfileStorage
 import com.rdr.roast.app.RecorderState
+import com.rdr.roast.app.ReferenceApi
 import com.rdr.roast.app.RoastRecorder
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.domain.EventType
@@ -19,12 +20,17 @@ import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.Parent
 import javafx.scene.Scene
+import javafx.scene.control.ContextMenu
+import javafx.scene.control.MenuItem
+import javafx.scene.control.Alert
 import javafx.scene.control.Button
 import javafx.scene.control.Label
+import javafx.scene.control.ListView
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.StackPane
+import javafx.stage.FileChooser
 import javafx.stage.Modality
 import javafx.stage.Stage
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +39,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.javafx.JavaFx
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.nio.file.Paths
 
 class MainController {
@@ -47,8 +54,13 @@ class MainController {
     @FXML lateinit var btnStart: Button
     @FXML lateinit var btnStop: Button
     @FXML lateinit var btnAbort: Button
+    @FXML lateinit var btnReference: Button
     @FXML lateinit var btnShortcuts: Button
     @FXML lateinit var btnSettings: Button
+
+    /** Current reference/background profile (from file or server). Null = none. */
+    private var referenceProfile: RoastProfile? = null
+    private var referenceLabel: String? = null
 
     // ── CurveModel pipeline ──────────────────────────────────────────────────
     private val btRaw = StandardCurveModel("BT")
@@ -107,6 +119,7 @@ class MainController {
 
         setupButtonHandlers()
         setupSettingsButton()
+        setupReferenceButton()
         btnShortcuts.setOnAction { showShortcutsHelp() }
         setupSpaceHotkey()
 
@@ -368,6 +381,132 @@ class MainController {
     private fun resetCurvePipeline() {
         btRaw.clear()
         etRaw.clear()
+    }
+
+    private fun setupReferenceButton() {
+        val loadFile = MenuItem("Load from file...")
+        val fromServer = MenuItem("From server...")
+        val clearRef = MenuItem("Clear reference")
+        loadFile.setOnAction { loadReferenceFromFile() }
+        fromServer.setOnAction { loadReferenceFromServer() }
+        clearRef.setOnAction { clearReference() }
+        val menu = ContextMenu(loadFile, fromServer, clearRef)
+        btnReference.setOnAction {
+            val bounds = btnReference.localToScreen(btnReference.layoutBounds)
+            menu.show(btnReference, bounds.minX, bounds.minY + bounds.height)
+        }
+    }
+
+    private fun loadReferenceFromFile() {
+        val chooser = FileChooser().apply {
+            title = "Load reference profile"
+            extensionFilters.add(FileChooser.ExtensionFilter("Artisan profile", "*.alog"))
+        }
+        val file = chooser.showOpenDialog(btnReference.scene?.window)
+        if (file == null) return
+        try {
+            val profile = ProfileStorage.loadProfile(file.toPath())
+            setReference(profile, file.name)
+        } catch (e: Exception) {
+            Alert(Alert.AlertType.ERROR).apply {
+                title = "Load failed"
+                headerText = "Could not load profile"
+                contentText = e.message ?: e.toString()
+            }.showAndWait()
+        }
+    }
+
+    private fun loadReferenceFromServer() {
+        val settings = SettingsManager.load()
+        val baseUrl = settings.serverBaseUrl.trim().removeSuffix("/")
+        if (baseUrl.isEmpty()) {
+            Alert(Alert.AlertType.WARNING).apply {
+                title = "Server not configured"
+                headerText = "Set server URL in Settings"
+                contentText = "Open Settings and set \"Server (reference)\" to your API base URL (e.g. https://artqqplus.ru/api/v1)."
+            }.showAndWait()
+            return
+        }
+        scope.launch {
+            val items = withContext(Dispatchers.IO) {
+                try {
+                    ReferenceApi.listReferences(
+                        baseUrl = baseUrl,
+                        token = settings.serverToken.takeIf { it.isNotBlank() }
+                    )
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
+            Platform.runLater {
+                if (items.isEmpty()) {
+                    Alert(Alert.AlertType.INFORMATION).apply {
+                        title = "No references"
+                        headerText = "No reference profiles found"
+                        contentText = "Upload reference roasts on the server or check the URL and token."
+                    }.showAndWait()
+                    return@runLater
+                }
+                val labels = items.map { "${it.label} (${it.id.take(8)}…)" }
+                val listView = ListView<String>().apply {
+                    this.items.clear()
+                    this.items.addAll(labels)
+                    prefHeight = 280.0
+                    prefWidth = 360.0
+                }
+                val stage = Stage().apply {
+                    title = "Select reference"
+                    scene = Scene(listView, 360.0, 280.0)
+                    initModality(Modality.APPLICATION_MODAL)
+                    initOwner(btnReference.scene?.window)
+                }
+                listView.setOnMouseClicked { ev ->
+                    if (ev.clickCount == 2) {
+                        val idx = listView.selectionModel.selectedIndex
+                        if (idx in items.indices) {
+                            stage.close()
+                            fetchAndSetReference(baseUrl, settings.serverToken.takeIf { it.isNotBlank() }, items[idx].id)
+                        }
+                    }
+                }
+                stage.showAndWait()
+            }
+        }
+    }
+
+    private fun fetchAndSetReference(baseUrl: String, token: String?, roastId: String) {
+        scope.launch {
+            val profile = withContext(Dispatchers.IO) {
+                try {
+                    ReferenceApi.getProfileData(baseUrl, roastId, token)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            Platform.runLater {
+                if (profile != null) {
+                    setReference(profile, "Server: $roastId")
+                } else {
+                    Alert(Alert.AlertType.ERROR).apply {
+                        title = "Load failed"
+                        headerText = "Could not load profile from server"
+                        contentText = "Check connection and try again."
+                    }.showAndWait()
+                }
+            }
+        }
+    }
+
+    private fun clearReference() {
+        referenceProfile = null
+        referenceLabel = null
+        curveChart.setReferenceProfile(null)
+    }
+
+    private fun setReference(profile: RoastProfile, label: String) {
+        referenceProfile = profile
+        referenceLabel = label
+        curveChart.setReferenceProfile(profile)
     }
 
     private fun setupSettingsButton() {

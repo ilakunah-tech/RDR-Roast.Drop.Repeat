@@ -41,6 +41,12 @@ class SettingsController {
     lateinit var txtSavePath: TextField
 
     @FXML
+    lateinit var txtServerBaseUrl: TextField
+
+    @FXML
+    lateinit var txtServerToken: TextField
+
+    @FXML
     lateinit var btnBrowse: Button
 
     @FXML
@@ -67,6 +73,8 @@ class SettingsController {
         txtBaudRate.text = settings.machineConfig.baudRate.toString()
         txtSlaveId.text = settings.machineConfig.slaveId.toString()
         txtSavePath.text = settings.savePath
+        txtServerBaseUrl.text = settings.serverBaseUrl
+        txtServerToken.text = settings.serverToken
 
         when (settings.unit.uppercase()) {
             "F" -> rbFahrenheit.isSelected = true
@@ -95,6 +103,8 @@ class SettingsController {
             val slaveId = txtSlaveId.text.toIntOrNull() ?: 1
             val unit = if (rbFahrenheit.isSelected) "F" else "C"
             val savePath = txtSavePath.text.ifBlank { System.getProperty("user.home") + "/roasts" }
+            val serverBaseUrl = txtServerBaseUrl.text?.trim() ?: ""
+            val serverToken = txtServerToken.text?.trim() ?: ""
 
             val mc = settings.machineConfig.copy(
                 machineType = machineType,
@@ -105,7 +115,9 @@ class SettingsController {
             val newSettings = AppSettings(
                 machineConfig = mc,
                 unit = unit,
-                savePath = savePath
+                savePath = savePath,
+                serverBaseUrl = serverBaseUrl,
+                serverToken = serverToken
             )
             SettingsManager.save(newSettings)
             closeWindow()

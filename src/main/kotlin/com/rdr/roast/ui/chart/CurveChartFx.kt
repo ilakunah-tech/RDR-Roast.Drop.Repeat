@@ -1,5 +1,6 @@
 package com.rdr.roast.ui.chart
 
+import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.curves.CurveModel
 import com.rdr.roast.domain.curves.CurveModelListener
 import javafx.application.Platform
@@ -78,6 +79,10 @@ class CurveChartFx : CurveModelListener {
         val STROKE_CURVE    = BasicStroke(2f)
         val STROKE_ROR      = BasicStroke(1.5f)
         val STROKE_MARKER   = BasicStroke(1f)
+        /** Dashed stroke for reference/background curve. */
+        val STROKE_REF      = BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f, floatArrayOf(8f, 4f), 0f)
+        val COLOR_REF_BT    = Color(180, 80, 70)
+        val COLOR_REF_ET    = Color(80, 120, 180)
 
         private val CHART_FONT = Font(null, Font.PLAIN, 11)
         private const val PHASE_STRIP_HEIGHT = 10
@@ -88,6 +93,8 @@ class CurveChartFx : CurveModelListener {
     private val etSeries    = XYSeries("ET",     false, true)
     private val rorBtSeries = XYSeries("RoR BT", false, true)
     private val rorEtSeries = XYSeries("RoR ET", false, true)
+    private val refBtSeries = XYSeries("Ref BT", false, true)
+    private val refEtSeries = XYSeries("Ref ET", false, true)
 
     private val seriesMap = mutableMapOf<CurveModel, XYSeries>()
 
@@ -151,8 +158,16 @@ class CurveChartFx : CurveModelListener {
             setSeriesPaint(0, COLOR_ROR_ET)
             setSeriesStroke(0, STROKE_ROR)
         }
+        val refBtRenderer = XYLineAndShapeRenderer(true, false).apply {
+            setSeriesPaint(0, COLOR_REF_BT)
+            setSeriesStroke(0, STROKE_REF)
+        }
+        val refEtRenderer = XYLineAndShapeRenderer(true, false).apply {
+            setSeriesPaint(0, COLOR_REF_ET)
+            setSeriesStroke(0, STROKE_REF)
+        }
 
-        // ── Single XYPlot with 4 datasets ─────────────────────────────────────
+        // ── Single XYPlot with 6 datasets (4 live + 2 reference) ─────────────
         plot = XYPlot().apply {
             domainAxis     = timeAxis
             setRangeAxis(0, tempAxis)
@@ -179,6 +194,14 @@ class CurveChartFx : CurveModelListener {
             setDataset(3, XYSeriesCollection(rorEtSeries))
             setRenderer(3, rorEtRenderer)
             mapDatasetToRangeAxis(3, 1)
+            // dataset 4 → Ref BT  → left axis
+            setDataset(4, XYSeriesCollection(refBtSeries))
+            setRenderer(4, refBtRenderer)
+            mapDatasetToRangeAxis(4, 0)
+            // dataset 5 → Ref ET  → left axis
+            setDataset(5, XYSeriesCollection(refEtSeries))
+            setRenderer(5, refEtRenderer)
+            mapDatasetToRangeAxis(5, 0)
 
             isOutlineVisible = false
             setBackgroundPaint(Color.WHITE)
@@ -365,6 +388,27 @@ class CurveChartFx : CurveModelListener {
 
     // ── Reset ─────────────────────────────────────────────────────────────────
 
+    /**
+     * Set or clear the reference/background profile curve (Artisan/Cropster-style).
+     * Time in profile is in seconds; we convert to ms for the chart.
+     */
+    fun setReferenceProfile(profile: RoastProfile?) {
+        Platform.runLater {
+            chart.isNotify = false
+            refBtSeries.clear()
+            refEtSeries.clear()
+            if (profile != null && profile.timex.isNotEmpty()) {
+                val n = minOf(profile.timex.size, profile.temp1.size, profile.temp2.size)
+                for (i in 0 until n) {
+                    val timeMs = (profile.timex[i] * 1000).toLong()
+                    refBtSeries.add(timeMs.toDouble(), profile.temp1[i])
+                    refEtSeries.add(timeMs.toDouble(), profile.temp2[i])
+                }
+            }
+            chart.isNotify = true
+        }
+    }
+
     fun clearAll() {
         Platform.runLater {
             chart.isNotify = false
@@ -372,6 +416,8 @@ class CurveChartFx : CurveModelListener {
             etSeries.clear()
             rorBtSeries.clear()
             rorEtSeries.clear()
+            refBtSeries.clear()
+            refEtSeries.clear()
             plot.clearDomainMarkers()
             phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             phaseStripAnnotations.clear()
