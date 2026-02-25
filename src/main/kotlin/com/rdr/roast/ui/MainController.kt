@@ -6,9 +6,13 @@ import com.rdr.roast.app.RoastRecorder
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.TemperatureSample
-import com.rdr.roast.domain.metrics.computePhases
-import com.rdr.roast.domain.metrics.computeRoR
+import com.rdr.roast.domain.curves.MovingAverageCurveModel
+import com.rdr.roast.domain.metrics.findTurningPointIndex
+import com.rdr.roast.domain.curves.RorCurveModel
+import com.rdr.roast.domain.curves.StandardCurveModel
 import com.rdr.roast.driver.simulator.SimulatorSource
+import com.rdr.roast.ui.chart.ChartPanelFx
+import com.rdr.roast.ui.chart.CurveChartFx
 import javafx.application.Platform
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
@@ -16,13 +20,14 @@ import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.Button
 import javafx.scene.control.Label
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyEvent
 import javafx.scene.layout.StackPane
 import javafx.stage.Modality
 import javafx.stage.Stage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.javafx.JavaFx
 import kotlinx.coroutines.launch
@@ -30,93 +35,63 @@ import java.nio.file.Paths
 
 class MainController {
 
-    @FXML
-    lateinit var chartContainer: StackPane
+    @FXML lateinit var chartContainer: StackPane
+    @FXML lateinit var lblBT: Label
+    @FXML lateinit var lblET: Label
+    @FXML lateinit var lblRoRBT: Label
+    @FXML lateinit var lblRoRET: Label
+    @FXML lateinit var lblDuration: Label
+    @FXML lateinit var btnStart: Button
+    @FXML lateinit var btnStop: Button
+    @FXML lateinit var btnAbort: Button
+    @FXML lateinit var btnShortcuts: Button
+    @FXML lateinit var btnSettings: Button
 
-    @FXML
-    lateinit var lblBT: Label
+    // ── CurveModel pipeline ──────────────────────────────────────────────────
+    private val btRaw = StandardCurveModel("BT")
+    private val etRaw = StandardCurveModel("ET")
 
-    @FXML
-    lateinit var lblET: Label
+    // Smooth raw readings with a 5-sample moving average before RoR calculation
+    private val btSmooth = MovingAverageCurveModel(btRaw, windowSize = 5)
+    private val etSmooth = MovingAverageCurveModel(etRaw, windowSize = 5)
 
-    @FXML
-    lateinit var lblRoRBT: Label
+    // RoR over the smoothed signal with a 30-second window
+    private val rorBt = RorCurveModel(btSmooth, windowMs = 30_000L)
+    private val rorEt = RorCurveModel(etSmooth, windowMs = 30_000L)
 
-    @FXML
-    lateinit var lblRoRET: Label
+    // ── Chart ────────────────────────────────────────────────────────────────
+    private val curveChart = CurveChartFx()
+    private val chartPanel = ChartPanelFx(curveChart)
 
-    @FXML
-    lateinit var lblDuration: Label
-
-    @FXML
-    lateinit var btnStart: Button
-
-    @FXML
-    lateinit var btnStop: Button
-
-    @FXML
-    lateinit var btnAbort: Button
-
-    @FXML
-    lateinit var btnCharge: Button
-
-    @FXML
-    lateinit var btnTP: Button
-
-    @FXML
-    lateinit var btnCC: Button
-
-    @FXML
-    lateinit var btnDrop: Button
-
-    @FXML
-    lateinit var btnSettings: Button
-
+    // ── App ──────────────────────────────────────────────────────────────────
     private val recorder = RoastRecorder(SimulatorSource())
-    private val chart = RoastChartView()
     private val scope = CoroutineScope(Dispatchers.JavaFx + SupervisorJob())
-
     private var shouldAutoStartAfterConnect = false
 
     @FXML
     fun initialize() {
-        // Canvas must not participate in layout -- otherwise it pushes other panels away
-        chart.isManaged = false
-        chartContainer.children.setAll(chart)
+        // Bind CurveModels to chart series once
+        curveChart.bindDefaultCurves(btSmooth, etSmooth, rorBt, rorEt)
 
-        // Resize canvas to match container's actual layout bounds (after insets)
-        val resizeChart = {
-            val insets = chartContainer.insets
-            val w = chartContainer.width - insets.left - insets.right
-            val h = chartContainer.height - insets.top - insets.bottom
-            if (w > 10 && h > 10) {
-                chart.width = w
-                chart.height = h
-                chart.layoutX = insets.left
-                chart.layoutY = insets.top
-            }
-        }
-        chartContainer.widthProperty().addListener { _, _, _ -> resizeChart() }
-        chartContainer.heightProperty().addListener { _, _, _ -> resizeChart() }
-        Platform.runLater { resizeChart() }
+        // Add ChartPanelFx to the container and stretch it to fill
+        chartPanel.prefWidthProperty().bind(chartContainer.widthProperty())
+        chartPanel.prefHeightProperty().bind(chartContainer.heightProperty())
+        chartContainer.children.setAll(chartPanel)
 
-        // Collect state + profile for button updates
         scope.launch {
-            combine(recorder.stateFlow, recorder.currentProfile) { state, profile ->
-                Pair(state, profile)
-            }.collect { (state, profile) ->
-                Platform.runLater { updateButtonStates(state, profile) }
+            recorder.stateFlow.collect { state ->
+                Platform.runLater { updateButtonStates(state) }
             }
         }
 
-        // Collect and update labels + chart on each sample
+        // Feed each incoming sample into the CurveModel pipeline
         scope.launch {
             recorder.currentSample.collect { sample ->
                 Platform.runLater { onSample(sample) }
             }
         }
 
-        // Collect elapsed time for duration label
+        // Elapsed-time label
         scope.launch {
             recorder.elapsedSec.collect { sec ->
                 Platform.runLater {
@@ -129,6 +104,203 @@ class MainController {
 
         setupButtonHandlers()
         setupSettingsButton()
+        btnShortcuts.setOnAction { showShortcutsHelp() }
+        setupSpaceHotkey()
+    }
+
+    // ── Sample handling ───────────────────────────────────────────────────────
+
+    private fun onSample(sample: TemperatureSample?) {
+        if (sample == null) return
+        val timeMs = (sample.timeSec * 1000).toLong()
+        val profile = recorder.currentProfile.value
+
+        btRaw.put(timeMs, sample.bt)
+        etRaw.put(timeMs, sample.et)
+
+        lblBT.text = "%.1f °C".format(sample.bt)
+        lblET.text = "%.1f °C".format(sample.et)
+        lblRoRBT.text = "%.1f °C/min".format(rorBt.getValue(timeMs) ?: 0.0)
+        lblRoRET.text = "%.1f °C/min".format(rorEt.getValue(timeMs) ?: 0.0)
+        chartPanel.lastDataTimeMs = timeMs
+
+        // Charge on first sample (Cropster: Start = start recording, charge at first data point)
+        if (profile.timex.size == 1 && profile.eventByType(EventType.CHARGE) == null) {
+            recorder.markEvent(EventType.CHARGE)
+            curveChart.addEventMarker(timeMs, "Charge @ %.1f °C".format(sample.bt),
+                com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
+        }
+
+        // TP once: place marker only after the first 3 min have passed (min BT in 0..3 min is then final)
+        if (!tpMarkerPlaced && profile.timex.isNotEmpty() && profile.timex.last() >= TP_WINDOW_SEC) {
+            val tpIdx = findTurningPointIndex(profile, searchWindowSec = TP_WINDOW_SEC)
+            if (tpIdx != null && profile.temp1.size > tpIdx) {
+                tpMarkerPlaced = true
+                val tpSec = profile.timex[tpIdx]
+                val tpBt = profile.temp1[tpIdx]
+                curveChart.addEventMarker((tpSec * 1000).toLong(), "TP @ %s · %.1f °C".format(formatSec(tpSec), tpBt),
+                    com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
+            }
+        }
+    }
+
+    private var tpMarkerPlaced = false
+    private companion object { const val TP_WINDOW_SEC = 180.0 }
+
+    private fun updateButtonStates(state: RecorderState) {
+        when (state) {
+            RecorderState.DISCONNECTED -> {
+                btnStart.text = "Connect"
+                btnStart.isDisable = false
+                btnStop.isDisable = true
+                btnAbort.isDisable = true
+            }
+            RecorderState.MONITORING -> {
+                if (shouldAutoStartAfterConnect) {
+                    shouldAutoStartAfterConnect = false
+                    recorder.startRecording()
+                }
+                btnStart.text = "Start"
+                btnStart.isDisable = false
+                btnStop.isDisable = true
+                btnAbort.isDisable = true
+            }
+            RecorderState.RECORDING -> {
+                btnStart.isDisable = true
+                btnStop.isDisable = false
+                btnAbort.isDisable = false
+            }
+            RecorderState.STOPPED -> {
+                btnStart.text = "New Roast"
+                btnStart.isDisable = false
+                btnStop.isDisable = true
+                btnAbort.isDisable = true
+            }
+        }
+    }
+
+    // ── Button handlers ───────────────────────────────────────────────────────
+
+    private fun setupButtonHandlers() {
+        btnStart.setOnAction {
+            when (recorder.stateFlow.value) {
+                RecorderState.DISCONNECTED -> {
+                    shouldAutoStartAfterConnect = true
+                    recorder.connect()
+                }
+                RecorderState.MONITORING -> recorder.startRecording()
+                RecorderState.STOPPED -> {
+                    recorder.reset()
+                    resetCurvePipeline()
+                    curveChart.clearAll()
+                    chartPanel.lastDataTimeMs = null
+                    tpMarkerPlaced = false
+                }
+                RecorderState.RECORDING -> { /* disabled */ }
+            }
+        }
+
+        btnStop.setOnAction {
+            val profile = recorder.stop()
+            val savePath = SettingsManager.load().savePath
+            val path = Paths.get(savePath).resolve(ProfileStorage.generateFileName())
+            try {
+                java.nio.file.Files.createDirectories(path.parent)
+                ProfileStorage.saveProfile(profile, path)
+            } catch (_: Exception) {
+                // TODO: show error dialog
+            }
+        }
+
+        btnAbort.setOnAction {
+            recorder.abort()
+            resetCurvePipeline()
+            curveChart.clearAll()
+            chartPanel.lastDataTimeMs = null
+            tpMarkerPlaced = false
+        }
+    }
+
+    /** Hotkeys: Cropster-style Ctrl+Enter (Start), Space (Start/Drop), Ctrl+Escape (Abort), F1 (shortcuts help). */
+    private fun setupSpaceHotkey() {
+        chartContainer.sceneProperty().addListener { _, _, scene ->
+            scene?.addEventHandler(KeyEvent.KEY_PRESSED) { e ->
+                when {
+                    e.code == KeyCode.ENTER && e.isShortcutDown -> {
+                        e.consume()
+                        triggerStart()
+                    }
+                    e.code == KeyCode.SPACE -> {
+                        e.consume()
+                        if (recorder.stateFlow.value == RecorderState.RECORDING) triggerDrop()
+                        else triggerStart()
+                    }
+                    e.code == KeyCode.ESCAPE && e.isShortcutDown -> {
+                        e.consume()
+                        if (recorder.stateFlow.value == RecorderState.RECORDING) {
+                            recorder.abort()
+                            resetCurvePipeline()
+                            curveChart.clearAll()
+                            chartPanel.lastDataTimeMs = null
+                            tpMarkerPlaced = false
+                        }
+                    }
+                    e.code == KeyCode.F1 -> {
+                        e.consume()
+                        showShortcutsHelp()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun triggerStart() {
+        when (recorder.stateFlow.value) {
+            RecorderState.DISCONNECTED -> {
+                shouldAutoStartAfterConnect = true
+                recorder.connect()
+            }
+            RecorderState.MONITORING -> recorder.startRecording()
+            RecorderState.STOPPED -> {
+                recorder.reset()
+                resetCurvePipeline()
+                curveChart.clearAll()
+                chartPanel.lastDataTimeMs = null
+                tpMarkerPlaced = false
+            }
+            RecorderState.RECORDING -> { }
+        }
+    }
+
+    private fun triggerDrop() {
+        val sample = recorder.currentSample.value ?: return
+        recorder.markEvent(EventType.DROP)
+        curveChart.addEventMarker((sample.timeSec * 1000).toLong(), "Drop @ %.1f °C".format(sample.bt),
+            com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
+    }
+
+    private fun showShortcutsHelp() {
+        val stage = Stage().apply {
+            title = "Keyboard shortcuts"
+            scene = javafx.scene.Scene(
+                com.rdr.roast.ui.HotkeysHelpView.createContent(),
+                420.0, 320.0
+            )
+            initModality(Modality.NONE)
+            initOwner(chartContainer.scene?.window)
+        }
+        stage.show()
+    }
+
+    private fun formatSec(sec: Double): String {
+        val m = (sec / 60).toInt()
+        val s = (sec % 60).toInt()
+        return "%02d:%02d".format(m, s)
+    }
+
+    private fun resetCurvePipeline() {
+        btRaw.clear()
+        etRaw.clear()
     }
 
     private fun setupSettingsButton() {
@@ -143,128 +315,5 @@ class MainController {
             }
             stage.showAndWait()
         }
-    }
-
-    private fun updateButtonStates(state: RecorderState, profile: com.rdr.roast.domain.RoastProfile) {
-        when (state) {
-            RecorderState.DISCONNECTED -> {
-                btnStart.text = "Connect"
-                btnStart.isVisible = true
-                btnStart.isDisable = false
-                btnStop.isDisable = true
-                btnAbort.isDisable = true
-                btnCharge.isDisable = true
-                btnTP.isDisable = true
-                btnCC.isDisable = true
-                btnDrop.isDisable = true
-            }
-            RecorderState.MONITORING -> {
-                if (shouldAutoStartAfterConnect) {
-                    shouldAutoStartAfterConnect = false
-                    recorder.startRecording()
-                }
-                btnStart.text = "Start"
-                btnStart.isVisible = true
-                btnStart.isDisable = false
-                btnStop.isDisable = true
-                btnAbort.isDisable = true
-                btnCharge.isDisable = true
-                btnTP.isDisable = true
-                btnCC.isDisable = true
-                btnDrop.isDisable = true
-            }
-            RecorderState.RECORDING -> {
-                btnStart.isDisable = true
-                btnStop.isDisable = false
-                btnAbort.isDisable = false
-                btnCharge.isDisable = profile.eventByType(EventType.CHARGE) != null
-                btnTP.isDisable = profile.eventByType(EventType.TP) != null
-                btnCC.isDisable = profile.eventByType(EventType.CC) != null
-                btnDrop.isDisable = profile.eventByType(EventType.DROP) != null
-            }
-            RecorderState.STOPPED -> {
-                btnStart.text = "New Roast"
-                btnStart.isVisible = true
-                btnStart.isDisable = false
-                btnStop.isDisable = true
-                btnAbort.isDisable = true
-                btnCharge.isDisable = true
-                btnTP.isDisable = true
-                btnCC.isDisable = true
-                btnDrop.isDisable = true
-            }
-        }
-    }
-
-    private fun onSample(sample: TemperatureSample?) {
-        if (sample == null) return
-        val profile = recorder.currentProfile.value
-        val idx = profile.timex.size - 1
-        val rorBt = if (idx >= 0) computeRoR(profile.temp1, profile.timex, idx) else 0.0
-        val rorEt = if (idx >= 0) computeRoR(profile.temp2, profile.timex, idx) else 0.0
-
-        chart.addSample(sample.timeSec, sample.bt, sample.et, rorBt, rorEt)
-
-        lblBT.text = "%.1f °C".format(sample.bt)
-        lblET.text = "%.1f °C".format(sample.et)
-        lblRoRBT.text = "%.1f °C".format(rorBt)
-        lblRoRET.text = "%.1f °C".format(rorEt)
-    }
-
-    private fun setupButtonHandlers() {
-        btnStart.setOnAction {
-            when (recorder.stateFlow.value) {
-                RecorderState.DISCONNECTED -> {
-                    shouldAutoStartAfterConnect = true
-                    recorder.connect()
-                }
-                RecorderState.MONITORING -> recorder.startRecording()
-                RecorderState.STOPPED -> {
-                    recorder.reset()
-                    chart.clear()
-                }
-                RecorderState.RECORDING -> { /* disabled */ }
-            }
-        }
-
-        btnStop.setOnAction {
-            val profile = recorder.stop()
-            val savePath = SettingsManager.load().savePath
-            val path = Paths.get(savePath).resolve(ProfileStorage.generateFileName())
-            try {
-                java.nio.file.Files.createDirectories(path.parent)
-                ProfileStorage.saveProfile(profile, path)
-            } catch (e: Exception) {
-                // TODO: show error to user
-            }
-        }
-
-        btnAbort.setOnAction {
-            recorder.abort()
-            chart.clear()
-        }
-
-        btnCharge.setOnAction { markEventAndUpdateChart(EventType.CHARGE) }
-        btnTP.setOnAction { markEventAndUpdateChart(EventType.TP) }
-        btnCC.setOnAction { markEventAndUpdateChart(EventType.CC) }
-        btnDrop.setOnAction { markEventAndUpdateChart(EventType.DROP) }
-    }
-
-    private fun markEventAndUpdateChart(type: EventType) {
-        val sample = recorder.currentSample.value ?: return
-        recorder.markEvent(type)
-
-        val tempStr = "%.1f °C".format(sample.bt)
-        val label = when (type) {
-            EventType.CHARGE -> "Charge"
-            EventType.TP -> "TP"
-            EventType.CC -> "CC"
-            EventType.DROP -> "Drop"
-        }
-        chart.addEventMarker(sample.timeSec, label, tempStr)
-
-        val profile = recorder.currentProfile.value
-        val phases = computePhases(profile)
-        chart.updatePhases(phases)
     }
 }

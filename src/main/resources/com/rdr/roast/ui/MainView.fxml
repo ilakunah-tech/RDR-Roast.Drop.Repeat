@@ -22,6 +22,8 @@
             <Label text="RDR - Roast.Drop.Repeat"
                    style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #333333;"/>
             <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnShortcuts" text="⌨ Shortcuts (F1)"
+                    style="-fx-font-size: 12; -fx-background-color: #e8e8e8; -fx-text-fill: #555555; -fx-cursor: hand; -fx-background-radius: 4;"/>
             <Button fx:id="btnSettings" text="⚙ Settings"
                     style="-fx-font-size: 12; -fx-background-color: #e8e8e8; -fx-text-fill: #555555; -fx-cursor: hand; -fx-background-radius: 4;"/>
         </HBox>
@@ -64,19 +66,7 @@
     <!-- Bottom: Controls -->
     <bottom>
         <VBox style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">
-            <!-- Event buttons row -->
-            <HBox spacing="8" alignment="CENTER" style="-fx-padding: 8 16;">
-                <Button fx:id="btnCharge" text="Charge" disable="true"
-                        style="-fx-background-color: #f0f0f0; -fx-text-fill: #555555; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-radius: 4;"/>
-                <Button fx:id="btnTP" text="TP" disable="true"
-                        style="-fx-background-color: #f0f0f0; -fx-text-fill: #555555; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-radius: 4;"/>
-                <Button fx:id="btnCC" text="CC" disable="true"
-                        style="-fx-background-color: #f0f0f0; -fx-text-fill: #555555; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-radius: 4;"/>
-                <Button fx:id="btnDrop" text="Drop" disable="true"
-                        style="-fx-background-color: #f0f0f0; -fx-text-fill: #555555; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4; -fx-border-color: #cccccc; -fx-border-radius: 4;"/>
-            </HBox>
-            <!-- Main controls row -->
-            <HBox spacing="20" alignment="CENTER" style="-fx-padding: 4 16 10 16;">
+            <HBox spacing="20" alignment="CENTER" style="-fx-padding: 12 16 14 16;">
                 <Button fx:id="btnAbort" text="✕ Abort" disable="true"
                         style="-fx-background-color: #ffffff; -fx-text-fill: #e74c3c; -fx-font-size: 13; -fx-padding: 8 20; -fx-background-radius: 4; -fx-border-color: #e74c3c; -fx-border-radius: 4;"/>
 
