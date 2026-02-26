@@ -1,5 +1,6 @@
 package com.rdr.roast.ui
 
+import com.rdr.roast.app.DataSourceFactory
 import com.rdr.roast.app.ProfileStorage
 import com.rdr.roast.app.RecorderState
 import com.rdr.roast.app.ReferenceApi
@@ -13,7 +14,6 @@ import com.rdr.roast.domain.metrics.findChargeDropIndex
 import com.rdr.roast.domain.metrics.findTurningPointIndex
 import com.rdr.roast.domain.curves.RorCurveModel
 import com.rdr.roast.domain.curves.StandardCurveModel
-import com.rdr.roast.driver.simulator.AlogReplaySource
 import com.rdr.roast.driver.simulator.SimulatorSource
 import com.rdr.roast.ui.chart.ChartPanelFx
 import com.rdr.roast.ui.chart.CurveChartFx
@@ -42,7 +42,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.javafx.JavaFx
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.nio.file.Files
 import java.nio.file.Paths
 
 class MainController {
@@ -82,12 +81,7 @@ class MainController {
     private val chartPanel = ChartPanelFx(curveChart)
 
     // ── App ──────────────────────────────────────────────────────────────────
-    private val recorder = RoastRecorder(createDemoDataSource())
-
-    /** Demo/simulator: replay real .alog if present, else synthetic S-curve. */
-    private fun createDemoDataSource() =
-        if (Files.exists(DEMO_PROFILE_PATH)) AlogReplaySource(DEMO_PROFILE_PATH)
-        else SimulatorSource()
+    private val recorder = RoastRecorder(DataSourceFactory.create(SettingsManager.load().machineConfig))
     private val scope = CoroutineScope(Dispatchers.JavaFx + SupervisorJob())
     private var shouldAutoStartAfterConnect = false
 
@@ -95,6 +89,8 @@ class MainController {
     fun initialize() {
         // Bind CurveModels to chart series once
         curveChart.bindDefaultCurves(btSmooth, etSmooth, rorBt, rorEt)
+        curveChart.applyChartColors(SettingsManager.load().chartColors)
+        curveChart.applyChartConfig(SettingsManager.load().chartConfig)
 
         // Add ChartPanelFx to the container and stretch it to fill
         chartPanel.prefWidthProperty().bind(chartContainer.widthProperty())
@@ -131,6 +127,9 @@ class MainController {
         btnShortcuts.setOnAction { showShortcutsHelp() }
         setupSpaceHotkey()
 
+        // Connect to configured roaster on startup (saved settings)
+        recorder.connect()
+
         // When user adds DE/FC from chart popup, store in profile and refresh phase strip
         chartPanel.onEventAdded = { timeMs, label ->
             val timeSec = timeMs / 1000.0
@@ -144,6 +143,11 @@ class MainController {
 
     // ── Sample handling ───────────────────────────────────────────────────────
 
+    private fun tempForDisplay(celsius: Double): Pair<Double, String> {
+        val unit = SettingsManager.load().unit.uppercase()
+        return if (unit == "F") (celsius * 9 / 5 + 32) to "°F" else celsius to "°C"
+    }
+
     private fun onSample(sample: TemperatureSample?) {
         if (sample == null) return
         val timeMs = (sample.timeSec * 1000).toLong()
@@ -152,10 +156,17 @@ class MainController {
         btRaw.put(timeMs, sample.bt)
         etRaw.put(timeMs, sample.et)
 
-        lblBT.text = "%.1f °C".format(sample.bt)
-        lblET.text = "%.1f °C".format(sample.et)
-        lblRoRBT.text = "%.1f °C/min".format(rorBt.getValue(timeMs) ?: 0.0)
-        lblRoRET.text = "%.1f °C/min".format(rorEt.getValue(timeMs) ?: 0.0)
+        val (btD, u) = tempForDisplay(sample.bt)
+        val (etD, _) = tempForDisplay(sample.et)
+        val rorBtVal = rorBt.getValue(timeMs) ?: 0.0
+        val rorEtVal = rorEt.getValue(timeMs) ?: 0.0
+        val isF = u == "°F"
+        val rorMul = if (isF) 9.0 / 5.0 else 1.0
+        val rorUnit = if (isF) " °F/min" else " °C/min"
+        lblBT.text = "%.1f $u".format(btD)
+        lblET.text = "%.1f $u".format(etD)
+        lblRoRBT.text = "%.1f%s".format(rorBtVal * rorMul, rorUnit)
+        lblRoRET.text = "%.1f%s".format(rorEtVal * rorMul, rorUnit)
         chartPanel.lastDataTimeMs = timeMs
 
         // Auto-detect Charge once: BT drop ≥ 6°C over 30s (Cropster-style); manual C overrides
@@ -215,10 +226,6 @@ class MainController {
         const val AUTO_CHARGE_WINDOW_SEC = 30.0
         const val AUTO_CHARGE_MIN_DROP_C = 6.0
         const val AUTO_CHARGE_MIN_ELAPSED_SEC = 18.0
-        /** Real profile for demo mode; if file exists, replay it instead of synthetic simulator. */
-        val DEMO_PROFILE_PATH = Paths.get(
-            "C:\\Users\\ilaku\\Documents\\Projects\\BESCA\\16 Ethiopia, Ethiopia Yirgacheffe 213 12.5%.alog"
-        )
     }
 
     private fun updateButtonStates(state: RecorderState) {
@@ -563,13 +570,20 @@ class MainController {
         btnSettings.setOnAction {
             val loader = FXMLLoader(javaClass.getResource("/com/rdr/roast/ui/SettingsView.fxml"))
             val root = loader.load<Parent>()
+            val settingsController = loader.getController<SettingsController>()
             val stage = Stage().apply {
                 title = "Settings"
-                scene = Scene(root, 480.0, 420.0)
+                scene = Scene(root, 520.0, 620.0)
                 initModality(Modality.APPLICATION_MODAL)
                 initOwner(btnSettings.scene?.window)
             }
             stage.showAndWait()
+            // If user saved, apply new machine config and reconnect
+            settingsController.savedSettings?.let { newSettings ->
+                recorder.disconnect()
+                recorder.dataSource = DataSourceFactory.create(newSettings.machineConfig)
+                recorder.connect()
+            }
         }
     }
 }

@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.RadioButton?>
@@ -36,35 +37,72 @@
         <ComboBox fx:id="cmbSource" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="0"
                   style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
 
-        <!-- Port fields container (hidden for Simulator) -->
-        <VBox fx:id="portFieldsContainer" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="1"
+        <!-- Preset -->
+        <Label text="Connection preset" GridPane.columnIndex="0" GridPane.rowIndex="1"
+               style="-fx-text-fill: white; -fx-font-size: 14;"/>
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="1">
+            <ComboBox fx:id="cmbPreset" prefWidth="180" promptText="— Current —"
+                      style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+            <Button fx:id="btnLoadPreset" text="Load"
+                    style="-fx-background-color: #0f3460; -fx-text-fill: white; -fx-padding: 6 12;"/>
+            <Button fx:id="btnSavePreset" text="Save as preset"
+                    style="-fx-background-color: #0f3460; -fx-text-fill: white; -fx-padding: 6 12;"/>
+        </HBox>
+
+        <!-- Port/connection fields container (hidden for Simulator) -->
+        <VBox fx:id="portFieldsContainer" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="2"
               spacing="12" style="-fx-background-color: transparent;">
             <GridPane hgap="16" vgap="8" style="-fx-background-color: transparent;">
                 <columnConstraints>
                     <ColumnConstraints minWidth="100" prefWidth="120"/>
                     <ColumnConstraints minWidth="200" prefWidth="280"/>
                 </columnConstraints>
-                <Label text="COM Port" GridPane.columnIndex="0" GridPane.rowIndex="0"
+                <Label text="Connection" GridPane.columnIndex="0" GridPane.rowIndex="0"
                        style="-fx-text-fill: white; -fx-font-size: 14;"/>
-                <TextField fx:id="txtPort" promptText="COM4" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                <ComboBox fx:id="cmbTransport" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                          style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
+
+                <Label fx:id="lblHost" text="Host (TCP)" GridPane.columnIndex="0" GridPane.rowIndex="1"
+                       style="-fx-text-fill: white; -fx-font-size: 14;"/>
+                <TextField fx:id="txtHost" promptText="10.0.0.9" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"
                            style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
 
-                <Label text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="1"
+                <Label fx:id="lblTcpPort" text="Port (TCP)" GridPane.columnIndex="0" GridPane.rowIndex="2"
                        style="-fx-text-fill: white; -fx-font-size: 14;"/>
-                <TextField fx:id="txtBaudRate" promptText="9600" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                <TextField fx:id="txtTcpPort" promptText="502" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2"
                            style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
 
-                <Label text="Slave ID" GridPane.columnIndex="0" GridPane.rowIndex="2"
+                <Label fx:id="lblComPort" text="COM Port" GridPane.columnIndex="0" GridPane.rowIndex="3"
                        style="-fx-text-fill: white; -fx-font-size: 14;"/>
-                <TextField fx:id="txtSlaveId" promptText="1" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2"
+                <TextField fx:id="txtPort" promptText="COM4" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="3"
+                           style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+
+                <Label fx:id="lblBaudRate" text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="4"
+                       style="-fx-text-fill: white; -fx-font-size: 14;"/>
+                <TextField fx:id="txtBaudRate" promptText="9600" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                           style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+
+                <Label fx:id="lblSlaveId" text="Slave ID" GridPane.columnIndex="0" GridPane.rowIndex="5"
+                       style="-fx-text-fill: white; -fx-font-size: 14;"/>
+                <TextField fx:id="txtSlaveId" promptText="1" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="5"
+                           style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+
+                <Label fx:id="lblPhidgetEt" text="Phidget ET channel" GridPane.columnIndex="0" GridPane.rowIndex="6"
+                       style="-fx-text-fill: white; -fx-font-size: 14;"/>
+                <TextField fx:id="txtPhidgetEtChannel" promptText="1" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="6"
+                           style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+
+                <Label fx:id="lblPhidgetBt" text="Phidget BT channel" GridPane.columnIndex="0" GridPane.rowIndex="7"
+                       style="-fx-text-fill: white; -fx-font-size: 14;"/>
+                <TextField fx:id="txtPhidgetBtChannel" promptText="2" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="7"
                            style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
             </GridPane>
         </VBox>
 
         <!-- Temperature Unit -->
-        <Label text="Temperature Unit" GridPane.columnIndex="0" GridPane.rowIndex="2"
+        <Label text="Temperature Unit" GridPane.columnIndex="0" GridPane.rowIndex="3"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <HBox spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="2">
+        <HBox spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="3">
             <RadioButton fx:id="rbCelsius" text="°C" toggleGroup="$tglUnit" selected="true"
                          style="-fx-text-fill: white;"/>
             <RadioButton fx:id="rbFahrenheit" text="°F" toggleGroup="$tglUnit"
@@ -72,9 +110,9 @@
         </HBox>
 
         <!-- Folder for .alog files -->
-        <Label text="Save folder (.alog)" GridPane.columnIndex="0" GridPane.rowIndex="3"
+        <Label text="Save folder (.alog)" GridPane.columnIndex="0" GridPane.rowIndex="4"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="3">
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="4">
             <TextField fx:id="txtSavePath" prefWidth="220" HBox.hgrow="ALWAYS"
                        style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
             <Button fx:id="btnBrowse" text="Browse"
@@ -82,18 +120,88 @@
         </HBox>
 
         <!-- Server (reference profiles) -->
-        <Label text="Server (reference)" GridPane.columnIndex="0" GridPane.rowIndex="4"
+        <Label text="Server (reference)" GridPane.columnIndex="0" GridPane.rowIndex="5"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <TextField fx:id="txtServerBaseUrl" promptText="https://example.com/api/v1" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="4"
+        <TextField fx:id="txtServerBaseUrl" promptText="https://example.com/api/v1" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="5"
                    style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
 
-        <Label text="API token (optional)" GridPane.columnIndex="0" GridPane.rowIndex="5"
+        <Label text="API token (optional)" GridPane.columnIndex="0" GridPane.rowIndex="6"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <TextField fx:id="txtServerToken" promptText="Bearer token" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="5"
+        <TextField fx:id="txtServerToken" promptText="Bearer token" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="6"
                    style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+
+        <!-- Chart Colors -->
+        <Label text="Chart Colors" GridPane.columnIndex="0" GridPane.rowIndex="7"
+               style="-fx-text-fill: #aaaaaa; -fx-font-size: 12;"/>
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="7">
+            <Label text="Live BT" style="-fx-text-fill: white; -fx-font-size: 12;"/>
+            <TextField fx:id="txtColorLiveBt" promptText="#d4483b" prefWidth="72"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+            <Label text="Live ET" style="-fx-text-fill: white; -fx-font-size: 12;"/>
+            <TextField fx:id="txtColorLiveEt" promptText="#3498db" prefWidth="72"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+        </HBox>
+        <Label text="Ref colors" GridPane.columnIndex="0" GridPane.rowIndex="8"
+               style="-fx-text-fill: white; -fx-font-size: 14;"/>
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="8">
+            <TextField fx:id="txtColorRefBt" promptText="#d4483b" prefWidth="72"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+            <TextField fx:id="txtColorRefEt" promptText="#3498db" prefWidth="72"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+            <Label text="Ref alpha 0–255" style="-fx-text-fill: white; -fx-font-size: 12;"/>
+            <TextField fx:id="txtColorRefAlpha" promptText="80" prefWidth="40"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+            <Button fx:id="btnResetColors" text="Reset colors"
+                    style="-fx-background-color: #0f3460; -fx-text-fill: white; -fx-padding: 4 8;"/>
+        </HBox>
+
+        <!-- Chart -->
+        <Label text="Chart" GridPane.columnIndex="0" GridPane.rowIndex="9"
+               style="-fx-text-fill: #aaaaaa; -fx-font-size: 12;"/>
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="9">
+            <Label text="Temp min" style="-fx-text-fill: white; -fx-font-size: 12;"/>
+            <TextField fx:id="txtChartTempMin" prefWidth="50"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
+            <Label text="Temp max" style="-fx-text-fill: white; -fx-font-size: 12;"/>
+            <TextField fx:id="txtChartTempMax" prefWidth="50"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
+        </HBox>
+        <Label text="RoR / Time" GridPane.columnIndex="0" GridPane.rowIndex="10"
+               style="-fx-text-fill: white; -fx-font-size: 14;"/>
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="10">
+            <TextField fx:id="txtChartRorMin" prefWidth="50"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
+            <TextField fx:id="txtChartRorMax" prefWidth="50"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
+            <Label text="Time range (min)" style="-fx-text-fill: white; -fx-font-size: 12;"/>
+            <TextField fx:id="txtChartTimeRange" prefWidth="50"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
+            <CheckBox fx:id="chkChartShowGrid" text="Show grid"
+                      style="-fx-text-fill: white;"/>
+        </HBox>
+        <Label text="Line widths" GridPane.columnIndex="0" GridPane.rowIndex="11"
+               style="-fx-text-fill: white; -fx-font-size: 14;"/>
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="11">
+            <TextField fx:id="txtChartBtLineWidth" prefWidth="40" promptText="2"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+            <TextField fx:id="txtChartEtLineWidth" prefWidth="40" promptText="2"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+            <TextField fx:id="txtChartRorLineWidth" prefWidth="40" promptText="1.5"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+            <TextField fx:id="txtChartRefLineWidth" prefWidth="40" promptText="1.5"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+        </HBox>
+        <Label text="Background / Grid" GridPane.columnIndex="0" GridPane.rowIndex="12"
+               style="-fx-text-fill: white; -fx-font-size: 14;"/>
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="12">
+            <TextField fx:id="txtChartBackground" promptText="#ffffff" prefWidth="72"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+            <TextField fx:id="txtChartGridColor" promptText="#d3d3d3" prefWidth="72"
+                       style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+        </HBox>
 
         <!-- Buttons -->
-        <HBox spacing="12" alignment="CENTER_RIGHT" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="6">
+        <HBox spacing="12" alignment="CENTER_RIGHT" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="13">
             <Button fx:id="btnSave" text="Save"
                     style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-padding: 8 24;"/>
             <Button fx:id="btnCancel" text="Cancel"

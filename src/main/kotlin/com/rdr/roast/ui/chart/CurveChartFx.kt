@@ -1,5 +1,8 @@
 package com.rdr.roast.ui.chart
 
+import com.rdr.roast.app.ChartConfig
+import com.rdr.roast.app.ChartColors
+import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.curves.CurveModel
 import com.rdr.roast.domain.curves.CurveModelListener
@@ -115,6 +118,11 @@ class CurveChartFx : CurveModelListener {
 
     // ── Marker label stagger offset ───────────────────────────────────────────
     private var markerOffset = 20.0
+    /** Stagger offset for reference event markers so labels don't overlap. */
+    private var refMarkerOffset = 5.0
+
+    /** Last applied chart config; used by resetAxes(). */
+    private var lastChartConfig: ChartConfig? = null
 
     /** Single-marker event types: adding the same type again removes the previous marker. */
     private val markersByType = mutableMapOf<String, ValueMarker>()
@@ -428,21 +436,33 @@ class CurveChartFx : CurveModelListener {
             refEtSeries.clear()
             refRorBtSeries.clear()
             refRorEtSeries.clear()
+            refMarkerOffset = 5.0
             if (profile != null && profile.timex.isNotEmpty()) {
+                val chargeEvent = profile.eventByType(EventType.CHARGE)
+                val chargeOffsetSec = chargeEvent?.timeSec ?: 0.0
                 val n = minOf(profile.timex.size, profile.temp1.size, profile.temp2.size)
                 val timex = profile.timex.take(n)
                 val bt = profile.temp1.take(n)
                 val et = profile.temp2.take(n)
-                for (i in 0 until n) {
-                    val timeMs = (timex[i] * 1000).toLong()
-                    refBtSeries.add(timeMs.toDouble(), bt[i])
-                    refEtSeries.add(timeMs.toDouble(), et[i])
+                // Filter to adjustedTimeSec >= 0 (points from Charge onward)
+                val indices = timex.indices.filter { (timex[it] - chargeOffsetSec) >= 0 }
+                val adjustedTimex = indices.map { timex[it] - chargeOffsetSec }
+                val btFiltered = indices.map { bt[it] }
+                val etFiltered = indices.map { et[it] }
+                for (i in adjustedTimex.indices) {
+                    val timeMs = (adjustedTimex[i] * 1000).toLong()
+                    refBtSeries.add(timeMs.toDouble(), btFiltered[i])
+                    refEtSeries.add(timeMs.toDouble(), etFiltered[i])
                 }
-                computeAndFillRorSeries(timex, bt, refRorBtSeries, ROR_DELTA_SEC)
-                computeAndFillRorSeries(timex, et, refRorEtSeries, ROR_DELTA_SEC)
+                if (adjustedTimex.size >= 2) {
+                    computeAndFillRorSeries(adjustedTimex, btFiltered, refRorBtSeries, ROR_DELTA_SEC)
+                    computeAndFillRorSeries(adjustedTimex, etFiltered, refRorEtSeries, ROR_DELTA_SEC)
+                }
                 profile.events.forEach { event ->
-                    val timeMs = (event.timeSec * 1000).toLong()
-                    val label = refEventLabel(event.type, event.timeSec, event.tempBT, event.tempET)
+                    val adjustedSec = event.timeSec - chargeOffsetSec
+                    if (adjustedSec < 0) return@forEach
+                    val timeMs = (adjustedSec * 1000).toLong()
+                    val label = refEventLabel(event.type, adjustedSec, event.tempBT, event.tempET)
                     addReferenceEventMarker(timeMs, label)
                 }
             }
@@ -472,16 +492,29 @@ class CurveChartFx : CurveModelListener {
             this.label = label
             labelAnchor = RectangleAnchor.TOP_RIGHT
             labelTextAnchor = TextAnchor.TOP_LEFT
-            labelOffset = RectangleInsets(5.0, 0.0, 0.0, 5.0)
+            labelOffset = RectangleInsets(refMarkerOffset, 0.0, 0.0, 5.0)
             labelFont = CHART_FONT
         }
         plot.addDomainMarker(marker)
         refMarkers.add(marker)
+        refMarkerOffset += 14.0
     }
 
-    /** RoR °C/min over [deltaSec] window (Artisan-style). Fills series with (timeMs, ror). */
+    /** Centred moving average; windowSize 7 smooths reference RoR. */
+    private fun smoothMovingAverage(data: List<Double>, windowSize: Int): List<Double> {
+        if (data.isEmpty()) return data
+        val half = windowSize / 2
+        return data.indices.map { i ->
+            val from = maxOf(0, i - half)
+            val to = minOf(data.size - 1, i + half)
+            data.subList(from, to + 1).average()
+        }
+    }
+
+    /** RoR °C/min over [deltaSec] window (Artisan-style). Uses smoothed temp for reference. Fills series with (timeMs, ror). */
     private fun computeAndFillRorSeries(timex: List<Double>, temp: List<Double>, series: XYSeries, deltaSec: Int) {
         if (timex.size < 2 || temp.size < 2) return
+        val smoothed = smoothMovingAverage(temp, 7)
         for (i in timex.indices) {
             val targetT = timex[i] - deltaSec
             var prevIdx = 0
@@ -496,7 +529,7 @@ class CurveChartFx : CurveModelListener {
                 i == 0 || timex[i] == timex[prevIdx] -> 0.0
                 else -> {
                     val dtMin = (timex[i] - timex[prevIdx]) / 60.0
-                    if (dtMin <= 0) 0.0 else (temp[i] - temp[prevIdx]) / dtMin
+                    if (dtMin <= 0) 0.0 else (smoothed[i] - smoothed[prevIdx]) / dtMin
                 }
             }
             series.add(timex[i] * 1000, ror.coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble()))
@@ -528,15 +561,68 @@ class CurveChartFx : CurveModelListener {
             phaseStripAnnotations.clear()
             markersByType.clear()
             markerOffset = 20.0
+            refMarkerOffset = 5.0
             chart.isNotify = true
         }
     }
 
-    /** Reset X axis to the default 0..15 min window (called by toolbar Reset button). */
+    /** Apply chart colours from settings. Ref series use refAlpha for transparency. */
+    fun applyChartColors(colors: ChartColors) {
+        Platform.runLater {
+            val decode = { hex: String -> Color.decode(hex) }
+            val decodeRef = { hex: String ->
+                val c = Color.decode(hex)
+                Color(c.red, c.green, c.blue, colors.refAlpha.coerceIn(0, 255))
+            }
+            (plot.getRenderer(0) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decode(colors.liveBt))
+            (plot.getRenderer(1) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decode(colors.liveEt))
+            (plot.getRenderer(2) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decode(colors.liveRorBt))
+            (plot.getRenderer(3) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decode(colors.liveRorEt))
+            (plot.getRenderer(4) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decodeRef(colors.refBt))
+            (plot.getRenderer(5) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decodeRef(colors.refEt))
+            (plot.getRenderer(6) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decodeRef(colors.refRorBt))
+            (plot.getRenderer(7) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decodeRef(colors.refRorEt))
+        }
+    }
+
+    /** Apply chart config (axes, grid, line widths). */
+    fun applyChartConfig(config: ChartConfig) {
+        Platform.runLater {
+            lastChartConfig = config
+            val timeRangeMs = config.timeRangeMin * 60 * 1000.0
+            plot.domainAxis.setRange(0.0, timeRangeMs)
+            plot.getRangeAxis(0).setRange(config.tempMin, config.tempMax)
+            plot.getRangeAxis(1).setRange(config.rorMin, config.rorMax)
+            (plot.getRenderer(0) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.btLineWidth))
+            (plot.getRenderer(1) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.etLineWidth))
+            (plot.getRenderer(2) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.rorLineWidth))
+            (plot.getRenderer(3) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.rorLineWidth))
+            val refStroke = BasicStroke(config.refLineWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f, floatArrayOf(8f, 4f), 0f)
+            (plot.getRenderer(4) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
+            (plot.getRenderer(5) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
+            (plot.getRenderer(6) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
+            (plot.getRenderer(7) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
+            plot.setBackgroundPaint(Color.decode(config.backgroundColor))
+            plot.setDomainGridlinePaint(Color.decode(config.gridColor))
+            plot.setRangeGridlinePaint(Color.decode(config.gridColor))
+            plot.isDomainGridlinesVisible = config.showGrid
+            plot.isRangeGridlinesVisible = config.showGrid
+        }
+    }
+
+    /** Reset X axis to the default 0..15 min window (or saved ChartConfig). Called by toolbar Reset button. */
     fun resetAxes() {
-        plot.domainAxis.setRange(0.0, TIME_RANGE_MS)
-        plot.getRangeAxis(0).setRange(TEMP_MIN, TEMP_MAX)
-        plot.getRangeAxis(1).setRange(MIN_ROR, MAX_ROR)
+        val config = lastChartConfig
+        if (config != null) {
+            val timeRangeMs = config.timeRangeMin * 60 * 1000.0
+            plot.domainAxis.setRange(0.0, timeRangeMs)
+            plot.getRangeAxis(0).setRange(config.tempMin, config.tempMax)
+            plot.getRangeAxis(1).setRange(config.rorMin, config.rorMax)
+        } else {
+            plot.domainAxis.setRange(0.0, TIME_RANGE_MS)
+            plot.getRangeAxis(0).setRange(TEMP_MIN, TEMP_MAX)
+            plot.getRangeAxis(1).setRange(MIN_ROR, MAX_ROR)
+        }
     }
 
     // ── Tick-unit builders ────────────────────────────────────────────────────
