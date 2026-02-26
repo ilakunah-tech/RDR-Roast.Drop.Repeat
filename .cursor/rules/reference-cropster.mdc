@@ -1,0 +1,78 @@
+---
+description: Where to look for Cropster / Artisan reference when implementing RDR features
+alwaysApply: true
+---
+
+# Reference: Cropster and Artisan
+
+When the user asks how something is implemented **in Cropster** or **in Artisan**, search in the corresponding path:
+
+- **Cropster** → `C:\Users\ilaku\Downloads\1_extracted`
+- **Artisan** → `D:\project\Projects\artisantest-master`
+
+Do not copy code verbatim; reimplement logic in Kotlin in RDR's structure.
+
+---
+
+## Cropster Roasting Intelligence (decompiled)
+
+When implementing or refining RDR features (RoR, chart, phases, drivers), use the **extracted Cropster RI** as a reference.
+
+## Cropster reference location
+
+- **Path**: `C:\Users\ilaku\Downloads\1_extracted`
+- **Contents**: Extracted Cropster Roasting Intelligence 5.10 — `lib/` (JARs), `src/` (decompiled Java from JARs).
+
+## Where to look by topic
+
+| Topic | Path under `1_extracted\src` | What to use |
+|-------|------------------------------|-------------|
+| **RoR calculation** | `cropster-util-3.6\com\cropster\util\` | `RorUtil.java` (fill gaps, moving average), `RorPolyFitCalculator.java` (polynomial RoR, smoothing). Reimplement ideas in RDR domain/metrics. |
+| **Duration formatting** | `cropster-util-3.6\com\cropster\util\text\` | `DurationFormat.java` — MM:SS (and optional hours/millis). Use for timer and axis labels. |
+| **Chart (axes, series, annotations)** | `roastingintelligence-5.10\org\cropster\roastingintelligence\ui\chart\` | `CurveChart.java` (JFreeChart setup, dual Y-axes, time axis), `AreaAnnotation.java` (phase bands), `FirstCrackAnnotation.java`, `PredictionAnnotation.java` (event/prediction markers). |
+| **Roasting data model** | `roastingintelligence-5.10\org\cropster\roastingintelligence\` | `RoastingModel.java` (channels, curves, events, start/TP/end), `model/` (CurveModel, RorCurveModel). Align RDR's RoastProfile/events with this structure where useful. |
+| **Sensor / data source contract** | `roastingintelligence-5.10\org\cropster\roastingintelligence\sensor\` | `Sensor.java` (open, configure, listeners), `SensorValueConverter.java`. Compare with RDR's `RoastDataSource`. |
+| **Phidget / value converters** | `roastingintelligence-5.10\org\cropster\roastingintelligence\sensor\impl\` | `*Phidget22*.java`, `VoltageRatioToTemperatureConverter`, `DiedrichValueConverter`, `DiedrichVoltageValueConverter` — formulas and conversion patterns. |
+| **Besca (MODBUS)** | `roastingintelligence-5.10\org\cropster\roastingintelligence\measurement\impl\` | `BescaAutoSource.java` — j2mod TCP, registers (e.g. gas 3904, airflow 1003, drum 1001). Use for RDR's Besca driver. |
+| **Diedrich** | Same `measurement\impl\` | `DiedrichAutoSource.java` (EtherNet/IP CIP), `Diedrich*Source*.java`. RDR may use different transport; reuse conversion formulas from `sensor\impl\Diedrich*Converter*.java`. |
+| **Generic MODBUS** | Same `measurement\impl\` | `GenericModbusRtuSource.java`, `GenericModbusTcpSource.java`, `GenericModbusSourceJ2mod.java` — patterns for j2mod. |
+| **JFreeChart in JavaFX** | `jfreechart-fx-1.0.1-cropster\org\jfree\chart\fx\` | `ChartCanvas.java`, `ChartViewer.java`, `interaction\` (zoom, pan, tooltip). Use if switching from custom Canvas to JFreeChart. |
+
+## Artisan reference location
+
+- **Path**: `D:\project\Projects\artisantest-master`
+- Use when the user asks how something is implemented **in Artisan**.
+
+---
+
+## Background (Artisan) ↔ Reference (Cropster)
+
+Функция **«фоновый профиль для сравнения с текущим обжаром»** в Artisan называется **background**, в Cropster — **reference** (reference curve / reference roast).
+
+### Artisan: background
+
+- **Диалог**: `src/artisanlib/background.py` — класс `backgroundDlg`, заголовок "Profile Background".
+- **Загрузка**: кнопка Load → файл `.alog` через `ArtisanOpenFileDialog` → `aw.loadbackground(filename)`.
+- **Реализация загрузки**: `src/artisanlib/main.py` — метод `loadbackground(self, filename)` (около строки 14128). Читает JSON-профиль (timex, temp1, temp2, extratimex, specialevents, timeindex, phases и т.д.), сохраняет в `qmc`: `temp1B`, `temp2B`, `timeB`, `stemp1B`, `stemp2B`, `backgroundEvents`, `timeindexB`, `backgroundpath` и др. Флаг видимости — `qmc.background` (не выставляется при load, только через чекбокс Show).
+- **Выравнивание по времени**: Align по событию (CHARGE, DRY, FCs, FCe, SCs, SCe, DROP, ALL) — `qmc.timealign()`. Сдвиг фона стрелками — `move_background('left'|'right'|'up'|'down')`, шаг из `speedSpinBox`.
+- **Отображение на графике**: чекбоксы Show, Annotations, Events, ET/BT curves, Delta ET/BT, Show Full; данные фона рисуются вместе с текущим профилем (foreground). Playback: воспроизведение событий фона по времени/BT/ET, Playback DROP.
+- **Команда**: `loadBackground(<filepath>)` — загружает .alog как background (event buttons/sliders help).
+
+### Cropster: reference
+
+- **Модель**: `org/cropster/roastingintelligence/model/Reference.java` — сущность с `created`, `lotId` (ссылка на обжар по ID лота).
+- **Данные**: у профиля есть `referenceId` (ID обжара-референса). Референс — это другой обжар (Roast), загружаемый с сервера.
+- **Загрузка**: `org/cropster/roastingintelligence/tasks/DataLoader.java` — для каждого профиля с `profile.getReferenceId()` вызывается `getProcessingRecord(profile.getReferenceId(), …)`, результат кладётся в `data.setReferences(referencesByProfile)` (Map profileId → Roast). Метод `pimpReference(Roast)` дополняет референс (например, комментарии).
+- **UI**:
+  - `com/cropster/roastingintelligence/ui/layout/ReferenceChartPanel.java` — панель с графиком референсного обжара (ChartViewer), метками idTag и имени профиля, кнопкой "Open in browser". Отдельный график, не оверлей на основном.
+  - `com/cropster/roastingintelligence/ui/components/ReferenceInfoPanel.java` — блок с информацией о референсе и ссылкой на мануал (Setting a reference curve).
+- **Отличие от Artisan**: в Cropster референс привязан к профилю и тянется с API; в Artisan background — локальный файл .alog, загружаемый пользователем, с гибким выравниванием и overlay на том же графике.
+
+## Library versions (in `1_extracted\lib`)
+
+Align RDR dependencies when needed: controlsfx 11.1.2, jfreechart 1.5.0, jfreechart-fx 1.0.1-cropster, j2mod 3.1.1, moka7 1.0.1, jSerialComm 2.9.3, phidget22, yoctolib, kotlin-stdlib 1.9.10.
+
+## Usage
+
+- Prefer **reimplementing** logic in Kotlin under RDR packages; do not copy decompiled code as-is.
+- Use reference for: RoR formulas, register addresses, conversion formulas, chart annotation shapes, and data model shape.

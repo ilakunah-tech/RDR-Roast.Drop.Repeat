@@ -4,15 +4,10 @@ import com.rdr.roast.app.AppSettings
 import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.ChartColors
 import com.rdr.roast.app.ConnectionPreset
-import com.rdr.roast.app.DeviceAssignment
 import com.rdr.roast.app.MachineConfig
 import com.rdr.roast.app.MachineType
-import com.rdr.roast.app.ModbusPortConfig
-import com.rdr.roast.app.S7PortConfig
-import com.rdr.roast.app.SerialPortParams
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.app.Transport
-import com.rdr.roast.app.WebSocketPortConfig
 import javafx.fxml.FXML
 import javafx.scene.control.Alert
 import javafx.scene.control.Button
@@ -184,123 +179,6 @@ class SettingsController {
     lateinit var settingsTabPane: TabPane
 
     @FXML
-    lateinit var portsTabPane: TabPane
-
-    @FXML
-    lateinit var chkCurveET: CheckBox
-
-    @FXML
-    lateinit var chkCurveBT: CheckBox
-
-    @FXML
-    lateinit var chkLcdET: CheckBox
-
-    @FXML
-    lateinit var chkLcdBT: CheckBox
-
-    @FXML
-    lateinit var chkSwapLcds: CheckBox
-
-    @FXML
-    lateinit var chkDeviceLogging: CheckBox
-
-    @FXML
-    lateinit var txtEtBtPort: TextField
-
-    @FXML
-    lateinit var txtEtBtBaudRate: TextField
-
-    @FXML
-    lateinit var txtEtBtByteSize: TextField
-
-    @FXML
-    lateinit var txtEtBtParity: TextField
-
-    @FXML
-    lateinit var txtEtBtStopbits: TextField
-
-    @FXML
-    lateinit var txtEtBtTimeout: TextField
-
-    @FXML
-    lateinit var txtModbusPort: TextField
-
-    @FXML
-    lateinit var txtModbusBaud: TextField
-
-    @FXML
-    lateinit var cmbModbusType: ComboBox<String>
-
-    @FXML
-    lateinit var txtModbusHost: TextField
-
-    @FXML
-    lateinit var txtModbusTcpPort: TextField
-
-    @FXML
-    lateinit var chkModbusLittleEndian: CheckBox
-
-    @FXML
-    lateinit var chkModbusOptimize: CheckBox
-
-    @FXML
-    lateinit var chkModbusFetchFullBlocks: CheckBox
-
-    @FXML
-    lateinit var txtS7Host: TextField
-
-    @FXML
-    lateinit var txtS7Port: TextField
-
-    @FXML
-    lateinit var txtS7Rack: TextField
-
-    @FXML
-    lateinit var txtS7Slot: TextField
-
-    @FXML
-    lateinit var chkS7Optimize: CheckBox
-
-    @FXML
-    lateinit var chkS7FetchFullBlocks: CheckBox
-
-    @FXML
-    lateinit var txtWsHost: TextField
-
-    @FXML
-    lateinit var txtWsPort: TextField
-
-    @FXML
-    lateinit var txtWsPath: TextField
-
-    @FXML
-    lateinit var txtWsConnectTimeout: TextField
-
-    @FXML
-    lateinit var txtWsReconnectTimeout: TextField
-
-    @FXML
-    lateinit var txtWsRequestTimeout: TextField
-
-    @FXML
-    lateinit var txtWsDataRequest: TextField
-
-    @FXML
-    lateinit var txtWsChargeMessage: TextField
-
-    @FXML
-    lateinit var txtWsDropMessage: TextField
-
-    @FXML
-    lateinit var chkWsStartOnCharge: CheckBox
-
-    @FXML
-    lateinit var chkWsOffOnDrop: CheckBox
-
-    @FXML
-    lateinit var chkWsCompression: CheckBox
-
-    @FXML
     lateinit var colorLiveBt: ColorPicker
 
     @FXML
@@ -330,67 +208,8 @@ class SettingsController {
     @FXML
     fun initialize() {
         settingsTabPane.tabClosingPolicy = TabPane.TabClosingPolicy.UNAVAILABLE
-        portsTabPane.tabClosingPolicy = TabPane.TabClosingPolicy.UNAVAILABLE
 
         val settings = SettingsManager.load()
-
-        // Device Assignment
-        val da = settings.deviceAssignment
-        chkCurveET.isSelected = da.curveET
-        chkCurveBT.isSelected = da.curveBT
-        chkLcdET.isSelected = da.lcdET
-        chkLcdBT.isSelected = da.lcdBT
-        chkSwapLcds.isSelected = da.swapLcds
-        chkDeviceLogging.isSelected = da.logging
-
-        // Ports → ET/BT
-        val sp = settings.serialPortParams
-        txtEtBtPort.text = sp.port
-        txtEtBtBaudRate.text = sp.baudRate.toString()
-        txtEtBtByteSize.text = sp.byteSize.toString()
-        txtEtBtParity.text = sp.parity
-        txtEtBtStopbits.text = sp.stopbits.toString()
-        txtEtBtTimeout.text = sp.timeout.toString()
-
-        // Ports → Modbus
-        val modbus = settings.modbusPortConfig
-        txtModbusPort.text = modbus.serial.port
-        txtModbusBaud.text = modbus.serial.baudRate.toString()
-        cmbModbusType.items.setAll("Serial RTU", "TCP", "UDP")
-        cmbModbusType.value = when (modbus.type) {
-            3 -> "TCP"
-            4 -> "UDP"
-            else -> "Serial RTU"
-        }
-        txtModbusHost.text = modbus.host
-        txtModbusTcpPort.text = modbus.port.toString()
-        chkModbusLittleEndian.isSelected = modbus.littleEndian
-        chkModbusOptimize.isSelected = modbus.optimize
-        chkModbusFetchFullBlocks.isSelected = modbus.fetchFullBlocks
-
-        // Ports → S7
-        val s7 = settings.s7PortConfig
-        txtS7Host.text = s7.host
-        txtS7Port.text = s7.port.toString()
-        txtS7Rack.text = s7.rack.toString()
-        txtS7Slot.text = s7.slot.toString()
-        chkS7Optimize.isSelected = s7.optimize
-        chkS7FetchFullBlocks.isSelected = s7.fetchFullBlocks
-
-        // Ports → WebSocket
-        val ws = settings.wsPortConfig
-        txtWsHost.text = ws.host
-        txtWsPort.text = ws.port.toString()
-        txtWsPath.text = ws.path
-        txtWsConnectTimeout.text = ws.connectTimeout.toString()
-        txtWsReconnectTimeout.text = ws.reconnectInterval.toString()
-        txtWsRequestTimeout.text = ws.requestTimeout.toString()
-        txtWsDataRequest.text = ws.dataRequestCommand
-        txtWsChargeMessage.text = ws.chargeMessage
-        txtWsDropMessage.text = ws.dropMessage
-        chkWsStartOnCharge.isSelected = ws.startOnCharge
-        chkWsOffOnDrop.isSelected = ws.offOnDrop
-        chkWsCompression.isSelected = ws.compression
 
         cmbSource.items.setAll("Simulator", "Besca", "Diedrich")
         cmbSource.value = when (settings.machineConfig.machineType) {
@@ -559,77 +378,13 @@ class SettingsController {
                 tcpPort = tcpPort,
                 port = port,
                 baudRate = baudRate,
-                byteSize = txtEtBtByteSize.text.toIntOrNull() ?: 8,
-                parity = txtEtBtParity.text?.trim()?.takeIf { it.isNotBlank() } ?: "N",
-                stopbits = txtEtBtStopbits.text.toIntOrNull() ?: 1,
-                timeout = txtEtBtTimeout.text.toDoubleOrNull() ?: 1.0,
                 slaveId = slaveId,
                 phidgetEtChannel = phidgetEt,
                 phidgetBtChannel = phidgetBt,
                 pollingIntervalMs = pollingIntervalMs
             )
-            val deviceAssignment = DeviceAssignment(
-                curveET = chkCurveET.isSelected,
-                curveBT = chkCurveBT.isSelected,
-                lcdET = chkLcdET.isSelected,
-                lcdBT = chkLcdBT.isSelected,
-                swapLcds = chkSwapLcds.isSelected,
-                logging = chkDeviceLogging.isSelected
-            )
-            val serialPortParams = SerialPortParams(
-                port = txtEtBtPort.text?.trim()?.ifBlank { null } ?: "COM4",
-                baudRate = txtEtBtBaudRate.text.toIntOrNull() ?: 115200,
-                byteSize = txtEtBtByteSize.text.toIntOrNull() ?: 8,
-                parity = txtEtBtParity.text?.trim()?.ifBlank { null } ?: "N",
-                stopbits = txtEtBtStopbits.text.toIntOrNull() ?: 1,
-                timeout = txtEtBtTimeout.text.toDoubleOrNull() ?: 1.0
-            )
-            val modbusType = when (cmbModbusType.value) {
-                "TCP" -> 3
-                "UDP" -> 4
-                else -> 0
-            }
-            val modbusPortConfig = ModbusPortConfig(
-                serial = SerialPortParams(
-                    port = txtModbusPort.text?.trim()?.ifBlank { null } ?: "COM5",
-                    baudRate = txtModbusBaud.text.toIntOrNull() ?: 9600
-                ),
-                type = modbusType,
-                host = txtModbusHost.text?.trim()?.ifBlank { null } ?: "127.0.0.1",
-                port = txtModbusTcpPort.text.toIntOrNull() ?: 502,
-                littleEndian = chkModbusLittleEndian.isSelected,
-                optimize = chkModbusOptimize.isSelected,
-                fetchFullBlocks = chkModbusFetchFullBlocks.isSelected
-            )
-            val s7PortConfig = S7PortConfig(
-                host = txtS7Host.text?.trim()?.ifBlank { null } ?: "127.0.0.1",
-                port = txtS7Port.text.toIntOrNull() ?: 102,
-                rack = txtS7Rack.text.toIntOrNull() ?: 0,
-                slot = txtS7Slot.text.toIntOrNull() ?: 0,
-                optimize = chkS7Optimize.isSelected,
-                fetchFullBlocks = chkS7FetchFullBlocks.isSelected
-            )
-            val wsPortConfig = WebSocketPortConfig(
-                host = txtWsHost.text?.trim()?.ifBlank { null } ?: "127.0.0.1",
-                port = txtWsPort.text.toIntOrNull() ?: 80,
-                path = txtWsPath.text?.trim()?.ifBlank { null } ?: "WebSocket",
-                connectTimeout = txtWsConnectTimeout.text.toDoubleOrNull() ?: 4.0,
-                reconnectInterval = txtWsReconnectTimeout.text.toDoubleOrNull() ?: 2.0,
-                requestTimeout = txtWsRequestTimeout.text.toDoubleOrNull() ?: 0.5,
-                dataRequestCommand = txtWsDataRequest.text?.trim()?.ifBlank { null } ?: "getData",
-                chargeMessage = txtWsChargeMessage.text?.trim()?.ifBlank { null } ?: "startRoasting",
-                dropMessage = txtWsDropMessage.text?.trim()?.ifBlank { null } ?: "endRoasting",
-                startOnCharge = chkWsStartOnCharge.isSelected,
-                offOnDrop = chkWsOffOnDrop.isSelected,
-                compression = chkWsCompression.isSelected
-            )
             val newSettings = AppSettings(
                 machineConfig = mc,
-                deviceAssignment = deviceAssignment,
-                serialPortParams = serialPortParams,
-                modbusPortConfig = modbusPortConfig,
-                s7PortConfig = s7PortConfig,
-                wsPortConfig = wsPortConfig,
                 unit = unit,
                 savePath = savePath,
                 serverBaseUrl = serverBaseUrl,

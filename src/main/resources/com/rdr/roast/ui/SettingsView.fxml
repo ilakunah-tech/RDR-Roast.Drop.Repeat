@@ -28,28 +28,13 @@
     </fx:define>
 
     <TabPane fx:id="settingsTabPane" VBox.vgrow="ALWAYS">
-        <Tab text="Устройство">
+        <Tab text="Подключение">
             <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;">
                 <VBox spacing="12" style="-fx-background-color: transparent;">
-                    <Label text="Источник данных (Meter)"
+                    <Label text="Источник данных"
                            style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
                     <ComboBox fx:id="cmbSource" prefWidth="280"
                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-
-                    <Label text="Кривые" style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="16">
-                        <CheckBox fx:id="chkCurveET" text="ET" style="-fx-text-fill: #333333;"/>
-                        <CheckBox fx:id="chkCurveBT" text="BT" style="-fx-text-fill: #333333;"/>
-                    </HBox>
-
-                    <Label text="LCD" style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="16">
-                        <CheckBox fx:id="chkLcdET" text="ET" style="-fx-text-fill: #333333;"/>
-                        <CheckBox fx:id="chkLcdBT" text="BT" style="-fx-text-fill: #333333;"/>
-                        <CheckBox fx:id="chkSwapLcds" text="Swap" style="-fx-text-fill: #333333;"/>
-                    </HBox>
-
-                    <CheckBox fx:id="chkDeviceLogging" text="Logging" style="-fx-text-fill: #333333;"/>
 
                     <Label text="Профиль подключения"
                            style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
@@ -144,152 +129,6 @@
                                style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
                 </VBox>
             </ScrollPane>
-        </Tab>
-
-        <Tab text="Порты">
-            <TabPane fx:id="portsTabPane">
-                <Tab text="ET/BT">
-                    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
-                        <VBox spacing="10" style="-fx-padding: 8; -fx-background-color: transparent;">
-                            <Label text="Параметры для устройств не-Modbus (COM)" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                            <GridPane hgap="12" vgap="6">
-                                <columnConstraints>
-                                    <ColumnConstraints minWidth="90" prefWidth="100"/>
-                                    <ColumnConstraints minWidth="120" prefWidth="200"/>
-                                </columnConstraints>
-                                <Label text="Comm Port" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtEtBtPort" promptText="COM4" prefWidth="180" GridPane.columnIndex="1" GridPane.rowIndex="0"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtEtBtBaudRate" promptText="115200" prefWidth="180" GridPane.columnIndex="1" GridPane.rowIndex="1"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Byte Size" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtEtBtByteSize" promptText="8" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="2"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Parity" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtEtBtParity" promptText="N" prefWidth="60" GridPane.columnIndex="1" GridPane.rowIndex="3"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Stopbits" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtEtBtStopbits" promptText="1" prefWidth="60" GridPane.columnIndex="1" GridPane.rowIndex="4"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Timeout" GridPane.columnIndex="0" GridPane.rowIndex="5" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtEtBtTimeout" promptText="1.0" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="5"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                            </GridPane>
-                        </VBox>
-                    </ScrollPane>
-                </Tab>
-                <Tab text="Modbus">
-                    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
-                        <VBox spacing="10" style="-fx-padding: 8; -fx-background-color: transparent;">
-                            <Label text="Serial" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                            <GridPane hgap="8" vgap="4">
-                                <columnConstraints><ColumnConstraints minWidth="70"/><ColumnConstraints minWidth="100"/></columnConstraints>
-                                <Label text="Comm Port" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtModbusPort" promptText="COM5" prefWidth="120" GridPane.columnIndex="1" GridPane.rowIndex="0"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtModbusBaud" promptText="9600" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="1"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                            </GridPane>
-                            <Label text="TCP/UDP" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                            <GridPane hgap="8" vgap="4">
-                                <columnConstraints><ColumnConstraints minWidth="70"/><ColumnConstraints minWidth="120"/></columnConstraints>
-                                <Label text="Type" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
-                                <ComboBox fx:id="cmbModbusType" prefWidth="120" GridPane.columnIndex="1" GridPane.rowIndex="0"
-                                          style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtModbusHost" promptText="10.0.0.9" prefWidth="140" GridPane.columnIndex="1" GridPane.rowIndex="1"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtModbusTcpPort" promptText="502" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="2"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                            </GridPane>
-                            <HBox spacing="8">
-                                <CheckBox fx:id="chkModbusLittleEndian" text="little-endian" style="-fx-text-fill: #333333;"/>
-                                <CheckBox fx:id="chkModbusOptimize" text="optimize" style="-fx-text-fill: #333333;"/>
-                                <CheckBox fx:id="chkModbusFetchFullBlocks" text="fetch full blocks" style="-fx-text-fill: #333333;"/>
-                            </HBox>
-                        </VBox>
-                    </ScrollPane>
-                </Tab>
-                <Tab text="S7">
-                    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
-                        <VBox spacing="10" style="-fx-padding: 8; -fx-background-color: transparent;">
-                            <GridPane hgap="8" vgap="4">
-                                <columnConstraints><ColumnConstraints minWidth="60"/><ColumnConstraints minWidth="120"/></columnConstraints>
-                                <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtS7Host" promptText="127.0.0.1" prefWidth="140" GridPane.columnIndex="1" GridPane.rowIndex="0"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtS7Port" promptText="102" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="1"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Rack" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtS7Rack" promptText="0" prefWidth="60" GridPane.columnIndex="1" GridPane.rowIndex="2"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Slot" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtS7Slot" promptText="0" prefWidth="60" GridPane.columnIndex="1" GridPane.rowIndex="3"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                            </GridPane>
-                            <HBox spacing="8">
-                                <CheckBox fx:id="chkS7Optimize" text="optimize" style="-fx-text-fill: #333333;"/>
-                                <CheckBox fx:id="chkS7FetchFullBlocks" text="fetch full blocks" style="-fx-text-fill: #333333;"/>
-                            </HBox>
-                        </VBox>
-                    </ScrollPane>
-                </Tab>
-                <Tab text="WebSocket">
-                    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
-                        <VBox spacing="10" style="-fx-padding: 8; -fx-background-color: transparent;">
-                            <Label text="Machine" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                            <GridPane hgap="8" vgap="4">
-                                <columnConstraints><ColumnConstraints minWidth="50"/><ColumnConstraints minWidth="160"/></columnConstraints>
-                                <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtWsHost" promptText="127.0.0.1" prefWidth="160" GridPane.columnIndex="1" GridPane.rowIndex="0"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtWsPort" promptText="80" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="1"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Path" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
-                                <TextField fx:id="txtWsPath" promptText="WebSocket" prefWidth="160" GridPane.columnIndex="1" GridPane.rowIndex="2"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                            </GridPane>
-                            <Label text="Timeout (sec)" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                            <HBox spacing="12">
-                                <Label text="Connect" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                                <TextField fx:id="txtWsConnectTimeout" promptText="4.0" prefWidth="50"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Reconnect" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                                <TextField fx:id="txtWsReconnectTimeout" promptText="2.0" prefWidth="50"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="Request" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                                <TextField fx:id="txtWsRequestTimeout" promptText="0.5" prefWidth="50"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                            </HBox>
-                            <Label text="Commands" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                            <HBox spacing="8">
-                                <Label text="Data request" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                                <TextField fx:id="txtWsDataRequest" promptText="getData" prefWidth="120"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                            </HBox>
-                            <Label text="Messages" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                            <HBox spacing="8">
-                                <Label text="CHARGE" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                                <TextField fx:id="txtWsChargeMessage" promptText="startRoasting" prefWidth="140"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                                <Label text="DROP" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                                <TextField fx:id="txtWsDropMessage" promptText="endRoasting" prefWidth="120"
-                                           style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                            </HBox>
-                            <HBox spacing="8">
-                                <CheckBox fx:id="chkWsStartOnCharge" text="START on CHARGE" style="-fx-text-fill: #333333;"/>
-                                <CheckBox fx:id="chkWsOffOnDrop" text="OFF on DROP" style="-fx-text-fill: #333333;"/>
-                            </HBox>
-                            <CheckBox fx:id="chkWsCompression" text="compression" style="-fx-text-fill: #333333;"/>
-                        </VBox>
-                    </ScrollPane>
-                </Tab>
-            </TabPane>
         </Tab>
 
         <Tab text="График">
