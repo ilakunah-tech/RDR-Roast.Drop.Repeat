@@ -86,10 +86,10 @@ class MainController {
 
     @FXML
     fun initialize() {
-        // Bind CurveModels to chart series once
+        // Bind CurveModels to chart series once; apply saved chart settings
         curveChart.bindDefaultCurves(btSmooth, etSmooth, rorBt, rorEt)
-        curveChart.applyChartColors(SettingsManager.load().chartColors)
-        curveChart.applyChartConfig(SettingsManager.load().chartConfig)
+        val settings = SettingsManager.load()
+        curveChart.applySettings(settings.chartColors, settings.chartConfig)
 
         // Add ChartPanelFx to the container and stretch it to fill
         chartPanel.prefWidthProperty().bind(chartContainer.widthProperty())
@@ -563,6 +563,9 @@ class MainController {
                 recorder.dataSource = DataSourceFactory.create(newSettings.machineConfig)
                 recorder.connect()
             }
+            // Re-apply chart colors and config from disk (so Settings changes apply to the chart)
+            val updated = SettingsManager.load()
+            curveChart.applySettings(updated.chartColors, updated.chartConfig)
         }
     }
 }

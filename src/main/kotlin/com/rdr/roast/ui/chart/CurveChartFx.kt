@@ -2,6 +2,7 @@ package com.rdr.roast.ui.chart
 
 import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.ChartColors
+import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.curves.CurveModel
@@ -137,11 +138,32 @@ class CurveChartFx : CurveModelListener {
     private val phaseStripAnnotations = mutableListOf<XYAnnotation>()
 
     init {
-        // ── X axis — fixed 0..TIME_RANGE_MS, MM:SS labels ─────────────────────
+        val settings = SettingsManager.load()
+        val colors = settings.chartColors
+        val config = settings.chartConfig
+        lastChartConfig = config
+
+        val liveBtColor = Color.decode(colors.liveBt)
+        val liveEtColor = Color.decode(colors.liveEt)
+        val liveRorBtColor = Color.decode(colors.liveRorBt)
+        val liveRorEtColor = Color.decode(colors.liveRorEt)
+        val refAlpha = colors.refAlpha.coerceIn(0, 255)
+        fun withAlpha(hex: String): Color {
+            val c = Color.decode(hex)
+            return Color((c.red * 255).toInt().coerceIn(0, 255), (c.green * 255).toInt().coerceIn(0, 255), (c.blue * 255).toInt().coerceIn(0, 255), refAlpha)
+        }
+        val refBtColor = withAlpha(colors.refBt)
+        val refEtColor = withAlpha(colors.refEt)
+        val refRorBtColor = withAlpha(colors.refRorBt)
+        val refRorEtColor = withAlpha(colors.refRorEt)
+
+        val timeRangeMs = config.timeRangeMin * 60 * 1000.0
+
+        // ── X axis — fixed 0..timeRangeMs, MM:SS labels ─────────────────────
         val timeAxis = NumberAxis("Time").apply {
             isAxisLineVisible = false
             isAutoRange       = false
-            setRange(0.0, TIME_RANGE_MS)
+            setRange(0.0, timeRangeMs)
             standardTickUnits = buildTimeTickUnits()
             tickLabelFont     = CHART_FONT
             labelFont         = CHART_FONT
@@ -151,7 +173,7 @@ class CurveChartFx : CurveModelListener {
         val tempAxis = NumberAxis("°C").apply {
             isAxisLineVisible = false
             isAutoRange       = false
-            setRange(TEMP_MIN, TEMP_MAX)
+            setRange(config.tempMin, config.tempMax)
             tickLabelFont     = CHART_FONT
             labelFont         = CHART_FONT
         }
@@ -160,44 +182,51 @@ class CurveChartFx : CurveModelListener {
         val rorAxis = NumberAxis("°C/min").apply {
             isAxisLineVisible = false
             isAutoRange       = false
-            setRange(MIN_ROR, MAX_ROR)
+            setRange(config.rorMin, config.rorMax)
             standardTickUnits = buildRorTickUnits()
             tickLabelFont     = CHART_FONT
             labelFont         = CHART_FONT
         }
 
+        val strokeBt = BasicStroke(config.btLineWidth)
+        val strokeEt = BasicStroke(config.etLineWidth)
+        val strokeRor = BasicStroke(config.rorLineWidth)
+        val strokeRef = BasicStroke(config.refLineWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f, floatArrayOf(8f, 4f), 0f)
+        val bgColor = Color.decode(config.backgroundColor)
+        val gridColor = Color.decode(config.gridColor)
+
         // ── Renderers ─────────────────────────────────────────────────────────
-        val btRenderer = XYLineAndShapeRenderer(true, false).apply {
-            setSeriesPaint(0, COLOR_BT)
-            setSeriesStroke(0, STROKE_CURVE)
+        val btRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, liveBtColor)
+            it.setSeriesStroke(0, strokeBt)
         }
-        val etRenderer = XYLineAndShapeRenderer(true, false).apply {
-            setSeriesPaint(0, COLOR_ET)
-            setSeriesStroke(0, STROKE_CURVE)
+        val etRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, liveEtColor)
+            it.setSeriesStroke(0, strokeEt)
         }
-        val rorBtRenderer = XYLineAndShapeRenderer(true, false).apply {
-            setSeriesPaint(0, COLOR_ROR_BT)
-            setSeriesStroke(0, STROKE_ROR)
+        val rorBtRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, liveRorBtColor)
+            it.setSeriesStroke(0, strokeRor)
         }
-        val rorEtRenderer = XYLineAndShapeRenderer(true, false).apply {
-            setSeriesPaint(0, COLOR_ROR_ET)
-            setSeriesStroke(0, STROKE_ROR)
+        val rorEtRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, liveRorEtColor)
+            it.setSeriesStroke(0, strokeRor)
         }
-        val refBtRenderer = XYLineAndShapeRenderer(true, false).apply {
-            setSeriesPaint(0, COLOR_REF_BT)
-            setSeriesStroke(0, STROKE_REF)
+        val refBtRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, refBtColor)
+            it.setSeriesStroke(0, strokeRef)
         }
-        val refEtRenderer = XYLineAndShapeRenderer(true, false).apply {
-            setSeriesPaint(0, COLOR_REF_ET)
-            setSeriesStroke(0, STROKE_REF)
+        val refEtRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, refEtColor)
+            it.setSeriesStroke(0, strokeRef)
         }
-        val refRorBtRenderer = XYLineAndShapeRenderer(true, false).apply {
-            setSeriesPaint(0, COLOR_REF_ROR_BT)
-            setSeriesStroke(0, STROKE_REF)
+        val refRorBtRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, refRorBtColor)
+            it.setSeriesStroke(0, strokeRef)
         }
-        val refRorEtRenderer = XYLineAndShapeRenderer(true, false).apply {
-            setSeriesPaint(0, COLOR_REF_ROR_ET)
-            setSeriesStroke(0, STROKE_REF)
+        val refRorEtRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, refRorEtColor)
+            it.setSeriesStroke(0, strokeRef)
         }
 
         // ── Single XYPlot with 8 datasets (4 live + 2 ref temp + 2 ref RoR) ──
@@ -245,9 +274,11 @@ class CurveChartFx : CurveModelListener {
             mapDatasetToRangeAxis(7, 1)
 
             isOutlineVisible = false
-            setBackgroundPaint(Color.WHITE)
-            setDomainGridlinePaint(Color.LIGHT_GRAY)
-            setRangeGridlinePaint(Color.LIGHT_GRAY)
+            setBackgroundPaint(bgColor)
+            setDomainGridlinePaint(gridColor)
+            setRangeGridlinePaint(gridColor)
+            isDomainGridlinesVisible = config.showGrid
+            isRangeGridlinesVisible = config.showGrid
             insets = RectangleInsets(15.0, 5.0, 5.0, 5.0)
         }
 
@@ -255,7 +286,7 @@ class CurveChartFx : CurveModelListener {
             setTextAntiAlias(true)
             setAntiAlias(true)
             removeLegend()
-            setBackgroundPaint(Color.WHITE)
+            setBackgroundPaint(bgColor)
         }
     }
 
@@ -656,7 +687,14 @@ class CurveChartFx : CurveModelListener {
             plot.setRangeGridlinePaint(Color.decode(config.gridColor))
             plot.isDomainGridlinesVisible = config.showGrid
             plot.isRangeGridlinesVisible = config.showGrid
+            chart.fireChartChanged()
         }
+    }
+
+    /** Apply chart colors and config from settings; call after loading or saving settings. */
+    fun applySettings(colors: ChartColors, config: ChartConfig) {
+        applyChartColors(colors)
+        applyChartConfig(config)
     }
 
     /** Reset X axis to the default 0..15 min window (or saved ChartConfig). Called by toolbar Reset button. */
