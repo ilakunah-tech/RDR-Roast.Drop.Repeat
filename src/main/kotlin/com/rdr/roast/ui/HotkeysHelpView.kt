@@ -21,15 +21,15 @@ object HotkeysHelpView {
 
     private fun rows(): List<Row> = listOf(
         Row("$modifier+Enter", "Start (Connect / Start / New roast)"),
-        Row("Space", "Start when idle; Drop when recording"),
-        Row("C", "Charge — mark charge at current time"),
-        Row("D", "Drop — mark drop and finish roast"),
-        Row("$modifier+Esc", "Abort roast (while recording)"),
-        Row("F1", "Show this shortcuts help"),
+        Row("Space", "Start при простое; Drop при записи"),
+        Row("C", "Charge — отметить charge в текущее время"),
+        Row("D", "Drop — отметить drop и завершить обжарку"),
+        Row("$modifier+Esc", "Прервать обжарку (во время записи)"),
+        Row("F1", "Показать эту справку"),
     )
 
     fun createContent(): VBox {
-        val title = Label("Keyboard shortcuts").apply {
+        val title = Label("Клавиатурные сокращения").apply {
             font = Font.font(null, FontWeight.BOLD, 16.0)
         }
         val grid = GridPane().apply {

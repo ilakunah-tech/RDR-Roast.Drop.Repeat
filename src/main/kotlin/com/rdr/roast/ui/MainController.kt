@@ -551,8 +551,8 @@ class MainController {
             val root = loader.load<Parent>()
             val settingsController = loader.getController<SettingsController>()
             val stage = Stage().apply {
-                title = "Settings"
-                scene = Scene(root, 520.0, 620.0)
+                title = "Настройки"
+                scene = Scene(root, 520.0, 500.0)
                 initModality(Modality.APPLICATION_MODAL)
                 initOwner(btnSettings.scene?.window)
             }

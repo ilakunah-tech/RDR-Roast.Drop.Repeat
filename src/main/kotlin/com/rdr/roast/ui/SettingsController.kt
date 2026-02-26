@@ -12,12 +12,16 @@ import javafx.fxml.FXML
 import javafx.scene.control.Alert
 import javafx.scene.control.Button
 import javafx.scene.control.CheckBox
+import javafx.scene.control.ColorPicker
 import javafx.scene.control.ComboBox
 import javafx.scene.control.RadioButton
+import javafx.scene.control.Slider
+import javafx.scene.control.TabPane
 import javafx.scene.control.TextField
 import javafx.scene.control.TextInputDialog
 import javafx.scene.control.ToggleGroup
 import javafx.scene.layout.VBox
+import javafx.scene.paint.Color
 import javafx.stage.DirectoryChooser
 import javafx.stage.Stage
 
@@ -172,7 +176,39 @@ class SettingsController {
     lateinit var txtChartGridColor: TextField
 
     @FXML
+    lateinit var settingsTabPane: TabPane
+
+    @FXML
+    lateinit var colorLiveBt: ColorPicker
+
+    @FXML
+    lateinit var colorLiveEt: ColorPicker
+
+    @FXML
+    lateinit var colorLiveRorBt: ColorPicker
+
+    @FXML
+    lateinit var colorLiveRorEt: ColorPicker
+
+    @FXML
+    lateinit var colorRefBt: ColorPicker
+
+    @FXML
+    lateinit var colorRefEt: ColorPicker
+
+    @FXML
+    lateinit var sldRefAlpha: Slider
+
+    @FXML
+    lateinit var txtColorLiveRorBt: TextField
+
+    @FXML
+    lateinit var txtColorLiveRorEt: TextField
+
+    @FXML
     fun initialize() {
+        settingsTabPane.tabClosingPolicy = TabPane.TabClosingPolicy.UNAVAILABLE
+
         val settings = SettingsManager.load()
 
         cmbSource.items.setAll("Simulator", "Besca", "Diedrich")
@@ -205,9 +241,28 @@ class SettingsController {
         val colors = settings.chartColors
         txtColorLiveBt.text = colors.liveBt
         txtColorLiveEt.text = colors.liveEt
+        txtColorLiveRorBt.text = colors.liveRorBt
+        txtColorLiveRorEt.text = colors.liveRorEt
         txtColorRefBt.text = colors.refBt
         txtColorRefEt.text = colors.refEt
         txtColorRefAlpha.text = colors.refAlpha.toString()
+        sldRefAlpha.value = colors.refAlpha.toDouble()
+        bindColorPickerToHex(colorLiveBt, txtColorLiveBt)
+        bindColorPickerToHex(colorLiveEt, txtColorLiveEt)
+        bindColorPickerToHex(colorLiveRorBt, txtColorLiveRorBt)
+        bindColorPickerToHex(colorLiveRorEt, txtColorLiveRorEt)
+        bindColorPickerToHex(colorRefBt, txtColorRefBt)
+        bindColorPickerToHex(colorRefEt, txtColorRefEt)
+        setColorPickerFromHex(colorLiveBt, colors.liveBt)
+        setColorPickerFromHex(colorLiveEt, colors.liveEt)
+        setColorPickerFromHex(colorLiveRorBt, colors.liveRorBt)
+        setColorPickerFromHex(colorLiveRorEt, colors.liveRorEt)
+        setColorPickerFromHex(colorRefBt, colors.refBt)
+        setColorPickerFromHex(colorRefEt, colors.refEt)
+        sldRefAlpha.valueProperty().addListener { _, _, v -> txtColorRefAlpha.text = v.toInt().toString() }
+        txtColorRefAlpha.textProperty().addListener { _, _, s ->
+            s.toIntOrNull()?.coerceIn(0, 255)?.let { sldRefAlpha.value = it.toDouble() }
+        }
         val config = settings.chartConfig
         txtChartTempMin.text = config.tempMin.toString()
         txtChartTempMax.text = config.tempMax.toString()
@@ -226,9 +281,18 @@ class SettingsController {
             val d = ChartColors()
             txtColorLiveBt.text = d.liveBt
             txtColorLiveEt.text = d.liveEt
+            txtColorLiveRorBt.text = d.liveRorBt
+            txtColorLiveRorEt.text = d.liveRorEt
             txtColorRefBt.text = d.refBt
             txtColorRefEt.text = d.refEt
             txtColorRefAlpha.text = d.refAlpha.toString()
+            sldRefAlpha.value = d.refAlpha.toDouble()
+            setColorPickerFromHex(colorLiveBt, d.liveBt)
+            setColorPickerFromHex(colorLiveEt, d.liveEt)
+            setColorPickerFromHex(colorLiveRorBt, d.liveRorBt)
+            setColorPickerFromHex(colorLiveRorEt, d.liveRorEt)
+            setColorPickerFromHex(colorRefBt, d.refBt)
+            setColorPickerFromHex(colorRefEt, d.refEt)
         }
 
         updatePortFieldsVisibility()
@@ -251,7 +315,7 @@ class SettingsController {
 
         btnBrowse.setOnAction {
             val chooser = DirectoryChooser()
-            chooser.title = "Select Save Directory"
+            chooser.title = "Выберите папку сохранения"
             val dir = chooser.showDialog((btnBrowse.scene?.window) as? Stage)
             dir?.let { txtSavePath.text = it.absolutePath }
         }
@@ -279,16 +343,17 @@ class SettingsController {
             val serverBaseUrl = txtServerBaseUrl.text?.trim() ?: ""
             val serverToken = txtServerToken.text?.trim() ?: ""
 
+            val def = ChartColors()
             val chartColors = ChartColors(
-                liveBt = txtColorLiveBt.text?.trim()?.takeIf { it.isNotBlank() } ?: ChartColors().liveBt,
-                liveEt = txtColorLiveEt.text?.trim()?.takeIf { it.isNotBlank() } ?: ChartColors().liveEt,
-                liveRorBt = ChartColors().liveRorBt,
-                liveRorEt = ChartColors().liveRorEt,
-                refBt = txtColorRefBt.text?.trim()?.takeIf { it.isNotBlank() } ?: ChartColors().refBt,
-                refEt = txtColorRefEt.text?.trim()?.takeIf { it.isNotBlank() } ?: ChartColors().refEt,
-                refRorBt = ChartColors().refRorBt,
-                refRorEt = ChartColors().refRorEt,
-                refAlpha = txtColorRefAlpha.text.toIntOrNull()?.coerceIn(0, 255) ?: ChartColors().refAlpha
+                liveBt = txtColorLiveBt.text?.trim()?.takeIf { it.isNotBlank() } ?: def.liveBt,
+                liveEt = txtColorLiveEt.text?.trim()?.takeIf { it.isNotBlank() } ?: def.liveEt,
+                liveRorBt = txtColorLiveRorBt.text?.trim()?.takeIf { it.isNotBlank() } ?: def.liveRorBt,
+                liveRorEt = txtColorLiveRorEt.text?.trim()?.takeIf { it.isNotBlank() } ?: def.liveRorEt,
+                refBt = txtColorRefBt.text?.trim()?.takeIf { it.isNotBlank() } ?: def.refBt,
+                refEt = txtColorRefEt.text?.trim()?.takeIf { it.isNotBlank() } ?: def.refEt,
+                refRorBt = def.refRorBt,
+                refRorEt = def.refRorEt,
+                refAlpha = sldRefAlpha.value.toInt().coerceIn(0, 255)
             )
             val chartConfig = ChartConfig(
                 tempMin = txtChartTempMin.text.toDoubleOrNull() ?: ChartConfig().tempMin,
@@ -419,9 +484,9 @@ class SettingsController {
 
     private fun saveCurrentAsPreset() {
         val dialog = TextInputDialog("")
-        dialog.title = "Save preset"
-        dialog.headerText = "Enter a name for this connection preset"
-        dialog.contentText = "Name:"
+        dialog.title = "Сохранить профиль"
+        dialog.headerText = "Введите имя профиля подключения"
+        dialog.contentText = "Имя:"
         val name = dialog.showAndWait().orElse(null)?.trim() ?: return
         if (name.isBlank()) return
         val settings = SettingsManager.load()
@@ -455,9 +520,31 @@ class SettingsController {
         refreshPresetList()
         cmbPreset.value = name
         Alert(Alert.AlertType.INFORMATION).apply {
-            this.title = "Preset saved"
-            headerText = "Preset \"$name\" saved."
+            this.title = "Профиль сохранён"
+            headerText = "Профиль «$name» сохранён."
         }.showAndWait()
+    }
+
+    private fun setColorPickerFromHex(picker: ColorPicker, hex: String?) {
+        if (!hex.isNullOrBlank()) {
+            try {
+                picker.value = Color.web(hex.trim())
+            } catch (_: Exception) { }
+        }
+    }
+
+    private fun colorToHex(c: Color): String {
+        return String.format("#%02x%02x%02x",
+            (c.red * 255).toInt().coerceIn(0, 255),
+            (c.green * 255).toInt().coerceIn(0, 255),
+            (c.blue * 255).toInt().coerceIn(0, 255))
+    }
+
+    private fun bindColorPickerToHex(picker: ColorPicker, field: TextField) {
+        picker.valueProperty().addListener { _, _, c -> field.text = colorToHex(c) }
+        field.focusedProperty().addListener { _, _, focused ->
+            if (!focused) field.text?.trim()?.takeIf { it.isNotBlank() }?.let { setColorPickerFromHex(picker, it) }
+        }
     }
 
     private fun closeWindow() {
