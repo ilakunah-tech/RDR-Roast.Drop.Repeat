@@ -1,5 +1,7 @@
 package com.rdr.roast.domain
 
+import kotlin.jvm.Synchronized
+
 /**
  * Temperature unit for roast profiles and samples.
  */
@@ -67,6 +69,7 @@ data class RoastProfile(
     val events: MutableList<RoastEvent> = mutableListOf(),
     val mode: TemperatureUnit = TemperatureUnit.CELSIUS
 ) {
+    @Synchronized
     fun addSample(sample: TemperatureSample) {
         timex.add(sample.timeSec)
         temp1.add(sample.bt)
