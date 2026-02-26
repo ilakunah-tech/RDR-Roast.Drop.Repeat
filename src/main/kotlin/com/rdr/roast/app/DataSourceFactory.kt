@@ -13,7 +13,7 @@ import com.rdr.roast.driver.simulator.SimulatorSource
 object DataSourceFactory {
 
     fun create(config: MachineConfig): RoastDataSource = when (config.machineType) {
-        MachineType.SIMULATOR -> SimulatorSource()
+        MachineType.SIMULATOR -> SimulatorSource(config)
         MachineType.BESCA -> when (config.transport) {
             Transport.TCP -> BescaModbusTcpSource(config)
             else -> BescaModbusSource(config)

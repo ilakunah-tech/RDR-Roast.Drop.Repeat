@@ -24,9 +24,9 @@
             <Region HBox.hgrow="ALWAYS"/>
             <Button fx:id="btnReference" text="Reference"
                     style="-fx-font-size: 12; -fx-background-color: #e8e8e8; -fx-text-fill: #555555; -fx-cursor: hand; -fx-background-radius: 4;"/>
-            <Button fx:id="btnShortcuts" text="⌨ Shortcuts (F1)"
+            <Button fx:id="btnShortcuts" text="⌨ Горячие клавиши (F1)"
                     style="-fx-font-size: 12; -fx-background-color: #e8e8e8; -fx-text-fill: #555555; -fx-cursor: hand; -fx-background-radius: 4;"/>
-            <Button fx:id="btnSettings" text="⚙ Settings"
+            <Button fx:id="btnSettings" text="⚙ Настройки"
                     style="-fx-font-size: 12; -fx-background-color: #e8e8e8; -fx-text-fill: #555555; -fx-cursor: hand; -fx-background-radius: 4;"/>
         </HBox>
     </top>

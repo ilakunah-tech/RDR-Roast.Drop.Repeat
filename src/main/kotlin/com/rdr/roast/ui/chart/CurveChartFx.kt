@@ -127,6 +127,12 @@ class CurveChartFx : CurveModelListener {
     /** Single-marker event types: adding the same type again removes the previous marker. */
     private val markersByType = mutableMapOf<String, ValueMarker>()
 
+    /** Time of Charge in raw ms (from recording start). Display X = raw - chargeOffsetMs; 0 until Charge is set. */
+    private var chargeOffsetMs: Long = 0L
+
+    /** Convert display time (chart X) to raw time for profile/callbacks. */
+    fun toRawTime(displayMs: Long): Long = displayMs + chargeOffsetMs
+
     /** Phase strip annotations (Drying, Maillard, Development) at bottom of chart. */
     private val phaseStripAnnotations = mutableListOf<XYAnnotation>()
 
@@ -274,11 +280,12 @@ class CurveChartFx : CurveModelListener {
         val series = seriesMap[source] ?: return
         Platform.runLater {
             chart.isNotify = false
+            val adjustedMs = timeMs - chargeOffsetMs
             val value = source.getValue(timeMs)
             if (value != null) {
-                series.addOrUpdate(timeMs as Number, value as Number)
+                series.addOrUpdate(adjustedMs as Number, value as Number)
             } else {
-                val idx = series.indexOf(timeMs as Number)
+                val idx = series.indexOf(adjustedMs as Number)
                 if (idx >= 0) series.remove(idx)
             }
             chart.isNotify = true
@@ -291,8 +298,48 @@ class CurveChartFx : CurveModelListener {
             chart.isNotify = false
             series.clear()
             for ((t, v) in source.getValues()) {
-                series.addOrUpdate(t as Number, v as Number)
+                val adjustedMs = (t as Number).toLong() - chargeOffsetMs
+                series.addOrUpdate(adjustedMs as Number, v as Number)
             }
+            chart.isNotify = true
+        }
+    }
+
+    /**
+     * Rebase live series and markers so Charge = 00:00 (Cropster-style).
+     * Call when user presses C: existing points get new X = rawX - offsetMs; markers are shifted; future points use this offset.
+     */
+    fun rebaseAllSeries(offsetMs: Long) {
+        Platform.runLater {
+            chart.isNotify = false
+            chargeOffsetMs = offsetMs
+            for (series in listOf(btSeries, etSeries, rorBtSeries, rorEtSeries)) {
+                val points = (0 until series.itemCount).map { i ->
+                    series.getX(i).toDouble() - offsetMs to series.getY(i).toDouble()
+                }
+                series.clear()
+                points.forEach { (x, y) -> series.add(x, y) }
+            }
+            for ((key, marker) in markersByType.toList()) {
+                plot.removeDomainMarker(marker as Marker)
+                val newVal = marker.value - offsetMs
+                val m = ValueMarker(newVal).apply {
+                    stroke = marker.stroke
+                    paint = marker.paint
+                    labelPaint = marker.labelPaint
+                    labelBackgroundColor = marker.labelBackgroundColor
+                    label = marker.label
+                    labelAnchor = marker.labelAnchor
+                    labelTextAnchor = marker.labelTextAnchor
+                    labelOffset = marker.labelOffset
+                    labelFont = marker.labelFont
+                }
+                plot.addDomainMarker(m)
+                markersByType[key] = m
+            }
+            val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
+            val preHeatMs = 5 * 60 * 1000.0
+            plot.domainAxis.setRange(-preHeatMs, timeRangeMs)
             chart.isNotify = true
         }
     }
@@ -315,9 +362,10 @@ class CurveChartFx : CurveModelListener {
      */
     fun addEventMarker(timeMs: Long, label: String, color: Color = COLOR_EVENT) {
         val key = eventTypeKey(label)
+        val displayMs = timeMs - chargeOffsetMs
         Platform.runLater {
             key?.let { markersByType[it]?.let { old -> plot.removeDomainMarker(old as Marker) } }
-            val marker = ValueMarker(timeMs.toDouble()).apply {
+            val marker = ValueMarker(displayMs.toDouble()).apply {
                 stroke          = STROKE_MARKER
                 paint           = color
                 labelPaint      = color
@@ -394,26 +442,26 @@ class CurveChartFx : CurveModelListener {
             phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             phaseStripAnnotations.clear()
             if (endMs <= 0) return@runLater
-            val end = endMs.toDouble()
-            val de = deMs?.toDouble()
-            val fc = fcMs?.toDouble()
-            // Drying: 0 .. DE or FC or end
-            val dryingEnd = de ?: fc ?: end
+            val end = (endMs - chargeOffsetMs).toDouble().coerceAtLeast(0.0)
+            val de = deMs?.let { (it - chargeOffsetMs).toDouble() }
+            val fc = fcMs?.let { (it - chargeOffsetMs).toDouble() }
+            // Drying: 0 .. DE or FC or end (display time)
+            val dryingEnd = de?.coerceAtLeast(0.0) ?: fc?.coerceAtLeast(0.0) ?: end
             if (dryingEnd > 0) {
                 val a = PhaseStripAnnotation(0.0, dryingEnd, COLOR_DRYING)
                 plot.getRenderer(0).addAnnotation(a, Layer.BACKGROUND)
                 phaseStripAnnotations.add(a)
             }
             // Maillard: DE (or 0) .. FC or end
-            val maillardStart = de ?: 0.0
-            val maillardEnd = fc ?: end
+            val maillardStart = de?.coerceAtLeast(0.0) ?: 0.0
+            val maillardEnd = fc?.coerceAtLeast(0.0) ?: end
             if (maillardEnd > maillardStart) {
                 val a = PhaseStripAnnotation(maillardStart, maillardEnd, COLOR_MAILLARD)
                 plot.getRenderer(0).addAnnotation(a, Layer.BACKGROUND)
                 phaseStripAnnotations.add(a)
             }
             // Development: FC .. end
-            if (fc != null && end > fc) {
+            if (fc != null && fc >= 0 && end > fc) {
                 val a = PhaseStripAnnotation(fc, end, COLOR_DEVELOPMENT)
                 plot.getRenderer(0).addAnnotation(a, Layer.BACKGROUND)
                 phaseStripAnnotations.add(a)
@@ -546,6 +594,7 @@ class CurveChartFx : CurveModelListener {
     fun clearAll() {
         Platform.runLater {
             chart.isNotify = false
+            chargeOffsetMs = 0L
             btSeries.clear()
             etSeries.clear()
             rorBtSeries.clear()

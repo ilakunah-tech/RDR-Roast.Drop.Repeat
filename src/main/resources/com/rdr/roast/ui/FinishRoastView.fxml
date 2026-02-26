@@ -15,35 +15,35 @@
       fx:controller="com.rdr.roast.ui.FinishRoastController"
       prefWidth="260" minWidth="260" maxWidth="260"
       spacing="14" style="-fx-background-color: #fafafa; -fx-padding: 14; -fx-border-color: #e0e0e0; -fx-border-width: 0 1 0 0;">
-    <Label text="Finish roast"
+    <Label text="Завершение обжарки"
            style="-fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: #333;"/>
     <GridPane hgap="10" vgap="8">
         <columnConstraints>
             <ColumnConstraints minWidth="80" prefWidth="90"/>
             <ColumnConstraints minWidth="120" prefWidth="140"/>
         </columnConstraints>
-        <Label text="Start time" GridPane.columnIndex="0" GridPane.rowIndex="0"
+        <Label text="Начало" GridPane.columnIndex="0" GridPane.rowIndex="0"
                style="-fx-text-fill: #666; -fx-font-size: 11;"/>
         <TextField fx:id="txtStartTime" promptText="00:00" prefWidth="120" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
 
-        <Label text="End time" GridPane.columnIndex="0" GridPane.rowIndex="1"
+        <Label text="Конец" GridPane.columnIndex="0" GridPane.rowIndex="1"
                style="-fx-text-fill: #666; -fx-font-size: 11;"/>
         <TextField fx:id="txtEndTime" promptText="00:00" prefWidth="120" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
 
-        <Label text="Start weight (kg)" GridPane.columnIndex="0" GridPane.rowIndex="2"
+        <Label text="Вес до (кг)" GridPane.columnIndex="0" GridPane.rowIndex="2"
                style="-fx-text-fill: #666; -fx-font-size: 11;"/>
         <TextField fx:id="txtStartWeight" promptText="—" prefWidth="120" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
 
-        <Label text="End weight (kg)" GridPane.columnIndex="0" GridPane.rowIndex="3"
+        <Label text="Вес после (кг)" GridPane.columnIndex="0" GridPane.rowIndex="3"
                style="-fx-text-fill: #666; -fx-font-size: 11;"/>
         <TextField fx:id="txtEndWeight" promptText="—" prefWidth="120" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
 
-        <Label text="Weight loss" GridPane.columnIndex="0" GridPane.rowIndex="4"
+        <Label text="Усушка" GridPane.columnIndex="0" GridPane.rowIndex="4"
                style="-fx-text-fill: #666; -fx-font-size: 11;"/>
         <Label fx:id="lblWeightLoss" text="—" GridPane.columnIndex="1" GridPane.rowIndex="4"
                style="-fx-text-fill: #333; -fx-font-size: 12;"/>
 
-        <Label text="Notes" GridPane.columnIndex="0" GridPane.rowIndex="5" GridPane.valignment="TOP"
+        <Label text="Заметки" GridPane.columnIndex="0" GridPane.rowIndex="5" GridPane.valignment="TOP"
                style="-fx-text-fill: #666; -fx-font-size: 11;"/>
         <TextArea fx:id="txtNotes" prefRowCount="2" prefWidth="140" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
     </GridPane>

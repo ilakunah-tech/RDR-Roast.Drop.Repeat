@@ -1,5 +1,6 @@
 package com.rdr.roast.driver.simulator
 
+import com.rdr.roast.app.MachineConfig
 import com.rdr.roast.driver.ConnectionState
 import com.rdr.roast.driver.RoastDataSource
 import com.rdr.roast.domain.TemperatureSample
@@ -22,7 +23,7 @@ import org.slf4j.LoggerFactory
  * - ET: ~300°C down to ~250°C (smooth, slower than BT).
  * - ±0.3°C noise for realism.
  */
-class SimulatorSource : RoastDataSource {
+class SimulatorSource(private val config: MachineConfig) : RoastDataSource {
 
     private val log = LoggerFactory.getLogger(SimulatorSource::class.java)
 
@@ -51,8 +52,8 @@ class SimulatorSource : RoastDataSource {
             val et = etCurve(t)
             val noise = 0.3 * (Random.nextDouble() * 2.0 - 1.0)
             emit(TemperatureSample(timeSec = t, bt = bt + noise, et = et + noise))
-            delay(1000)
-            t += 1.0
+            delay(config.pollingIntervalMs)
+            t += config.pollingIntervalMs / 1000.0
         }
     }
 

@@ -10,7 +10,6 @@ import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.TemperatureSample
 import com.rdr.roast.domain.curves.MovingAverageCurveModel
-import com.rdr.roast.domain.metrics.findChargeDropIndex
 import com.rdr.roast.domain.metrics.findTurningPointIndex
 import com.rdr.roast.domain.curves.RorCurveModel
 import com.rdr.roast.domain.curves.StandardCurveModel
@@ -110,13 +109,20 @@ class MainController {
             }
         }
 
-        // Elapsed-time label
+        // Elapsed-time label: from Charge (00:00) after C, or "Pre-heat" before
         scope.launch {
             recorder.elapsedSec.collect { sec ->
                 Platform.runLater {
-                    val m = (sec / 60).toInt()
-                    val s = (sec % 60).toInt()
-                    lblDuration.text = "%02d:%02d".format(m, s)
+                    val profile = recorder.currentProfile.value
+                    val chargeTimeSec = profile.eventByType(EventType.CHARGE)?.timeSec
+                    lblDuration.text = if (chargeTimeSec != null) {
+                        val fromCharge = (sec - chargeTimeSec).coerceAtLeast(0.0)
+                        val m = (fromCharge / 60).toInt()
+                        val s = (fromCharge % 60).toInt()
+                        "%02d:%02d".format(m, s)
+                    } else {
+                        "Pre-heat"
+                    }
                 }
             }
         }
@@ -169,23 +175,6 @@ class MainController {
         lblRoRET.text = "%.1f%s".format(rorEtVal * rorMul, rorUnit)
         chartPanel.lastDataTimeMs = timeMs
 
-        // Auto-detect Charge once: BT drop ≥ 6°C over 30s (Cropster-style); manual C overrides
-        if (profile.eventByType(EventType.CHARGE) == null) {
-            val chargeIdx = findChargeDropIndex(
-                profile,
-                windowSec = AUTO_CHARGE_WINDOW_SEC,
-                minDropC = AUTO_CHARGE_MIN_DROP_C,
-                minElapsedSec = AUTO_CHARGE_MIN_ELAPSED_SEC
-            )
-            if (chargeIdx != null && chargeIdx < profile.timex.size) {
-                val chargeTimeSec = profile.timex[chargeIdx]
-                recorder.markEventAt(chargeTimeSec, EventType.CHARGE)
-                val chargeBt = profile.temp1[chargeIdx]
-                curveChart.addEventMarker((chargeTimeSec * 1000).toLong(), "Charge @ %.1f °C".format(chargeBt),
-                    com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
-            }
-        }
-
         // TP once: min BT after charge in [charge, charge+120s], or [0, 180s] if no charge
         val chargeTimeSec = profile.eventByType(EventType.CHARGE)?.timeSec
         val tpSearchDone = chargeTimeSec != null && profile.timex.lastOrNull() != null &&
@@ -223,9 +212,6 @@ class MainController {
     private companion object {
         const val TP_WINDOW_SEC = 180.0
         const val TP_WINDOW_AFTER_CHARGE_SEC = 120.0
-        const val AUTO_CHARGE_WINDOW_SEC = 30.0
-        const val AUTO_CHARGE_MIN_DROP_C = 6.0
-        const val AUTO_CHARGE_MIN_ELAPSED_SEC = 18.0
     }
 
     private fun updateButtonStates(state: RecorderState) {
@@ -367,8 +353,9 @@ class MainController {
         if (profile.eventByType(EventType.CHARGE) != null) return
         val sample = recorder.currentSample.value ?: return
         recorder.markEvent(EventType.CHARGE)
-        val timeMs = (sample.timeSec * 1000).toLong()
-        curveChart.addEventMarker(timeMs, "Charge @ %.1f °C".format(sample.bt),
+        val chargeTimeMs = (sample.timeSec * 1000).toLong()
+        curveChart.rebaseAllSeries(chargeTimeMs)
+        curveChart.addEventMarker(chargeTimeMs, "Charge @ %.1f °C".format(sample.bt),
             com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
     }
 
@@ -572,8 +559,8 @@ class MainController {
             val root = loader.load<Parent>()
             val settingsController = loader.getController<SettingsController>()
             val stage = Stage().apply {
-                title = "Settings"
-                scene = Scene(root, 520.0, 620.0)
+                title = "Настройки"
+                scene = Scene(root, 520.0, 500.0)
                 initModality(Modality.APPLICATION_MODAL)
                 initOwner(btnSettings.scene?.window)
             }

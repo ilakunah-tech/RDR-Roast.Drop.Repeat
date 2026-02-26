@@ -47,7 +47,7 @@ class ChartEventPopup(
             """.trimIndent()
         }
 
-        val lblAt   = Label("Comment at:").apply { style = "-fx-font-size: 11px; -fx-text-fill: #888;" }
+        val lblAt   = Label("Комментарий в:").apply { style = "-fx-font-size: 11px; -fx-text-fill: #888;" }
         val lblTime = Label(mmss).apply { style = "-fx-font-size: 14px; -fx-font-weight: bold;" }
         val lblUnit = Label("mm:ss").apply { style = "-fx-font-size: 10px; -fx-text-fill: #bbb;" }
         root.children += HBox(6.0, lblAt, lblTime, lblUnit).apply { alignment = Pos.CENTER_LEFT }
@@ -56,7 +56,7 @@ class ChartEventPopup(
         // DE (Dry End), FC (First Crack)
         val grid = GridPane().apply { hgap = 6.0; vgap = 5.0 }
         // Temperature °C (Cropster: event at a specific temperature)
-        val lblTemp = Label("Temperature °C:").apply { style = "-fx-font-size: 11px; -fx-text-fill: #888;" }
+        val lblTemp = Label("Температура °C:").apply { style = "-fx-font-size: 11px; -fx-text-fill: #888;" }
         val txtTemp = TextField().apply {
             promptText = "optional"
             style = "-fx-font-size: 11px;"
@@ -94,10 +94,10 @@ class ChartEventPopup(
         root.children += Separator()
 
         val txtComment = TextField().apply {
-            promptText = "Custom comment…"
+            promptText = "Свой комментарий…"
             style = "-fx-font-size: 11px;"
         }
-        val btnAdd = Button("Add").apply {
+        val btnAdd = Button("Добавить").apply {
             style = """
                 -fx-background-color: #3498db;
                 -fx-text-fill: white;
@@ -117,7 +117,7 @@ class ChartEventPopup(
             HBox.setHgrow(txtComment, Priority.ALWAYS)
         }
 
-        val btnClose = Button("Close").apply {
+        val btnClose = Button("Закрыть").apply {
             maxWidth = Double.MAX_VALUE
             style = """
                 -fx-background-color: #ecf0f1;
