@@ -124,11 +124,10 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
             } ?: clickedTimeMs
 
             val btAtTime = curveChart.getBtAtTime(effectiveTimeMs)
-            val popup = ChartEventPopup(effectiveTimeMs, btAtTime) { t, label ->
-                // Add a visual marker on the chart immediately
-                curveChart.addEventMarker(t, label)
-                // Notify the host controller (optional extra handling)
-                onEventAdded?.invoke(t, label)
+            val popup = ChartEventPopup(effectiveTimeMs, btAtTime) { displayTimeMs, label ->
+                val rawTimeMs = curveChart.toRawTime(displayTimeMs)
+                curveChart.addEventMarker(rawTimeMs, label)
+                onEventAdded?.invoke(rawTimeMs, label)
             }
 
             val window = chartViewer.scene?.window ?: return@addEventHandler

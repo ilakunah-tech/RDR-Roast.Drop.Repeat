@@ -52,6 +52,9 @@ class SettingsController {
     lateinit var txtSavePath: TextField
 
     @FXML
+    lateinit var txtSamplingIntervalSec: TextField
+
+    @FXML
     lateinit var txtServerBaseUrl: TextField
 
     @FXML
@@ -190,6 +193,7 @@ class SettingsController {
         txtPhidgetEtChannel.text = settings.machineConfig.phidgetEtChannel.toString()
         txtPhidgetBtChannel.text = settings.machineConfig.phidgetBtChannel.toString()
         txtSavePath.text = settings.savePath
+        txtSamplingIntervalSec.text = (settings.machineConfig.pollingIntervalMs / 1000.0).toString()
         txtServerBaseUrl.text = settings.serverBaseUrl
         txtServerToken.text = settings.serverToken
 
@@ -301,6 +305,7 @@ class SettingsController {
                 gridColor = txtChartGridColor.text?.trim()?.takeIf { it.isNotBlank() } ?: ChartConfig().gridColor
             )
 
+            val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(250L, 120_000L)) ?: 1000L
             val mc = settings.machineConfig.copy(
                 machineType = machineType,
                 transport = transport,
@@ -310,7 +315,8 @@ class SettingsController {
                 baudRate = baudRate,
                 slaveId = slaveId,
                 phidgetEtChannel = phidgetEt,
-                phidgetBtChannel = phidgetBt
+                phidgetBtChannel = phidgetBt,
+                pollingIntervalMs = pollingIntervalMs
             )
             val newSettings = AppSettings(
                 machineConfig = mc,
@@ -407,6 +413,7 @@ class SettingsController {
         txtSlaveId.text = c.slaveId.toString()
         txtPhidgetEtChannel.text = c.phidgetEtChannel.toString()
         txtPhidgetBtChannel.text = c.phidgetBtChannel.toString()
+        txtSamplingIntervalSec.text = (c.pollingIntervalMs / 1000.0).toString()
         updateTransportFieldsVisibility()
     }
 
@@ -428,6 +435,7 @@ class SettingsController {
             machineType == MachineType.DIEDRICH && cmbTransport.value == "Phidget 1048 (USB)" -> Transport.PHIDGET
             else -> Transport.SERIAL
         }
+        val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(250L, 120_000L)) ?: 1000L
         val config = settings.machineConfig.copy(
             machineType = machineType,
             transport = transport,
@@ -437,7 +445,8 @@ class SettingsController {
             baudRate = txtBaudRate.text.toIntOrNull() ?: 9600,
             slaveId = txtSlaveId.text.toIntOrNull() ?: 1,
             phidgetEtChannel = txtPhidgetEtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 1,
-            phidgetBtChannel = txtPhidgetBtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 2
+            phidgetBtChannel = txtPhidgetBtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 2,
+            pollingIntervalMs = pollingIntervalMs
         )
         var presets = SettingsManager.loadPresets().toMutableList()
         presets.removeAll { it.name == name }

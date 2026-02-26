@@ -99,10 +99,16 @@
             </GridPane>
         </VBox>
 
-        <!-- Temperature Unit -->
-        <Label text="Temperature Unit" GridPane.columnIndex="0" GridPane.rowIndex="3"
+        <!-- Sampling interval (sec) -->
+        <Label text="Sampling interval (sec)" GridPane.columnIndex="0" GridPane.rowIndex="3"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <HBox spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="3">
+        <TextField fx:id="txtSamplingIntervalSec" promptText="1" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="3"
+                   style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
+
+        <!-- Temperature Unit -->
+        <Label text="Temperature Unit" GridPane.columnIndex="0" GridPane.rowIndex="4"
+               style="-fx-text-fill: white; -fx-font-size: 14;"/>
+        <HBox spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="4">
             <RadioButton fx:id="rbCelsius" text="°C" toggleGroup="$tglUnit" selected="true"
                          style="-fx-text-fill: white;"/>
             <RadioButton fx:id="rbFahrenheit" text="°F" toggleGroup="$tglUnit"
@@ -110,9 +116,9 @@
         </HBox>
 
         <!-- Folder for .alog files -->
-        <Label text="Save folder (.alog)" GridPane.columnIndex="0" GridPane.rowIndex="4"
+        <Label text="Save folder (.alog)" GridPane.columnIndex="0" GridPane.rowIndex="5"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="4">
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="5">
             <TextField fx:id="txtSavePath" prefWidth="220" HBox.hgrow="ALWAYS"
                        style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
             <Button fx:id="btnBrowse" text="Browse"
@@ -120,20 +126,20 @@
         </HBox>
 
         <!-- Server (reference profiles) -->
-        <Label text="Server (reference)" GridPane.columnIndex="0" GridPane.rowIndex="5"
+        <Label text="Server (reference)" GridPane.columnIndex="0" GridPane.rowIndex="6"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <TextField fx:id="txtServerBaseUrl" promptText="https://example.com/api/v1" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="5"
+        <TextField fx:id="txtServerBaseUrl" promptText="https://example.com/api/v1" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="6"
                    style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
 
-        <Label text="API token (optional)" GridPane.columnIndex="0" GridPane.rowIndex="6"
+        <Label text="API token (optional)" GridPane.columnIndex="0" GridPane.rowIndex="7"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <TextField fx:id="txtServerToken" promptText="Bearer token" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="6"
+        <TextField fx:id="txtServerToken" promptText="Bearer token" prefWidth="280" GridPane.columnIndex="1" GridPane.rowIndex="7"
                    style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
 
         <!-- Chart Colors -->
-        <Label text="Chart Colors" GridPane.columnIndex="0" GridPane.rowIndex="7"
+        <Label text="Chart Colors" GridPane.columnIndex="0" GridPane.rowIndex="8"
                style="-fx-text-fill: #aaaaaa; -fx-font-size: 12;"/>
-        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="7">
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="8">
             <Label text="Live BT" style="-fx-text-fill: white; -fx-font-size: 12;"/>
             <TextField fx:id="txtColorLiveBt" promptText="#d4483b" prefWidth="72"
                        style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
@@ -141,9 +147,9 @@
             <TextField fx:id="txtColorLiveEt" promptText="#3498db" prefWidth="72"
                        style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
         </HBox>
-        <Label text="Ref colors" GridPane.columnIndex="0" GridPane.rowIndex="8"
+        <Label text="Ref colors" GridPane.columnIndex="0" GridPane.rowIndex="9"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="8">
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="9">
             <TextField fx:id="txtColorRefBt" promptText="#d4483b" prefWidth="72"
                        style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
             <TextField fx:id="txtColorRefEt" promptText="#3498db" prefWidth="72"
@@ -156,9 +162,9 @@
         </HBox>
 
         <!-- Chart -->
-        <Label text="Chart" GridPane.columnIndex="0" GridPane.rowIndex="9"
+        <Label text="Chart" GridPane.columnIndex="0" GridPane.rowIndex="10"
                style="-fx-text-fill: #aaaaaa; -fx-font-size: 12;"/>
-        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="9">
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="10">
             <Label text="Temp min" style="-fx-text-fill: white; -fx-font-size: 12;"/>
             <TextField fx:id="txtChartTempMin" prefWidth="50"
                        style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
@@ -166,9 +172,9 @@
             <TextField fx:id="txtChartTempMax" prefWidth="50"
                        style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
         </HBox>
-        <Label text="RoR / Time" GridPane.columnIndex="0" GridPane.rowIndex="10"
+        <Label text="RoR / Time" GridPane.columnIndex="0" GridPane.rowIndex="11"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="10">
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="11">
             <TextField fx:id="txtChartRorMin" prefWidth="50"
                        style="-fx-background-color: #16213e; -fx-text-fill: white;"/>
             <TextField fx:id="txtChartRorMax" prefWidth="50"
@@ -179,9 +185,9 @@
             <CheckBox fx:id="chkChartShowGrid" text="Show grid"
                       style="-fx-text-fill: white;"/>
         </HBox>
-        <Label text="Line widths" GridPane.columnIndex="0" GridPane.rowIndex="11"
+        <Label text="Line widths" GridPane.columnIndex="0" GridPane.rowIndex="12"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="11">
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="12">
             <TextField fx:id="txtChartBtLineWidth" prefWidth="40" promptText="2"
                        style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
             <TextField fx:id="txtChartEtLineWidth" prefWidth="40" promptText="2"
@@ -191,9 +197,9 @@
             <TextField fx:id="txtChartRefLineWidth" prefWidth="40" promptText="1.5"
                        style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
         </HBox>
-        <Label text="Background / Grid" GridPane.columnIndex="0" GridPane.rowIndex="12"
+        <Label text="Background / Grid" GridPane.columnIndex="0" GridPane.rowIndex="13"
                style="-fx-text-fill: white; -fx-font-size: 14;"/>
-        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="12">
+        <HBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="13">
             <TextField fx:id="txtChartBackground" promptText="#ffffff" prefWidth="72"
                        style="-fx-background-color: #16213e; -fx-text-fill: white; -fx-prompt-text-fill: #888888;"/>
             <TextField fx:id="txtChartGridColor" promptText="#d3d3d3" prefWidth="72"
@@ -201,7 +207,7 @@
         </HBox>
 
         <!-- Buttons -->
-        <HBox spacing="12" alignment="CENTER_RIGHT" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="13">
+        <HBox spacing="12" alignment="CENTER_RIGHT" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="14">
             <Button fx:id="btnSave" text="Save"
                     style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-padding: 8 24;"/>
             <Button fx:id="btnCancel" text="Cancel"
