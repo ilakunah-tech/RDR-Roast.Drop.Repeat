@@ -79,16 +79,35 @@ class RoastRecorder(
             return
         }
         val profile = RoastProfile(mode = TemperatureUnit.CELSIUS)
+        // #region agent log
+        val oldRef = System.identityHashCode(_currentProfile.value)
+        // #endregion
         _currentProfile.value = profile
+        // #region agent log
+        val newRef = System.identityHashCode(_currentProfile.value)
+        val localRef = System.identityHashCode(profile)
+        java.io.File("/opt/cursor/logs/debug.log").appendText("""{"id":"log_startRec_1","timestamp":${System.currentTimeMillis()},"location":"RoastRecorder.kt:startRecording","message":"profile created and assigned","data":{"oldRef":$oldRef,"newRef":$newRef,"localRef":$localRef,"refsMatch":${newRef == localRef},"stateFlowUpdated":${newRef != oldRef}},"hypothesisId":"A"}""" + "\n")
+        // #endregion
         _currentSample.value = null
         _elapsedSec.value = 0.0
         _stateFlow.value = RecorderState.RECORDING
 
         sampleCollectionJob?.cancel()
         sampleCollectionJob = scope.launch {
+            // #region agent log
+            var sampleCount = 0
+            // #endregion
             dataSource.sampleFlow().collect { sample ->
                 if (!isActive) return@collect
                 profile.addSample(sample)
+                // #region agent log
+                sampleCount++
+                if (sampleCount <= 3 || sampleCount % 10 == 0) {
+                    val flowProfileRef = System.identityHashCode(profile)
+                    val stateFlowRef = System.identityHashCode(_currentProfile.value)
+                    java.io.File("/opt/cursor/logs/debug.log").appendText("""{"id":"log_sample_$sampleCount","timestamp":${System.currentTimeMillis()},"location":"RoastRecorder.kt:sampleFlow","message":"after addSample","data":{"sampleCount":$sampleCount,"profileTimexSize":${profile.timex.size},"flowProfileRef":$flowProfileRef,"stateFlowRef":$stateFlowRef,"refsMismatch":${flowProfileRef != stateFlowRef}},"hypothesisId":"A,D"}""" + "\n")
+                }
+                // #endregion
                 _currentSample.value = sample
                 _elapsedSec.value = sample.timeSec
             }
@@ -120,14 +139,24 @@ class RoastRecorder(
     }
 
     fun stop(): RoastProfile {
+        // #region agent log
+        java.io.File("/opt/cursor/logs/debug.log").appendText("""{"id":"log_stop_entry","timestamp":${System.currentTimeMillis()},"location":"RoastRecorder.kt:stop","message":"stop() called","data":{"currentState":"${_stateFlow.value}"},"hypothesisId":"B"}""" + "\n")
+        // #endregion
         if (_stateFlow.value != RecorderState.RECORDING) {
             log.warn("stop ignored: state is {}", _stateFlow.value)
+            // #region agent log
+            java.io.File("/opt/cursor/logs/debug.log").appendText("""{"id":"log_stop_ignored","timestamp":${System.currentTimeMillis()},"location":"RoastRecorder.kt:stop","message":"stop IGNORED - not RECORDING","data":{"state":"${_stateFlow.value}","profileTimexSize":${_currentProfile.value.timex.size}},"hypothesisId":"B"}""" + "\n")
+            // #endregion
             return _currentProfile.value
         }
         sampleCollectionJob?.cancel()
         sampleCollectionJob = null
         _stateFlow.value = RecorderState.STOPPED
         val live = _currentProfile.value
+        // #region agent log
+        val liveRef = System.identityHashCode(live)
+        java.io.File("/opt/cursor/logs/debug.log").appendText("""{"id":"log_stop_before","timestamp":${System.currentTimeMillis()},"location":"RoastRecorder.kt:stop","message":"before snapshot","data":{"liveRef":$liveRef,"liveTimexSize":${live.timex.size},"liveTemp1Size":${live.temp1.size},"liveTemp2Size":${live.temp2.size},"liveEventsSize":${live.events.size}},"hypothesisId":"A,C"}""" + "\n")
+        // #endregion
         val snapshot = synchronized(live) {
             RoastProfile(
                 timex = ArrayList(live.timex),
@@ -137,6 +166,10 @@ class RoastRecorder(
                 mode = live.mode
             )
         }
+        // #region agent log
+        val snapRef = System.identityHashCode(snapshot)
+        java.io.File("/opt/cursor/logs/debug.log").appendText("""{"id":"log_stop_after","timestamp":${System.currentTimeMillis()},"location":"RoastRecorder.kt:stop","message":"after snapshot","data":{"snapRef":$snapRef,"snapTimexSize":${snapshot.timex.size},"snapTemp1Size":${snapshot.temp1.size},"snapTemp2Size":${snapshot.temp2.size}},"hypothesisId":"A,C"}""" + "\n")
+        // #endregion
         _currentProfile.value = snapshot
         return snapshot
     }

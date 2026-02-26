@@ -61,8 +61,12 @@ data class PhaseDuration(
 /**
  * Roast profile with time-ordered temperature series and events.
  * Uses mutable lists for live recording; samples and events are appended during a roast.
+ *
+ * NOT a data class: MutableStateFlow uses equals() for deduplication, and data class
+ * structural equality would silently discard new empty profiles that are equal to the
+ * current value, causing the coroutine to write into an unreachable instance.
  */
-data class RoastProfile(
+class RoastProfile(
     val timex: MutableList<Double> = mutableListOf(),
     val temp1: MutableList<Double> = mutableListOf(),
     val temp2: MutableList<Double> = mutableListOf(),

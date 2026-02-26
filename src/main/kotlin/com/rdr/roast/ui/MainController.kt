@@ -276,6 +276,10 @@ class MainController {
 
         btnStop.setOnAction {
             val profile = recorder.stop()
+            // #region agent log
+            val profRef = System.identityHashCode(profile)
+            java.io.File("/opt/cursor/logs/debug.log").appendText("""{"id":"log_btnStop","timestamp":${System.currentTimeMillis()},"location":"MainController.kt:btnStop","message":"profile from stop()","data":{"profRef":$profRef,"timexSize":${profile.timex.size},"temp1Size":${profile.temp1.size},"temp2Size":${profile.temp2.size}},"hypothesisId":"E"}""" + "\n")
+            // #endregion
             showFinishRoastDialog(profile)
         }
 
@@ -367,6 +371,10 @@ class MainController {
         curveChart.addEventMarker((sample.timeSec * 1000).toLong(), "Drop @ %.1f °C".format(sample.bt),
             com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
         val profile = recorder.stop()
+        // #region agent log
+        val profRef = System.identityHashCode(profile)
+        java.io.File("/opt/cursor/logs/debug.log").appendText("""{"id":"log_triggerDrop","timestamp":${System.currentTimeMillis()},"location":"MainController.kt:triggerDrop","message":"profile from stop()","data":{"profRef":$profRef,"timexSize":${profile.timex.size},"temp1Size":${profile.temp1.size},"temp2Size":${profile.temp2.size},"eventsSize":${profile.events.size}},"hypothesisId":"E"}""" + "\n")
+        // #endregion
         showFinishRoastDialog(profile)
     }
 

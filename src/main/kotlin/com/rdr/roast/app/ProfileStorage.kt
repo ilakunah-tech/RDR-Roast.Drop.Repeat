@@ -210,6 +210,10 @@ object ProfileStorage {
      * Writes to file with UTF-8 encoding.
      */
     fun saveProfile(profile: RoastProfile, filePath: Path) {
+        // #region agent log
+        val profRef = System.identityHashCode(profile)
+        java.io.File("/opt/cursor/logs/debug.log").appendText("""{"id":"log_saveProfile","timestamp":${System.currentTimeMillis()},"location":"ProfileStorage.kt:saveProfile","message":"before buildAlogDict","data":{"profRef":$profRef,"timexSize":${profile.timex.size},"temp1Size":${profile.temp1.size},"temp2Size":${profile.temp2.size},"eventsSize":${profile.events.size},"filePath":"$filePath"},"hypothesisId":"E"}""" + "\n")
+        // #endregion
         val dict = buildAlogDict(profile)
         Files.writeString(filePath, dict, Charsets.UTF_8)
     }
