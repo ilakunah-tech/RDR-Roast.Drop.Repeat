@@ -11,7 +11,11 @@ class RoastApp : Application() {
         val root = loader.load<javafx.scene.Parent>()
         primaryStage.title = "RDR - Roast.Drop" +
             ".Repeat"
-        primaryStage.scene = Scene(root, 1280.0, 800.0)
+        val scene = Scene(root, 1280.0, 800.0)
+        scene.stylesheets.add(
+            javaClass.getResource("/com/rdr/roast/ui/main.css")?.toExternalForm() ?: ""
+        )
+        primaryStage.scene = scene
         primaryStage.show()
     }
 }

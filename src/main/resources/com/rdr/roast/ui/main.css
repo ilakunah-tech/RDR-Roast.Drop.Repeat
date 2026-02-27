@@ -1,0 +1,110 @@
+/* RDR layout – Cropster RI style zones */
+
+.root-pane {
+    -fx-background-color: #f5f5f5;
+}
+
+/* Без рамки между левым сайдбаром и центром */
+.left-sidebar-region {
+    -fx-border-width: 0;
+    -fx-border-color: transparent;
+}
+
+.top-bar {
+    -fx-background-color: #f5f5f5;
+    -fx-padding: 4 10;
+}
+
+.top-bar .button {
+    -fx-border-width: 0;
+}
+
+.sidebar-column {
+    -fx-padding: 4 1;
+    -fx-min-width: 28px;
+    -fx-pref-width: 28px;
+    -fx-background-color: #f5f5f5;
+}
+
+.sidebar-btn {
+    -fx-min-width: 26px;
+    -fx-max-width: 26px;
+    -fx-min-height: 22px;
+    -fx-border-width: 0;
+}
+
+.sidebar-panel-container {
+    -fx-background-color: #f5f5f5;
+}
+
+.center-split {
+    -fx-background-color: transparent;
+}
+
+/* Невидимый разделитель между графиком и правой панелью */
+.center-split .split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 0 0;
+}
+
+.right-split {
+    -fx-background-color: transparent;
+}
+
+/* Невидимый разделитель между readouts и Reference */
+.right-split .split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 0 0;
+}
+
+/* Показатели в стиле Cropster: компактный блок, крупные цифры */
+.readout-value-bt {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3498db;
+}
+.readout-unit-bt {
+    -fx-font-size: 12px;
+    -fx-text-fill: #3498db;
+    -fx-translate-y: -6;
+}
+.readout-label-bt {
+    -fx-font-size: 10px;
+    -fx-text-fill: #3498db;
+}
+.readout-ror-value-bt {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3498db;
+}
+.readout-value-et {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #d4483b;
+}
+.readout-unit-et {
+    -fx-font-size: 12px;
+    -fx-text-fill: #d4483b;
+    -fx-translate-y: -6;
+}
+.readout-label-et {
+    -fx-font-size: 10px;
+    -fx-text-fill: #d4483b;
+}
+.readout-ror-value-et {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #d4483b;
+}
+
+.reference-panel {
+    -fx-background-color: #f5f5f5;
+}
+
+.player-bar {
+    -fx-background-color: #f5f5f5;
+}
+
+.player-bar .button {
+    -fx-border-width: 0;
+}

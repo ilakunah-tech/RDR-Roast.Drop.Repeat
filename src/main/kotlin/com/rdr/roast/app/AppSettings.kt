@@ -78,7 +78,11 @@ data class AppSettings(
     /** Optional Bearer token for server API auth. */
     val serverToken: String = "",
     val chartColors: ChartColors = ChartColors(),
-    val chartConfig: ChartConfig = ChartConfig()
+    val chartConfig: ChartConfig = ChartConfig(),
+    /** Saved divider position for center|right SplitPane (0..1). */
+    val layoutDividerCenterRight: Double? = null,
+    /** Saved divider position for values|reference SplitPane (0..1). */
+    val layoutDividerReferenceChannels: Double? = null
 )
 
 object SettingsManager {

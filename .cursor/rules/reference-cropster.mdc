@@ -1,16 +1,18 @@
 ---
-description: Where to look for Cropster / Artisan reference when implementing RDR features
+description: Where to look for Cropster / Artisan reference when implementing RDR features; workflow: reference first, then RDR
 alwaysApply: true
 ---
 
 # Reference: Cropster and Artisan
 
-When the user asks how something is implemented **in Cropster** or **in Artisan**, search in the corresponding path:
+## Workflow (обязательный порядок)
 
-- **Cropster** → `C:\Users\ilaku\Downloads\1_extracted`
-- **Artisan** → `D:\project\Projects\artisantest-master`
+1. **Сначала** изучить или взять логику/код из референсов:
+   - **Cropster** → `C:\Users\ilaku\Downloads\1_extracted`
+   - **Artisan** → `D:\project\Projects\artisantest-master`
+2. **Затем** применять обновления в RDR (`D:\project\Projects\RDR-roast.drop.repeat`): переписывать логику на Kotlin в структуре RDR, не копировать код дословно.
 
-Do not copy code verbatim; reimplement logic in Kotlin in RDR's structure.
+Когда пользователь просит реализовать что-то «как в Cropster» или «как в Artisan» — искать в указанных путях, понять реализацию, потом писать/менять код в RDR.
 
 ---
 
@@ -38,10 +40,28 @@ When implementing or refining RDR features (RoR, chart, phases, drivers), use th
 | **Generic MODBUS** | Same `measurement\impl\` | `GenericModbusRtuSource.java`, `GenericModbusTcpSource.java`, `GenericModbusSourceJ2mod.java` — patterns for j2mod. |
 | **JFreeChart in JavaFX** | `jfreechart-fx-1.0.1-cropster\org\jfree\chart\fx\` | `ChartCanvas.java`, `ChartViewer.java`, `interaction\` (zoom, pan, tooltip). Use if switching from custom Canvas to JFreeChart. |
 
+## Подключение ростера в Cropster RI (логика и UI)
+
+- **Идея**: В RI нет одного «подключения к ростерам» — есть **коннекторы** (типы устройств) и **каналы** (BT, ET, газ и т.д.). Обжарщик выбирает машину в Cropster, добавляет коннекторы, настраивает параметры (IP, порт, регистры), привязывает каналы к коннекторам и сохраняет; после перезапуска приложение само открывает подключения и опрашивает устройства.
+- **Действия обжарщика**: 1) Открыть Preferences → Configuration. 2) Выбрать **Machine** (машина в аккаунте Cropster). 3) **Add connector** → в списке «Available connectors» выбрать тип (Phidget, Yoctopuce, MODBUS TCP/RTU, Diedrich, Besca, Probat, Demo и др.). 4) У коннектора нажать **Configure** и задать параметры (IP, порт, адрес MODBUS и т.д.). 5) В **Measurements** привязать каналы (BT, ET, газ…) к коннекторам и номерам каналов. 6) **Save**; при изменении коннекторов/параметров — перезапуск приложения.
+- **Логика в коде**: Коннектор = `MeasurementSourceFactory` (параметры `getParameters()`, `setup(parameters)` при сохранении). Источник данных = `MeasurementSource` (`open()`, `configure(channels)`, `getValues()`, `isReady()`). `MeasurementHub` при старте по сохранённым настройкам создаёт источники, вызывает `configure(channels)` и вешает `MeasurementMonitor`; монитор по таймеру опрашивает `getValues()`, при `!isReady()` периодически вызывает `source.open()` (reconnect).
+- **Пути в `1_extracted\src\roastingintelligence-5.10`**:
+  - UI: `com\cropster\roastingintelligence\ui\layout\preferences\ConfigurationPreferencesPage.java` (машина, список коннекторов, Add connector), `com\cropster\roastingintelligence\ui\components\ConnectorPanel.java` (Configure, удаление), `com\cropster\roastingintelligence\ui\components\ChannelConfigurationPanel.java` (привязка каналов), `com\cropster\roastingintelligence\ui\layout\PreferencesWindowController.java` (addConnector, «Available connectors»).
+  - Логика: `org\cropster\roastingintelligence\measurement\MeasurementSource.java`, `MeasurementSourceFactory.java`, `MeasurementHub.java`, `measurement\impl\MeasurementMonitorImpl.java`; драйверы в `org\cropster\roastingintelligence\measurement\impl\` (Phidget, Yoctopuce, MODBUS, Diedrich и др.). Параметры хранятся в Preferences `sourceConfigurations`; привязка каналов — в `Channel.sourceFactory` и индексе канала.
+
 ## Artisan reference location
 
 - **Path**: `D:\project\Projects\artisantest-master`
 - Use when the user asks how something is implemented **in Artisan**.
+
+### Подключение ростера/логгера в Artisan
+
+- **Идея**: Один основной тип устройства (логгер/ростер) для ET/BT + при необходимости «Extra Devices». Тип задаётся в диалоге **Device Assignment**; параметры подключения (COM‑порт, MODBUS host/port, S7 host и т.д.) задаются там же или при выборе **Machine** в меню (machine setup может запросить порт/IP).
+- **Действия обжарщика**: 1) Меню **Config → Device...** (или Ctrl+D) → открывается **Device Assignment**. 2) На вкладке **Device**: в выпадающем списке выбрать **тип устройства** (список из `qmc.devices`: Fuji, MODBUS, Phidget, Yoctopuce, Hottop, S7, WebSocket, Santoker, Kaleido, IKAWA и др.). 3) Включить/выключить кривые ET/BT, LCD, Logging, Control; для части устройств — задать параметры (PID unit, Arduino каналы, Phidget 1048/1051/TMP, MODBUS, S7 и т.д.) на той же вкладке. 4) Для serial/MODBUS порта: либо задать порт в настройках устройства, либо при выборе **Machine** в меню (список машин) Artisan может показать диалог **Port Configuration** (или запрос MODBUS/S7 host) и сохранить `ser.comport` / `modbus.comport` / `modbus.host` и т.д. 5) **OK** в Device Assignment сохраняет тип устройства (`qmc.device`), `ser.*`, `modbus.*`, Phidget/Yoctopuce флаги, extra devices. 6) Подключение к устройству выполняется при старте обжарки/логгинга (открытие порта/сокета по выбранному типу и параметрам).
+- **Пути в Artisan**:
+  - UI диалога: `src/artisanlib/devices.py` — класс `DeviceAssignmentDlg` (заголовок "Device Assignment"): вкладка 1 — тип устройства (`devicetypeComboBox`, список из `qmc.devices`), кривые/LCD, опции PID/Arduino/Phidget/MODBUS/S7 и др.; вкладка 2 — Extra Devices (таблица); вкладка 3 — Ambient (источники температуры/влажности/давления). Сохранение в `okEvent()`.
+  - Вызов диалога: `src/artisanlib/main.py` — `deviceAction` (меню "Device...", Ctrl+D), слот `deviceassigment()` (стр. ~24811), открывает `DeviceAssignmentDlg(self, self, DeviceAssignmentDlg_activeTab)`.
+  - Связь и порты: `src/artisanlib/comm.py` — класс `serialport` (основной ET/BT); `src/artisanlib/modbusport.py` — MODBUS; в main — `self.ser`, `self.modbus`, `self.s7`, `self.ws` и т.д. Выбор COM‑порта при machine setup: в main при выборе машины вызывается `ArtisanPortsDialog` для serial/MODBUS (стр. ~5961–5971), результат пишется в `ser.comport` или `modbus.comport`; для MODBUS TCP/UDP, S7, WebSocket запрашивается host (QInputDialog).
 
 ---
 
@@ -74,5 +94,6 @@ Align RDR dependencies when needed: controlsfx 11.1.2, jfreechart 1.5.0, jfreech
 
 ## Usage
 
+- **Всегда**: сначала изучить/взять из `1_extracted` и `artisantest-master`, потом вносить изменения в RDR.
 - Prefer **reimplementing** logic in Kotlin under RDR packages; do not copy decompiled code as-is.
 - Use reference for: RoR formulas, register addresses, conversion formulas, chart annotation shapes, and data model shape.

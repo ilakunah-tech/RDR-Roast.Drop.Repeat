@@ -47,13 +47,15 @@
                                 style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
                     </HBox>
 
+                    <Label text="Параметры подключения"
+                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
                     <VBox fx:id="portFieldsContainer" spacing="12" style="-fx-background-color: transparent;">
                         <GridPane hgap="16" vgap="8" style="-fx-background-color: transparent;">
                             <columnConstraints>
                                 <ColumnConstraints minWidth="100" prefWidth="140"/>
                                 <ColumnConstraints minWidth="200" prefWidth="280"/>
                             </columnConstraints>
-                            <Label text="Connection" GridPane.columnIndex="0" GridPane.rowIndex="0"
+                            <Label text="Транспорт" GridPane.columnIndex="0" GridPane.rowIndex="0"
                                    style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
                             <ComboBox fx:id="cmbTransport" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="0"
                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
@@ -70,8 +72,12 @@
 
                             <Label fx:id="lblComPort" text="COM Port" GridPane.columnIndex="0" GridPane.rowIndex="3"
                                    style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtPort" promptText="COM4" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="3"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
+                            <HBox spacing="8" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                <ComboBox fx:id="cmbPort" prefWidth="200" editable="true" promptText="COM4"
+                                          style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
+                                <Button fx:id="btnRefreshPorts" text="Обновить порты"
+                                        style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
+                            </HBox>
 
                             <Label fx:id="lblBaudRate" text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="4"
                                    style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
@@ -93,11 +99,17 @@
                             <TextField fx:id="txtPhidgetBtChannel" promptText="2" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="7"
                                        style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
                         </GridPane>
+                        <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 8 0 0 0;">
+                            <Button fx:id="btnTestConnection" text="Проверить подключение"
+                                    style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
+                            <CheckBox fx:id="chkVerifyBeforeSave" text="Проверить перед сохранением"
+                                      style="-fx-text-fill: #555555;"/>
+                        </HBox>
                     </VBox>
 
                     <Label text="Интервал опроса (сек)"
                            style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <TextField fx:id="txtSamplingIntervalSec" promptText="1" prefWidth="80"
+                    <TextField fx:id="txtSamplingIntervalSec" promptText="0.1–3" prefWidth="80"
                                style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
 
                     <Label text="Единицы температуры"

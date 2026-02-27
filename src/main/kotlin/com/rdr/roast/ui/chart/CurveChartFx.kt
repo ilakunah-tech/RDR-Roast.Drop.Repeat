@@ -128,8 +128,11 @@ class CurveChartFx : CurveModelListener {
     /** Single-marker event types: adding the same type again removes the previous marker. */
     private val markersByType = mutableMapOf<String, ValueMarker>()
 
-    /** Time of Charge in raw ms (from recording start). Display X = raw - chargeOffsetMs; 0 until Charge is set. */
+    /** Time of Charge in raw ms (from recording start). Display X = raw - chargeOffsetMs when rebased; when reference is set we do not rebase so this stays 0 and ref is shifted to this position. */
     private var chargeOffsetMs: Long = 0L
+
+    /** Current charge offset (raw ms of Charge). Used when loading reference to align ref Charge with live Charge. */
+    fun getChargeOffsetMs(): Long = chargeOffsetMs
 
     /** Convert display time (chart X) to raw time for profile/callbacks. */
     fun toRawTime(displayMs: Long): Long = displayMs + chargeOffsetMs
@@ -369,8 +372,8 @@ class CurveChartFx : CurveModelListener {
                 markersByType[key] = m
             }
             val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
-            val preHeatMs = 5 * 60 * 1000.0
-            plot.domainAxis.setRange(-preHeatMs, timeRangeMs)
+            // Artisan/Cropster-style: X axis 0..timeRange with 0 = Charge; no pre-heat band to avoid "many 00:00" labels
+            plot.domainAxis.setRange(0.0, timeRangeMs)
             chart.isNotify = true
         }
     }
@@ -505,8 +508,12 @@ class CurveChartFx : CurveModelListener {
     /**
      * Set or clear the reference/background profile curve (Artisan/Cropster-style).
      * Fills ref BT/ET, ref RoR, and reference event markers (Charge, TP, DE, FC, Drop).
+     *
+     * Alignment (Artisan-style): when [alignAtChargeMs] is set, the reference is shifted so that
+     * Ref Charge coincides with the live Charge at that X. So ref X = (ref_time - ref_charge)*1000 + alignAtChargeMs.
+     * When null, ref Charge is at 0 (ref X = (ref_time - ref_charge)*1000).
      */
-    fun setReferenceProfile(profile: RoastProfile?) {
+    fun setReferenceProfile(profile: RoastProfile?, alignAtChargeMs: Long? = null) {
         Platform.runLater {
             chart.isNotify = false
             refMarkers.forEach { plot.removeDomainMarker(it) }
@@ -516,6 +523,7 @@ class CurveChartFx : CurveModelListener {
             refRorBtSeries.clear()
             refRorEtSeries.clear()
             refMarkerOffset = 5.0
+            val shiftMs = alignAtChargeMs ?: 0L
             if (profile != null && profile.timex.isNotEmpty()) {
                 val chargeEvent = profile.eventByType(EventType.CHARGE)
                 val chargeOffsetSec = chargeEvent?.timeSec ?: 0.0
@@ -523,26 +531,27 @@ class CurveChartFx : CurveModelListener {
                 val timex = profile.timex.take(n)
                 val bt = profile.temp1.take(n)
                 val et = profile.temp2.take(n)
-                // Filter to adjustedTimeSec >= 0 (points from Charge onward)
                 val indices = timex.indices.filter { (timex[it] - chargeOffsetSec) >= 0 }
                 val adjustedTimex = indices.map { timex[it] - chargeOffsetSec }
                 val btFiltered = indices.map { bt[it] }
                 val etFiltered = indices.map { et[it] }
                 for (i in adjustedTimex.indices) {
-                    val timeMs = (adjustedTimex[i] * 1000).toLong()
-                    refBtSeries.add(timeMs.toDouble(), btFiltered[i])
-                    refEtSeries.add(timeMs.toDouble(), etFiltered[i])
+                    val timeFromChargeMs = (adjustedTimex[i] * 1000).toLong()
+                    val xMs = timeFromChargeMs + shiftMs
+                    refBtSeries.add(xMs.toDouble(), btFiltered[i])
+                    refEtSeries.add(xMs.toDouble(), etFiltered[i])
                 }
                 if (adjustedTimex.size >= 2) {
-                    computeAndFillRorSeries(adjustedTimex, btFiltered, refRorBtSeries, ROR_DELTA_SEC)
-                    computeAndFillRorSeries(adjustedTimex, etFiltered, refRorEtSeries, ROR_DELTA_SEC)
+                    computeAndFillRorSeries(adjustedTimex, btFiltered, refRorBtSeries, ROR_DELTA_SEC, shiftMs)
+                    computeAndFillRorSeries(adjustedTimex, etFiltered, refRorEtSeries, ROR_DELTA_SEC, shiftMs)
                 }
                 profile.events.forEach { event ->
                     val adjustedSec = event.timeSec - chargeOffsetSec
                     if (adjustedSec < 0) return@forEach
-                    val timeMs = (adjustedSec * 1000).toLong()
+                    val timeFromChargeMs = (adjustedSec * 1000).toLong()
+                    val xMs = timeFromChargeMs + shiftMs
                     val label = refEventLabel(event.type, adjustedSec, event.tempBT, event.tempET)
-                    addReferenceEventMarker(timeMs, label)
+                    addReferenceEventMarker(xMs, label)
                 }
             }
             chart.isNotify = true
@@ -590,8 +599,8 @@ class CurveChartFx : CurveModelListener {
         }
     }
 
-    /** RoR °C/min over [deltaSec] window (Artisan-style). Uses smoothed temp for reference. Fills series with (timeMs, ror). */
-    private fun computeAndFillRorSeries(timex: List<Double>, temp: List<Double>, series: XYSeries, deltaSec: Int) {
+    /** RoR °C/min over [deltaSec] window (Artisan-style). Uses smoothed temp for reference. Fills series with (timeMs + shiftMs, ror). */
+    private fun computeAndFillRorSeries(timex: List<Double>, temp: List<Double>, series: XYSeries, deltaSec: Int, shiftMs: Long = 0L) {
         if (timex.size < 2 || temp.size < 2) return
         val smoothed = smoothMovingAverage(temp, 7)
         for (i in timex.indices) {
@@ -611,7 +620,7 @@ class CurveChartFx : CurveModelListener {
                     if (dtMin <= 0) 0.0 else (smoothed[i] - smoothed[prevIdx]) / dtMin
                 }
             }
-            series.add(timex[i] * 1000, ror.coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble()))
+            series.add(timex[i] * 1000 + shiftMs, ror.coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble()))
         }
     }
 
@@ -736,13 +745,15 @@ class CurveChartFx : CurveModelListener {
 
 private fun Color.withAlpha(alpha: Int) = Color(red, green, blue, alpha)
 
-/** Formats millisecond values as MM:SS for the time axis. */
+/** Formats millisecond values as MM:SS for the time axis. Negative values as -MM:SS (e.g. pre-heat). */
 private class MmSsFormat : NumberFormat() {
     override fun format(number: Double, toAppendTo: StringBuffer, pos: FieldPosition): StringBuffer {
-        val totalSec = (number / 1000).toLong().coerceAtLeast(0)
-        val m = totalSec / 60
-        val s = totalSec % 60
-        return toAppendTo.append("%02d:%02d".format(m, s))
+        val totalSec = (number / 1000).toLong()
+        val absSec = kotlin.math.abs(totalSec)
+        val m = absSec / 60
+        val s = absSec % 60
+        val sign = if (totalSec < 0) "-" else ""
+        return toAppendTo.append(sign).append("%02d:%02d".format(m, s))
     }
 
     override fun format(number: Long, toAppendTo: StringBuffer, pos: FieldPosition): StringBuffer =

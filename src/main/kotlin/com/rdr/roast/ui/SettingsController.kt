@@ -4,10 +4,13 @@ import com.rdr.roast.app.AppSettings
 import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.ChartColors
 import com.rdr.roast.app.ConnectionPreset
+import com.rdr.roast.app.ConnectionTester
 import com.rdr.roast.app.MachineConfig
 import com.rdr.roast.app.MachineType
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.app.Transport
+import com.rdr.roast.driver.ConnectionState
+import javafx.application.Platform
 import javafx.fxml.FXML
 import javafx.scene.control.Alert
 import javafx.scene.control.Button
@@ -20,10 +23,15 @@ import javafx.scene.control.TabPane
 import javafx.scene.control.TextField
 import javafx.scene.control.TextInputDialog
 import javafx.scene.control.ToggleGroup
+import javafx.scene.control.Tooltip
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
 import javafx.stage.DirectoryChooser
 import javafx.stage.Stage
+import com.fazecast.jSerialComm.SerialPort
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class SettingsController {
 
@@ -31,11 +39,16 @@ class SettingsController {
     var savedSettings: AppSettings? = null
         private set
 
+    private val scope = CoroutineScope(Dispatchers.Default)
+
     @FXML
     lateinit var cmbSource: ComboBox<String>
 
     @FXML
-    lateinit var txtPort: TextField
+    lateinit var cmbPort: ComboBox<String>
+
+    @FXML
+    lateinit var btnRefreshPorts: Button
 
     @FXML
     lateinit var txtBaudRate: TextField
@@ -120,6 +133,12 @@ class SettingsController {
 
     @FXML
     lateinit var lblPhidgetBt: javafx.scene.control.Label
+
+    @FXML
+    lateinit var btnTestConnection: Button
+
+    @FXML
+    lateinit var chkVerifyBeforeSave: CheckBox
 
     @FXML
     lateinit var txtColorLiveBt: TextField
@@ -221,7 +240,8 @@ class SettingsController {
         refreshPresetList()
         cmbTransport.valueProperty().addListener { _, _, _ -> updateTransportFieldsVisibility() }
 
-        txtPort.text = settings.machineConfig.port
+        refreshSerialPorts()
+        cmbPort.value = settings.machineConfig.port.ifBlank { null } ?: settings.machineConfig.port
         txtBaudRate.text = settings.machineConfig.baudRate.toString()
         txtSlaveId.text = settings.machineConfig.slaveId.toString()
         txtHost.text = settings.machineConfig.host?.takeIf { it.isNotBlank() } ?: ""
@@ -295,6 +315,8 @@ class SettingsController {
             setColorPickerFromHex(colorRefEt, d.refEt)
         }
 
+        btnRefreshPorts.setOnAction { refreshSerialPorts() }
+        btnTestConnection.setOnAction { runTestConnection() }
         updatePortFieldsVisibility()
         updateTransportCombo()
         cmbTransport.value = when {
@@ -303,6 +325,7 @@ class SettingsController {
             else -> cmbTransport.items.firstOrNull()
         }
         updateTransportFieldsVisibility()
+        setupConnectionTooltips()
 
         cmbSource.valueProperty().addListener { _, _, _ ->
             updatePortFieldsVisibility()
@@ -321,6 +344,62 @@ class SettingsController {
         }
 
         btnSave.setOnAction {
+            if (chkVerifyBeforeSave.isSelected) {
+                val mc = buildMachineConfigFromFields()
+                scope.launch {
+                    val result = ConnectionTester.test(mc)
+                    Platform.runLater {
+                        result.fold(
+                            onSuccess = { performSave() },
+                            onFailure = { e ->
+                                val alert = Alert(Alert.AlertType.CONFIRMATION)
+                                alert.title = "Проверка подключения"
+                                alert.headerText = "Не удалось подключиться: ${e.message}"
+                                alert.contentText = "Всё равно сохранить настройки?"
+                                if (alert.showAndWait().orElse(null) == javafx.scene.control.ButtonType.OK) performSave()
+                            }
+                        )
+                    }
+                }
+                return@setOnAction
+            }
+            performSave()
+        }
+
+        btnCancel.setOnAction { closeWindow() }
+    }
+
+    private fun buildMachineConfigFromFields(): MachineConfig {
+        val settings = SettingsManager.load()
+        val machineType = when (cmbSource.value) {
+            "Besca" -> MachineType.BESCA
+            "Diedrich" -> MachineType.DIEDRICH
+            else -> MachineType.SIMULATOR
+        }
+        val transport = when {
+            machineType == MachineType.BESCA && cmbTransport.value == "TCP (Ethernet)" -> Transport.TCP
+            machineType == MachineType.DIEDRICH && cmbTransport.value == "Phidget 1048 (USB)" -> Transport.PHIDGET
+            else -> Transport.SERIAL
+        }
+        val portRaw = (cmbPort.value ?: cmbPort.editor?.text)?.trim().orEmpty()
+        val port = (if (portRaw.startsWith("Другой: ")) portRaw.removePrefix("Другой: ").trim() else portRaw).ifBlank { "COM4" }
+        val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(100L, 3000L)) ?: 1000L
+        return settings.machineConfig.copy(
+            machineType = machineType,
+            transport = transport,
+            host = txtHost.text?.trim()?.takeIf { it.isNotBlank() },
+            tcpPort = txtTcpPort.text.toIntOrNull() ?: 502,
+            port = port,
+            baudRate = txtBaudRate.text.toIntOrNull() ?: 9600,
+            slaveId = txtSlaveId.text.toIntOrNull() ?: 1,
+            phidgetEtChannel = txtPhidgetEtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 1,
+            phidgetBtChannel = txtPhidgetBtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 2,
+            pollingIntervalMs = pollingIntervalMs
+        )
+    }
+
+    private fun performSave() {
+            val settings = SettingsManager.load()
             val machineType = when (cmbSource.value) {
                 "Besca" -> MachineType.BESCA
                 "Diedrich" -> MachineType.DIEDRICH
@@ -333,7 +412,8 @@ class SettingsController {
             }
             val host = txtHost.text?.trim()?.takeIf { it.isNotBlank() }
             val tcpPort = txtTcpPort.text.toIntOrNull() ?: 502
-            val port = txtPort.text.ifBlank { "COM4" }
+            val portRaw = (cmbPort.value ?: cmbPort.editor?.text)?.trim().orEmpty()
+            val port = (if (portRaw.startsWith("Другой: ")) portRaw.removePrefix("Другой: ").trim() else portRaw).ifBlank { "COM4" }
             val baudRate = txtBaudRate.text.toIntOrNull() ?: 9600
             val slaveId = txtSlaveId.text.toIntOrNull() ?: 1
             val phidgetEt = txtPhidgetEtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 1
@@ -370,7 +450,7 @@ class SettingsController {
                 gridColor = txtChartGridColor.text?.trim()?.takeIf { it.isNotBlank() } ?: ChartConfig().gridColor
             )
 
-            val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(250L, 120_000L)) ?: 1000L
+            val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(100L, 3000L)) ?: 1000L
             val mc = settings.machineConfig.copy(
                 machineType = machineType,
                 transport = transport,
@@ -395,9 +475,45 @@ class SettingsController {
             savedSettings = newSettings
             SettingsManager.save(newSettings)
             closeWindow()
-        }
+    }
 
-        btnCancel.setOnAction { closeWindow() }
+    private fun runTestConnection() {
+        val mc = buildMachineConfigFromFields()
+        btnTestConnection.isDisable = true
+        scope.launch {
+            val result = ConnectionTester.test(mc)
+            Platform.runLater {
+                btnTestConnection.isDisable = false
+                result.fold(
+                    onSuccess = { state ->
+                        val name = (state as? ConnectionState.Connected)?.deviceName ?: "Устройство"
+                        Alert(Alert.AlertType.INFORMATION).apply {
+                            title = "Проверка подключения"
+                            headerText = "Подключено"
+                            contentText = "Успешное подключение: $name"
+                        }.showAndWait()
+                    },
+                    onFailure = { e ->
+                        Alert(Alert.AlertType.ERROR).apply {
+                            title = "Проверка подключения"
+                            headerText = "Ошибка подключения"
+                            contentText = e.message ?: "Не удалось подключиться"
+                        }.showAndWait()
+                    }
+                )
+            }
+        }
+    }
+
+    private fun setupConnectionTooltips() {
+        cmbTransport.tooltip = Tooltip("Способ подключения: COM-порт (Modbus RTU), TCP или Phidget USB")
+        txtHost.tooltip = Tooltip("IP-адрес ростера при подключении по TCP (Ethernet)")
+        txtTcpPort.tooltip = Tooltip("Порт Modbus TCP (обычно 502)")
+        cmbPort.tooltip = Tooltip("Последовательный порт (COM). Нажмите «Обновить порты» для обновления списка.")
+        txtBaudRate.tooltip = Tooltip("Скорость порта (например 9600, 19200)")
+        txtSlaveId.tooltip = Tooltip("Modbus Slave ID устройства (обычно 1)")
+        txtPhidgetEtChannel.tooltip = Tooltip("Номер канала Phidget 1048 для датчика ET (Environment Temperature)")
+        txtPhidgetBtChannel.tooltip = Tooltip("Номер канала Phidget 1048 для датчика BT (Bean Temperature)")
     }
 
     private fun updatePortFieldsVisibility() {
@@ -429,8 +545,10 @@ class SettingsController {
         txtTcpPort.isManaged = isBescaTcp
         lblComPort.isVisible = !isDiedrichPhidget
         lblComPort.isManaged = !isDiedrichPhidget
-        txtPort.isVisible = !isDiedrichPhidget
-        txtPort.isManaged = !isDiedrichPhidget
+        cmbPort.isVisible = !isDiedrichPhidget
+        cmbPort.isManaged = !isDiedrichPhidget
+        btnRefreshPorts.isVisible = !isDiedrichPhidget
+        btnRefreshPorts.isManaged = !isDiedrichPhidget
         lblBaudRate.isVisible = !isDiedrichPhidget
         lblBaudRate.isManaged = !isDiedrichPhidget
         lblSlaveId.isVisible = !isDiedrichPhidget
@@ -447,6 +565,20 @@ class SettingsController {
         lblPhidgetBt.isManaged = isDiedrichPhidget
         txtPhidgetBtChannel.isVisible = isDiedrichPhidget
         txtPhidgetBtChannel.isManaged = isDiedrichPhidget
+    }
+
+    private fun refreshSerialPorts() {
+        val portNames = SerialPort.getCommPorts().map { it.systemPortName }
+        val current = (cmbPort.value ?: cmbPort.editor?.text)?.trim().orEmpty()
+        val portOnly = if (current.startsWith("Другой: ")) current.removePrefix("Другой: ").trim() else current
+        cmbPort.items.setAll(portNames)
+        if (portOnly.isNotBlank()) {
+            if (portOnly in portNames) cmbPort.value = portOnly
+            else if (portOnly !in portNames) {
+                cmbPort.items.add("Другой: $portOnly")
+                cmbPort.value = "Другой: $portOnly"
+            }
+        }
     }
 
     private fun refreshPresetList() {
@@ -473,7 +605,7 @@ class SettingsController {
         }
         txtHost.text = c.host ?: ""
         txtTcpPort.text = c.tcpPort.toString()
-        txtPort.text = c.port
+        cmbPort.value = c.port
         txtBaudRate.text = c.baudRate.toString()
         txtSlaveId.text = c.slaveId.toString()
         txtPhidgetEtChannel.text = c.phidgetEtChannel.toString()
@@ -500,13 +632,16 @@ class SettingsController {
             machineType == MachineType.DIEDRICH && cmbTransport.value == "Phidget 1048 (USB)" -> Transport.PHIDGET
             else -> Transport.SERIAL
         }
-        val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(250L, 120_000L)) ?: 1000L
+        val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(100L, 3000L)) ?: 1000L
         val config = settings.machineConfig.copy(
             machineType = machineType,
             transport = transport,
             host = txtHost.text?.trim()?.takeIf { it.isNotBlank() },
             tcpPort = txtTcpPort.text.toIntOrNull() ?: 502,
-            port = txtPort.text.ifBlank { "COM4" },
+            port = (run {
+                val raw = (cmbPort.value ?: cmbPort.editor?.text)?.trim().orEmpty()
+                if (raw.startsWith("Другой: ")) raw.removePrefix("Другой: ").trim() else raw
+            }).ifBlank { "COM4" },
             baudRate = txtBaudRate.text.toIntOrNull() ?: 9600,
             slaveId = txtSlaveId.text.toIntOrNull() ?: 1,
             phidgetEtChannel = txtPhidgetEtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 1,

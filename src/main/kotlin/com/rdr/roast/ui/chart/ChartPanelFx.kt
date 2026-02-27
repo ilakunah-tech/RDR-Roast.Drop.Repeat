@@ -1,8 +1,8 @@
 package com.rdr.roast.ui.chart
 
 import javafx.geometry.Insets
-import javafx.scene.control.Button
 import javafx.scene.control.Label
+import javafx.scene.input.ContextMenuEvent
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.AnchorPane
@@ -17,7 +17,7 @@ import org.jfree.chart.ui.RectangleEdge
  * JavaFX container for [CurveChartFx], modeled after Cropster's ChartWrapper.
  *
  * Layout:
- *   - Top:    toolbar (Reset-axes button · spacer · live mouse-coordinates label)
+ *   - Top:    toolbar (spacer · live mouse-coordinates label). Reset axes — по ПКМ по графику.
  *   - Center: ChartViewer (jfreechart-fx / fxgraphics2d bridge)
  *
  * Mouse-click behaviour (Cropster "Comment at" card):
@@ -49,14 +49,9 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
         style = "-fx-font-size: 10px; -fx-text-fill: #555;"
     }
 
-    private val btnReset = Button("Reset axes").apply {
-        style = "-fx-font-size: 10px;"
-        setOnAction { curveChart.resetAxes() }
-    }
-
     init {
         val spacer = Region().apply { HBox.setHgrow(this, Priority.ALWAYS) }
-        val toolbar = HBox(4.0, btnReset, spacer, lblCoords).apply {
+        val toolbar = HBox(4.0, spacer, lblCoords).apply {
             padding = Insets(4.0, 8.0, 4.0, 8.0)
             style = "-fx-background-color: #f8f8f8;" +
                     "-fx-border-color: #ddd; -fx-border-width: 0 0 1 0;"
@@ -87,6 +82,9 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
         }
         chartViewer.canvas.setOnMouseExited { lblCoords.text = "" }
 
+        // ПКМ по графику → reset axes (потребляем, чтобы не показывалось меню "Export As")
+        chartViewer.canvas.setOnContextMenuRequested { e -> e.consume(); curveChart.resetAxes() }
+
         // ── Click → "Comment at" popup (Cropster-style) ───────────────────────
         // Track pressed position to distinguish a click from a drag.
         // Using addEventHandler so jfreechart-fx's own setOnMouseXxx handlers
@@ -97,9 +95,16 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
         chartViewer.canvas.addEventHandler(MouseEvent.MOUSE_PRESSED) { e ->
             pressX = e.x
             pressY = e.y
+            // ПКМ: потребляем, чтобы не показывалось контекстное меню библиотеки
+            if (e.button == MouseButton.SECONDARY) e.consume()
         }
 
         chartViewer.canvas.addEventHandler(MouseEvent.MOUSE_CLICKED) { e ->
+            // ПКМ (right-click) → Reset axes
+            if (e.button == MouseButton.SECONDARY) {
+                curveChart.resetAxes()
+                return@addEventHandler
+            }
             if (e.button     != MouseButton.PRIMARY) return@addEventHandler
             if (e.clickCount != 1)                   return@addEventHandler
 

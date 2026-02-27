@@ -1,89 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.Region?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Separator?>
-<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.rdr.roast.ui.MainController"
+            styleClass="root-pane"
             style="-fx-background-color: #f5f5f5;">
 
-    <!-- Top: Menu-like bar -->
+    <!-- Top: минимальная полоса (название приложения убрано) -->
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="12"
-              style="-fx-background-color: #ffffff; -fx-padding: 6 16; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 1 0;">
-            <Label text="RDR - Roast.Drop.Repeat"
-                   style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #333333;"/>
+        <HBox styleClass="top-bar" alignment="CENTER_LEFT" spacing="8"
+              style="-fx-background-color: #f5f5f5; -fx-padding: 4 10;">
             <Region HBox.hgrow="ALWAYS"/>
-            <Button fx:id="btnReference" text="Reference"
-                    style="-fx-font-size: 12; -fx-background-color: #e8e8e8; -fx-text-fill: #555555; -fx-cursor: hand; -fx-background-radius: 4;"/>
-            <Button fx:id="btnShortcuts" text="⌨ Горячие клавиши (F1)"
-                    style="-fx-font-size: 12; -fx-background-color: #e8e8e8; -fx-text-fill: #555555; -fx-cursor: hand; -fx-background-radius: 4;"/>
-            <Button fx:id="btnSettings" text="⚙ Настройки"
-                    style="-fx-font-size: 12; -fx-background-color: #e8e8e8; -fx-text-fill: #555555; -fx-cursor: hand; -fx-background-radius: 4;"/>
+            <!-- Скрыты: действия перенесены в drawer'ы левого блока -->
+            <Button fx:id="btnReference" text="Reference" visible="false" managed="false"/>
+            <Button fx:id="btnShortcuts" text="Горячие клавиши (F1)" visible="false" managed="false"/>
+            <Button fx:id="btnSettings" text="Настройки" visible="false" managed="false"/>
+            <Button fx:id="btnSync" text="Sync" visible="false" managed="false"/>
         </HBox>
     </top>
 
-    <!-- Center: optional finish panel (left) + chart (center), Cropster-style -->
+    <!-- Left: sidebar column (buttons) + sliding panel container -->
+    <left>
+        <HBox fx:id="leftSidebarRegion" styleClass="left-sidebar-region" spacing="0" style="-fx-background-color: #f5f5f5; -fx-border-width: 0;">
+            <VBox fx:id="sidebarColumn" styleClass="sidebar-column" spacing="1" style="-fx-padding: 4 1; -fx-min-width: 28; -fx-pref-width: 28;">
+                <ToggleButton fx:id="btnSidebarSystem" text="S" styleClass="sidebar-btn"
+                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
+                <ToggleButton fx:id="btnSidebarProduction" text="P" styleClass="sidebar-btn"
+                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
+                <ToggleButton fx:id="btnSidebarTasks" text="T" styleClass="sidebar-btn"
+                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
+                <ToggleButton fx:id="btnSidebarAlarms" text="A" styleClass="sidebar-btn"
+                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
+                <ToggleButton fx:id="btnSidebarComments" text="C" styleClass="sidebar-btn"
+                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
+                <ToggleButton fx:id="btnSidebarSupport" text="?" styleClass="sidebar-btn"
+                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
+            </VBox>
+            <StackPane fx:id="sidebarPanelContainer" styleClass="sidebar-panel-container"
+                       minWidth="0" prefWidth="0" maxWidth="180"
+                       style="-fx-background-color: #f5f5f5;"/>
+        </HBox>
+    </left>
+
+    <!-- Center: SplitPane [ chart area | right area (readouts + reference) ] -->
     <center>
-        <BorderPane fx:id="centerPane" style="-fx-background-color: transparent;">
-            <center>
-                <StackPane fx:id="chartContainer"
-                           style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
-                    <padding><Insets top="4" right="4" bottom="4" left="4"/></padding>
-                </StackPane>
-            </center>
-        </BorderPane>
+        <SplitPane fx:id="centerSplit" styleClass="center-split" dividerPositions="0.92">
+            <!-- Left part: center pane (chart; finish panel can be set to centerPane.left) -->
+            <BorderPane fx:id="centerPane" style="-fx-background-color: transparent;">
+                <center>
+                    <StackPane fx:id="chartContainer"
+                               style="-fx-background-color: #f5f5f5;">
+                        <padding><Insets top="2" right="2" bottom="2" left="2"/></padding>
+                    </StackPane>
+                </center>
+            </BorderPane>
+            <!-- Right part: SplitPane [ values | reference ] -->
+            <SplitPane fx:id="rightSplit" styleClass="right-split" dividerPositions="0.55" orientation="VERTICAL"
+                       minWidth="200" prefWidth="200" maxWidth="200">
+                <VBox fx:id="valuesPanel" spacing="2" alignment="TOP_LEFT"
+                      minHeight="60" prefHeight="120" VBox.vgrow="ALWAYS"
+                      style="-fx-background-color: #f5f5f5; -fx-padding: 6 10;">
+                    <!-- Bean temp (Cropster style: large value + small °C, label below) -->
+                    <HBox alignment="TOP_LEFT" spacing="0" styleClass="readout-row-bt">
+                        <Label fx:id="lblBTValue" text="--.-" styleClass="readout-value-bt" HBox.hgrow="ALWAYS" maxWidth="1.7976931348623157E308"/>
+                        <Label fx:id="lblBTUnit" text=" °C" styleClass="readout-unit-bt"/>
+                    </HBox>
+                    <Label text="Bean temp." styleClass="readout-label-bt" maxWidth="1.7976931348623157E308"/>
+                    <Region prefHeight="1" minHeight="0" maxHeight="2"/>
+                    <!-- RoR Bean (blue) -->
+                    <HBox alignment="TOP_LEFT" spacing="0" styleClass="readout-row-bt">
+                        <Label fx:id="lblRoRBTValue" text="--.-" styleClass="readout-ror-value-bt" HBox.hgrow="ALWAYS" maxWidth="1.7976931348623157E308"/>
+                        <Label fx:id="lblRoRBTUnit" text=" °C/min" styleClass="readout-unit-bt"/>
+                    </HBox>
+                    <Label text="RoR" styleClass="readout-label-bt" maxWidth="1.7976931348623157E308"/>
+                    <Region prefHeight="4" minHeight="0" maxHeight="4"/>
+                    <!-- Exhaust (Cropster style: large value + small °C, red/orange) -->
+                    <HBox alignment="TOP_LEFT" spacing="0" styleClass="readout-row-et">
+                        <Label fx:id="lblETValue" text="--.-" styleClass="readout-value-et" HBox.hgrow="ALWAYS" maxWidth="1.7976931348623157E308"/>
+                        <Label fx:id="lblETUnit" text=" °C" styleClass="readout-unit-et"/>
+                    </HBox>
+                    <Label text="Exhaust" styleClass="readout-label-et" maxWidth="1.7976931348623157E308"/>
+                    <Region prefHeight="1" minHeight="0" maxHeight="2"/>
+                    <!-- RoR Exhaust -->
+                    <HBox alignment="TOP_LEFT" spacing="0" styleClass="readout-row-et">
+                        <Label fx:id="lblRoRETValue" text="--.-" styleClass="readout-ror-value-et" HBox.hgrow="ALWAYS" maxWidth="1.7976931348623157E308"/>
+                        <Label fx:id="lblRoRETUnit" text=" °C/min" styleClass="readout-unit-et"/>
+                    </HBox>
+                    <Label text="RoR" styleClass="readout-label-et" maxWidth="1.7976931348623157E308"/>
+                </VBox>
+                <VBox fx:id="referencePanel" styleClass="reference-panel" spacing="2" alignment="TOP_LEFT"
+                      minHeight="40" prefHeight="80" VBox.vgrow="ALWAYS"
+                      style="-fx-background-color: #f5f5f5; -fx-padding: 4;">
+                    <Label text="Reference" style="-fx-font-weight: bold; -fx-text-fill: #555555; -fx-font-size: 10;"/>
+                    <Label fx:id="lblReferenceLabel" text="Placeholder" style="-fx-text-fill: #888888; -fx-font-size: 9;"/>
+                </VBox>
+            </SplitPane>
+        </SplitPane>
     </center>
 
-    <!-- Right: Current values panel -->
-    <right>
-        <VBox fx:id="valuesPanel" spacing="8" alignment="TOP_CENTER"
-              prefWidth="180" minWidth="180"
-              style="-fx-background-color: #ffffff; -fx-padding: 16; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 1 1;">
-
-            <Label text="Bean temp." style="-fx-text-fill: #888888; -fx-font-size: 11;"/>
-            <Label fx:id="lblBT" text="--.- °C"
-                   style="-fx-text-fill: #d4483b; -fx-font-size: 36; -fx-font-weight: bold;"/>
-
-            <Label text="RoR" style="-fx-text-fill: #888888; -fx-font-size: 10;"/>
-            <Label fx:id="lblRoRBT" text="--.-"
-                   style="-fx-text-fill: #d4483b; -fx-font-size: 18;"/>
-
-            <Separator style="-fx-padding: 4 0;"/>
-
-            <Label text="Exhaust" style="-fx-text-fill: #888888; -fx-font-size: 11;"/>
-            <Label fx:id="lblET" text="--.- °C"
-                   style="-fx-text-fill: #3498db; -fx-font-size: 36; -fx-font-weight: bold;"/>
-
-            <Label text="RoR" style="-fx-text-fill: #888888; -fx-font-size: 10;"/>
-            <Label fx:id="lblRoRET" text="--.-"
-                   style="-fx-text-fill: #3498db; -fx-font-size: 18;"/>
-        </VBox>
-    </right>
-
-    <!-- Bottom: Controls -->
+    <!-- Bottom: player bar (unchanged) -->
     <bottom>
-        <VBox style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">
+        <VBox styleClass="player-bar" style="-fx-background-color: #f5f5f5;">
             <HBox spacing="20" alignment="CENTER" style="-fx-padding: 12 16 14 16;">
+                <Label fx:id="lblConnectionStatus" text="○ Отключено"
+                       style="-fx-text-fill: #888888; -fx-font-size: 12px; -fx-min-width: 160;"/>
+                <Region HBox.hgrow="ALWAYS"/>
                 <Button fx:id="btnAbort" text="✕ Abort" disable="true"
-                        style="-fx-background-color: #ffffff; -fx-text-fill: #e74c3c; -fx-font-size: 13; -fx-padding: 8 20; -fx-background-radius: 4; -fx-border-color: #e74c3c; -fx-border-radius: 4;"/>
-
+                        style="-fx-background-color: #f5f5f5; -fx-text-fill: #e74c3c; -fx-font-size: 13; -fx-padding: 8 20; -fx-background-radius: 4;"/>
                 <Button fx:id="btnStart" text="Start"
-                        style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14; -fx-font-weight: bold; -fx-padding: 8 32; -fx-background-radius: 4;"/>
-
+                        style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14; -fx-font-weight: bold; -fx-padding: 8 32; -fx-background-radius: 4; -fx-border-width: 0;"/>
                 <Label fx:id="lblDuration" text="00:00"
                        style="-fx-text-fill: #333333; -fx-font-size: 28; -fx-font-weight: bold;"/>
-
                 <Button fx:id="btnStop" text="■ Stop" disable="true"
-                        style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14; -fx-font-weight: bold; -fx-padding: 8 32; -fx-background-radius: 4;"/>
+                        style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14; -fx-font-weight: bold; -fx-padding: 8 32; -fx-background-radius: 4; -fx-border-width: 0;"/>
             </HBox>
         </VBox>
     </bottom>
