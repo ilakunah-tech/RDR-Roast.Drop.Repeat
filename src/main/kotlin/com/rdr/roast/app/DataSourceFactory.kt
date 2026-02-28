@@ -12,10 +12,24 @@ import com.rdr.roast.driver.simulator.SimulatorSource
  */
 object DataSourceFactory {
 
+    /** Cropster Besca Full Auto default control registers (gas, airflow, drum). */
+    private val BESCA_TCP_DEFAULT_GAS_REG = 3904
+    private val BESCA_TCP_DEFAULT_AIRFLOW_REG = 1003
+    private val BESCA_TCP_DEFAULT_DRUM_REG = 1001
+
     fun create(config: MachineConfig): RoastDataSource = when (config.machineType) {
         MachineType.SIMULATOR -> SimulatorSource(config)
         MachineType.BESCA -> when (config.transport) {
-            Transport.TCP -> BescaModbusTcpSource(config)
+            Transport.TCP -> {
+                val cfg = if (config.gasRegister == 0 && config.airflowRegister == 0 && config.drumRegister == 0)
+                    config.copy(
+                        gasRegister = BESCA_TCP_DEFAULT_GAS_REG,
+                        airflowRegister = BESCA_TCP_DEFAULT_AIRFLOW_REG,
+                        drumRegister = BESCA_TCP_DEFAULT_DRUM_REG
+                    )
+                else config
+                BescaModbusTcpSource(cfg)
+            }
             else -> BescaModbusSource(config)
         }
         MachineType.DIEDRICH -> when (config.transport) {

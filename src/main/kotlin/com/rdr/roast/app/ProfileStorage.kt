@@ -1,5 +1,6 @@
 package com.rdr.roast.app
 
+import com.rdr.roast.domain.BetweenBatchLog
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.RoastEvent
@@ -49,13 +50,47 @@ object ProfileStorage {
             events.sortBy { it.timeSec }
         }
 
+        val bbp = parseBbp(content, mode)
         return RoastProfile(
             timex = timexList,
             temp1 = btList,
             temp2 = etList,
             events = events,
-            mode = mode
+            mode = mode,
+            betweenBatchLog = bbp
         )
+    }
+
+    private fun parseBbp(content: String, mode: TemperatureUnit): BetweenBatchLog? {
+        val startMs = parseLong(content, "bbp_start_epoch_ms") ?: return null
+        val durationMs = parseLong(content, "bbp_duration_ms") ?: return null
+        val timex = parseDoubleList(content, "bbp_timex")
+        val temp1 = parseDoubleList(content, "bbp_temp1")
+        val temp2 = parseDoubleList(content, "bbp_temp2")
+        if (timex.isEmpty() || temp1.size != timex.size || temp2.size != timex.size) return null
+        val lowestMs = parseLong(content, "bbp_lowest_temp_time_ms")
+        val highestMs = parseLong(content, "bbp_highest_temp_time_ms")
+        return BetweenBatchLog(
+            startEpochMs = startMs,
+            durationMs = durationMs,
+            timex = timex,
+            temp1 = temp1,
+            temp2 = temp2,
+            mode = mode,
+            lowestTemperatureTimeMs = lowestMs,
+            highestTemperatureTimeMs = highestMs
+        )
+    }
+
+    private fun parseLong(content: String, key: String): Long? {
+        val start = indexOfKey(content, key)
+        if (start < 0) return null
+        val after = content.substring(start).let { s ->
+            val colon = s.indexOf(':', 4)
+            if (colon < 0) return@let null
+            s.substring(colon + 1).trim().trimStart(',').split(',', ' ', '}').firstOrNull()?.trim()
+        } ?: return null
+        return after.toLongOrNull()
     }
 
     /** Finds key in Python dict repr. Prefer "'key':" so we match 'timex' not 'timeindex' or 'extratimex'. */
@@ -244,6 +279,19 @@ object ProfileStorage {
         val roastisodate = now.format(DateTimeFormatter.ISO_LOCAL_DATE)
         val roasttime = now.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
 
+        val bbpSuffix = profile.betweenBatchLog?.let { bbp ->
+            val bbpTimex = formatTimexList(bbp.timex)
+            val bbpTemp1 = formatTempList(bbp.temp1)
+            val bbpTemp2 = formatTempList(bbp.temp2)
+            val opt = listOfNotNull(
+                bbp.lowestTemperatureTimeMs?.let { "'bbp_lowest_temp_time_ms': $it" },
+                bbp.highestTemperatureTimeMs?.let { "'bbp_highest_temp_time_ms': $it" }
+            ).joinToString(", ")
+            ", 'bbp_start_epoch_ms': ${bbp.startEpochMs}, 'bbp_duration_ms': ${bbp.durationMs}, " +
+            "'bbp_timex': $bbpTimex, 'bbp_temp1': $bbpTemp1, 'bbp_temp2': $bbpTemp2" +
+            if (opt.isNotEmpty()) ", $opt" else ""
+        } ?: ""
+
         // Artisan 4.x–compatible minimal dict: required keys so Artisan can open the file.
         return (
             "{'recording_version': '4.0.1', 'version': '4.0.1', 'mode': '$modeChar', " +
@@ -251,7 +299,8 @@ object ProfileStorage {
             "'timeindex': $timeindexStr, " +
             "'roastisodate': '$roastisodate', 'roasttime': '$roasttime', " +
             "'specialevents': [], 'specialeventstype': [], 'specialeventsvalue': [], 'specialeventsStrings': [], " +
-            "'extratimex': [], 'extratemp1': [], 'extratemp2': []}"
+            "'extratimex': [], 'extratemp1': [], 'extratemp2': []" +
+            bbpSuffix + "}"
         )
     }
 

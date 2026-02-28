@@ -47,6 +47,13 @@
                style="-fx-text-fill: #666; -fx-font-size: 11;"/>
         <TextArea fx:id="txtNotes" prefRowCount="2" prefWidth="140" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
     </GridPane>
+    <VBox fx:id="bbpPanel" spacing="4" visible="false" managed="false"
+          style="-fx-padding: 8 0; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">
+        <Label text="Between Batch (BBP)" style="-fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: #555;"/>
+        <Label fx:id="lblBbpDuration" text="—" style="-fx-text-fill: #666; -fx-font-size: 11;"/>
+        <Label fx:id="lblBbpMinBt" text="—" style="-fx-text-fill: #666; -fx-font-size: 11;"/>
+        <Label fx:id="lblBbpMaxBt" text="—" style="-fx-text-fill: #666; -fx-font-size: 11;"/>
+    </VBox>
     <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 4 0 0 0;">
         <Button fx:id="btnDontSave" text="Don't save"
                 style="-fx-background-color: #bdc3c7; -fx-text-fill: #333; -fx-font-size: 12; -fx-padding: 6 14; -fx-background-radius: 4;"/>

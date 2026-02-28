@@ -4,6 +4,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.BorderPane?>
@@ -35,21 +36,23 @@
     <left>
         <HBox fx:id="leftSidebarRegion" styleClass="left-sidebar-region" spacing="0" style="-fx-background-color: #f5f5f5; -fx-border-width: 0;">
             <VBox fx:id="sidebarColumn" styleClass="sidebar-column" spacing="1" style="-fx-padding: 4 1; -fx-min-width: 28; -fx-pref-width: 28;">
-                <ToggleButton fx:id="btnSidebarSystem" text="S" styleClass="sidebar-btn"
-                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
-                <ToggleButton fx:id="btnSidebarProduction" text="P" styleClass="sidebar-btn"
-                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
-                <ToggleButton fx:id="btnSidebarTasks" text="T" styleClass="sidebar-btn"
-                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
-                <ToggleButton fx:id="btnSidebarAlarms" text="A" styleClass="sidebar-btn"
-                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
-                <ToggleButton fx:id="btnSidebarComments" text="C" styleClass="sidebar-btn"
-                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
+                <ToggleButton fx:id="btnSidebarSystem" styleClass="sidebar-btn"
+                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;">
+                    <graphic>
+                        <Label text="⚙" style="-fx-font-size: 13; -fx-text-fill: #555555;"/>
+                    </graphic>
+                </ToggleButton>
+                <ToggleButton fx:id="btnSidebarProduction" styleClass="sidebar-btn"
+                              style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;">
+                    <graphic>
+                        <Label text="▤" style="-fx-font-size: 14; -fx-text-fill: #555555;"/>
+                    </graphic>
+                </ToggleButton>
                 <ToggleButton fx:id="btnSidebarSupport" text="?" styleClass="sidebar-btn"
                               style="-fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 22;"/>
             </VBox>
             <StackPane fx:id="sidebarPanelContainer" styleClass="sidebar-panel-container"
-                       minWidth="0" prefWidth="0" maxWidth="180"
+                       minWidth="0" prefWidth="0" maxWidth="460"
                        style="-fx-background-color: #f5f5f5;"/>
         </HBox>
     </left>
@@ -66,10 +69,13 @@
                     </StackPane>
                 </center>
             </BorderPane>
-            <!-- Right part: SplitPane [ values | reference ] -->
+            <!-- Right part: SplitPane [ values + control | reference ] -->
             <SplitPane fx:id="rightSplit" styleClass="right-split" dividerPositions="0.55" orientation="VERTICAL"
                        minWidth="200" prefWidth="200" maxWidth="200">
-                <VBox fx:id="valuesPanel" spacing="2" alignment="TOP_LEFT"
+                <VBox spacing="4" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
+                    <VBox fx:id="controlPanelContainer" spacing="4" alignment="TOP_LEFT" visible="false" managed="false"
+                          style="-fx-background-color: #f5f5f5; -fx-padding: 6 10;"/>
+                    <VBox fx:id="valuesPanel" spacing="2" alignment="TOP_LEFT"
                       minHeight="60" prefHeight="120" VBox.vgrow="ALWAYS"
                       style="-fx-background-color: #f5f5f5; -fx-padding: 6 10;">
                     <!-- Bean temp (Cropster style: large value + small °C, label below) -->
@@ -100,6 +106,7 @@
                     </HBox>
                     <Label text="RoR" styleClass="readout-label-et" maxWidth="1.7976931348623157E308"/>
                 </VBox>
+                </VBox>
                 <VBox fx:id="referencePanel" styleClass="reference-panel" spacing="2" alignment="TOP_LEFT"
                       minHeight="40" prefHeight="80" VBox.vgrow="ALWAYS"
                       style="-fx-background-color: #f5f5f5; -fx-padding: 4;">
@@ -110,15 +117,20 @@
         </SplitPane>
     </center>
 
-    <!-- Bottom: player bar (unchanged) -->
+    <!-- Bottom: player bar -->
     <bottom>
         <VBox styleClass="player-bar" style="-fx-background-color: #f5f5f5;">
             <HBox spacing="20" alignment="CENTER" style="-fx-padding: 12 16 14 16;">
                 <Label fx:id="lblConnectionStatus" text="○ Отключено"
                        style="-fx-text-fill: #888888; -fx-font-size: 12px; -fx-min-width: 160;"/>
+                <Button fx:id="btnAuth" style="-fx-min-width: 32; -fx-min-height: 32; -fx-max-width: 32; -fx-max-height: 32; -fx-background-radius: 4; -fx-cursor: hand; -fx-background-color: #e8e8e8;"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Button fx:id="btnAbort" text="✕ Abort" disable="true"
                         style="-fx-background-color: #f5f5f5; -fx-text-fill: #e74c3c; -fx-font-size: 13; -fx-padding: 8 20; -fx-background-radius: 4;"/>
+                <Button fx:id="btnRestartBbp" text="Restart" visible="false" managed="false"
+                        style="-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4;"/>
+                <Button fx:id="btnStopBbp" text="Stop BBP" visible="false" managed="false"
+                        style="-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 6 16; -fx-background-radius: 4;"/>
                 <Button fx:id="btnStart" text="Start"
                         style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14; -fx-font-weight: bold; -fx-padding: 8 32; -fx-background-radius: 4; -fx-border-width: 0;"/>
                 <Label fx:id="lblDuration" text="00:00"

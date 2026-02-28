@@ -31,7 +31,13 @@ data class MachineConfig(
     /** Phidget 1048: ET thermocouple channel (1-based). Used when transport == PHIDGET. */
     val phidgetEtChannel: Int = 1,
     /** Phidget 1048: BT thermocouple channel (1-based). Used when transport == PHIDGET. */
-    val phidgetBtChannel: Int = 2
+    val phidgetBtChannel: Int = 2,
+    /** Modbus register for gas control (Besca Full Auto: 3904). 0 = no control. */
+    val gasRegister: Int = 0,
+    /** Modbus register for airflow control (Besca Full Auto: 1003). 0 = no control. */
+    val airflowRegister: Int = 0,
+    /** Modbus register for drum control (Besca Full Auto: 1001). 0 = no control. */
+    val drumRegister: Int = 0
 )
 
 /** Named connection preset (like Artisan .aset machine settings). */
@@ -75,14 +81,36 @@ data class AppSettings(
     val savePath: String = System.getProperty("user.home") + "/roasts",
     /** Base URL of the roast server (e.g. https://artqqplus.ru/api/v1) for loading reference profiles. */
     val serverBaseUrl: String = "",
-    /** Optional Bearer token for server API auth. */
+    /** Optional Bearer token for server API auth. Set after login. */
     val serverToken: String = "",
+    /** Refresh token for renewing access (optional). */
+    val serverRefreshToken: String = "",
+    /** Email to pre-fill in login dialog when "Remember" was used. */
+    val serverRememberEmail: String = "",
     val chartColors: ChartColors = ChartColors(),
     val chartConfig: ChartConfig = ChartConfig(),
     /** Saved divider position for center|right SplitPane (0..1). */
     val layoutDividerCenterRight: Double? = null,
     /** Saved divider position for values|reference SplitPane (0..1). */
-    val layoutDividerReferenceChannels: Double? = null
+    val layoutDividerReferenceChannels: Double? = null,
+    /** When true, after Stop enter BBP phase and record BT/ET until next Start or Stop BBP (Cropster-style). */
+    val betweenBatchProtocolEnabled: Boolean = true,
+    /** When true, run roaster discovery on Connect and use detected config if found. */
+    val autoDetectRoaster: Boolean = false,
+    /** TCP hosts to scan for discovery (e.g. ["10.0.0.9"]). Null = use built-in default list. */
+    val discoveryTcpHosts: List<String>? = null,
+    /** Remember last successfully detected roaster and try it first on next Connect (skip full scan). */
+    val rememberLastDetectedRoaster: Boolean = true,
+    /** Last detected roaster config (used when rememberLastDetectedRoaster is true). */
+    val lastDetectedConfig: MachineConfig? = null,
+    // Roast properties (for aroast payload and Roast Properties dialog)
+    val roastPropertiesTitle: String = "",
+    val roastPropertiesReferenceId: String = "",
+    val roastPropertiesStockId: String = "",
+    val roastPropertiesBlendId: String = "",
+    val roastPropertiesWeightInKg: Double = 0.0,
+    val roastPropertiesWeightOutKg: Double = 0.0,
+    val roastPropertiesBeansNotes: String = ""
 )
 
 object SettingsManager {

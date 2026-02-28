@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.RoastPropertiesController"
+      spacing="12" alignment="TOP_LEFT"
+      style="-fx-background-color: #ffffff; -fx-padding: 20; -fx-min-width: 360;">
+    <Label text="Свойства обжарки" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;"/>
+    <Label text="Title / Название" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+    <TextField fx:id="txtTitle" promptText="Название профиля" prefWidth="320"
+               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-font-size: 12px;"/>
+    <Label text="Stock / Склад" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+    <ComboBox fx:id="cmbStock" prefWidth="320" promptText="— Не выбрано —"
+              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-font-size: 12px;"/>
+    <Label text="Blend / Бленд" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+    <ComboBox fx:id="cmbBlend" prefWidth="320" promptText="— Не выбрано —"
+              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-font-size: 12px;"/>
+    <Label text="Reference (Эталон)" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+    <ComboBox fx:id="cmbReference" prefWidth="320" promptText="— Без эталона —"
+              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-font-size: 12px;"/>
+    <Label text="Weight (Вес)" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <TextField fx:id="txtWeightIn" promptText="0.0" prefWidth="100"
+                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-font-size: 12px;"/>
+        <Label text="кг зелёного" style="-fx-text-fill: #888888; -fx-font-size: 11px;"/>
+        <TextField fx:id="txtWeightOut" promptText="0.0" prefWidth="100"
+                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-font-size: 12px;"/>
+        <Label text="кг обжаренного" style="-fx-text-fill: #888888; -fx-font-size: 11px;"/>
+    </HBox>
+    <Label text="Beans / Заметки" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+    <TextArea fx:id="txtBeans" promptText="Описание зелёного кофе, заметки..." prefRowCount="3" wrapText="true" prefWidth="320"
+              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-font-size: 12px;"/>
+    <HBox spacing="16" alignment="CENTER" style="-fx-padding: 12 0 0 0;">
+        <Button fx:id="btnOk" text="OK" defaultButton="true"
+                style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 8 24; -fx-background-radius: 4;"/>
+        <Button fx:id="btnCancel" text="Отмена" cancelButton="true"
+                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 8 24; -fx-background-radius: 4;"/>
+    </HBox>
+</VBox>

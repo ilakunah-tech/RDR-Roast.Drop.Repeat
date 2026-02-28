@@ -25,6 +25,7 @@ import org.jfree.chart.plot.Marker
 import org.jfree.chart.plot.ValueMarker
 import org.jfree.chart.plot.XYPlot
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer
+import org.jfree.chart.title.TextTitle
 import org.jfree.chart.ui.Layer
 import org.jfree.chart.ui.RectangleAnchor
 import org.jfree.chart.ui.RectangleInsets
@@ -92,6 +93,9 @@ class CurveChartFx : CurveModelListener {
         val COLOR_REF_ROR_ET = Color(160, 170, 175, 120)
         /** Reference event markers: subtle gray. */
         val COLOR_REF_MARKER = Color(140, 140, 140, 180)
+        /** BBP period band (Cropster-style: before roast start). */
+        val COLOR_BBP_BAND = Color(196, 196, 196)
+        val COLOR_BBP_TEXT_BG = Color(226, 231, 233)
 
         private val CHART_FONT = Font(null, Font.PLAIN, 11)
         private const val PHASE_STRIP_HEIGHT = 10
@@ -139,6 +143,13 @@ class CurveChartFx : CurveModelListener {
 
     /** Phase strip annotations (Drying, Maillard, Development) at bottom of chart. */
     private val phaseStripAnnotations = mutableListOf<XYAnnotation>()
+
+    /** When true, chart shows BBP curves (time 0..15 min) instead of roast; live pipeline updates ignored. */
+    @Volatile
+    private var bbpMode = false
+
+    /** BBP period annotation (shaded band before roast start). Null when not set. */
+    private var bbpAnnotation: AbstractXYAnnotation? = null
 
     init {
         val settings = SettingsManager.load()
@@ -311,6 +322,7 @@ class CurveChartFx : CurveModelListener {
     // ── CurveModelListener ────────────────────────────────────────────────────
 
     override fun notifyCurveChanged(source: CurveModel, timeMs: Long) {
+        if (bbpMode) return
         val series = seriesMap[source] ?: return
         Platform.runLater {
             chart.isNotify = false
@@ -327,6 +339,7 @@ class CurveChartFx : CurveModelListener {
     }
 
     override fun notifyCurveChanged(source: CurveModel) {
+        if (bbpMode) return
         val series = seriesMap[source] ?: return
         Platform.runLater {
             chart.isNotify = false
@@ -377,6 +390,151 @@ class CurveChartFx : CurveModelListener {
             chart.isNotify = true
         }
     }
+
+    // ── BBP: annotation (band before roast) and live BBP mode ─────────────────
+
+    /**
+     * Shaded band for "Between batch" period (before roast start).
+     * Draws from x1 to x2 (domain in ms; typically negative to 0).
+     */
+    private inner class BbpBandAnnotation(
+        private val x1Ms: Double,
+        private val x2Ms: Double
+    ) : AbstractXYAnnotation() {
+        override fun draw(
+            g2: Graphics2D,
+            plot: XYPlot,
+            dataArea: Rectangle2D,
+            domainAxis: ValueAxis,
+            rangeAxis: ValueAxis,
+            rendererIndex: Int,
+            info: PlotRenderingInfo?
+        ) {
+            val edge = Plot.resolveDomainAxisLocation(plot.domainAxisLocation, PlotOrientation.VERTICAL)
+            val j2dx1 = domainAxis.valueToJava2D(x1Ms, dataArea, edge)
+            val j2dx2 = domainAxis.valueToJava2D(x2Ms, dataArea, edge)
+            val w = j2dx2 - j2dx1
+            val savedComposite = g2.composite
+            val savedPaint = g2.paint
+            val savedColor = g2.color
+            g2.paint = COLOR_BBP_BAND
+            g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.15f)
+            g2.fill(java.awt.geom.Rectangle2D.Double(j2dx1, dataArea.minY, w, dataArea.height))
+            g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f)
+            g2.paint = COLOR_BBP_TEXT_BG
+            val label = "Between batch"
+            val fm = g2.fontMetrics
+            val tw = fm.stringWidth(label)
+            val th = fm.height
+            val tx = (j2dx1 + (w - tw) / 2).toFloat().coerceIn((dataArea.minX + 4).toFloat(), (dataArea.maxX - tw - 4).toFloat())
+            val ty = (dataArea.maxY - 12).toFloat()
+            g2.fill(java.awt.geom.Rectangle2D.Double(tx - 2.0, ty - th - 2.0, tw + 4.0, th + 4.0))
+            g2.color = java.awt.Color.DARK_GRAY
+            g2.drawString(label, tx, ty)
+            g2.composite = savedComposite
+            g2.paint = savedPaint
+            g2.color = savedColor
+        }
+    }
+
+    /**
+     * Show BBP period as a shaded band before roast start (X from -bbpDurationMs to 0).
+     * Extends domain axis to include negative time when bbpDurationMs > 0.
+     */
+    fun setBetweenBatchAnnotation(bbpDurationMs: Long) {
+        Platform.runLater {
+            bbpAnnotation?.let { plot.getRenderer(0).removeAnnotation(it); bbpAnnotation = null }
+            if (bbpDurationMs <= 0) {
+                val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
+                plot.domainAxis.setRange(0.0, timeRangeMs)
+                chart.fireChartChanged()
+                return@runLater
+            }
+            val startMs = -bbpDurationMs.toDouble()
+            val endMs = 0.0
+            val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
+            plot.domainAxis.setRange(startMs, timeRangeMs)
+            val ann = BbpBandAnnotation(startMs, endMs)
+            plot.getRenderer(0).addAnnotation(ann, Layer.BACKGROUND)
+            bbpAnnotation = ann
+            chart.fireChartChanged()
+        }
+    }
+
+    fun removeBetweenBatchAnnotation() {
+        Platform.runLater {
+            bbpAnnotation?.let {
+                plot.getRenderer(0).removeAnnotation(it)
+                bbpAnnotation = null
+            }
+            val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
+            plot.domainAxis.setRange(0.0, timeRangeMs)
+            chart.fireChartChanged()
+        }
+    }
+
+    /** Switch chart to BBP live mode (Cropster-style): only BBP BT/ET, no reference, no phase strip, no title. */
+    fun showBbpMode() {
+        Platform.runLater {
+            bbpMode = true
+            bbpAnnotation?.let { plot.getRenderer(0).removeAnnotation(it); bbpAnnotation = null }
+            btSeries.clear()
+            etSeries.clear()
+            rorBtSeries.clear()
+            rorEtSeries.clear()
+            refBtSeries.clear()
+            refEtSeries.clear()
+            refRorBtSeries.clear()
+            refRorEtSeries.clear()
+            refMarkers.forEach { plot.removeDomainMarker(it) }
+            refMarkers.clear()
+            markersByType.values.forEach { plot.removeDomainMarker(it as Marker) }
+            markersByType.clear()
+            markerOffset = 20.0
+            refMarkerOffset = 5.0
+            phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
+            phaseStripAnnotations.clear()
+            plot.clearDomainMarkers()
+            val bbpTimeRangeMs = 15 * 60 * 1000.0
+            plot.domainAxis.setRange(0.0, bbpTimeRangeMs)
+            chart.title = null
+            chart.fireChartChanged()
+        }
+    }
+
+    /** Update BBP curves from session (timex in seconds, temp1=BT, temp2=ET). Call only when in BBP mode. */
+    fun updateBbpCurves(timex: List<Double>, temp1: List<Double>, temp2: List<Double>) {
+        if (!bbpMode) return
+        Platform.runLater {
+            btSeries.clear()
+            etSeries.clear()
+            val n = minOf(timex.size, temp1.size, temp2.size)
+            for (i in 0 until n) {
+                val xMs = timex[i] * 1000
+                btSeries.add(xMs, temp1[i])
+                etSeries.add(xMs, temp2[i])
+            }
+            chart.fireChartChanged()
+        }
+    }
+
+    /** Leave BBP mode; reset domain and clear BBP series. */
+    fun exitBbpMode() {
+        Platform.runLater {
+            bbpMode = false
+            chart.title = null
+            btSeries.clear()
+            etSeries.clear()
+            rorBtSeries.clear()
+            rorEtSeries.clear()
+            val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
+            plot.domainAxis.setRange(0.0, timeRangeMs)
+            chart.fireChartChanged()
+        }
+    }
+
+    /** True when chart is showing BBP live data. */
+    fun isBbpMode(): Boolean = bbpMode
 
     // ── Event markers (Cropster ValueMarker pattern) ──────────────────────────
 
@@ -554,6 +712,11 @@ class CurveChartFx : CurveModelListener {
                     addReferenceEventMarker(xMs, label)
                 }
             }
+            if (profile?.betweenBatchLog != null) {
+                setBetweenBatchAnnotation(profile.betweenBatchLog!!.durationMs)
+            } else {
+                removeBetweenBatchAnnotation()
+            }
             chart.isNotify = true
             chart.fireChartChanged()
         }
@@ -634,6 +797,11 @@ class CurveChartFx : CurveModelListener {
     fun clearAll() {
         Platform.runLater {
             chart.isNotify = false
+            bbpAnnotation?.let { plot.getRenderer(0).removeAnnotation(it); bbpAnnotation = null }
+            bbpMode = false
+            chart.title = null
+            val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
+            plot.domainAxis.setRange(0.0, timeRangeMs)
             chargeOffsetMs = 0L
             btSeries.clear()
             etSeries.clear()

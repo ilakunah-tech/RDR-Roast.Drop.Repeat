@@ -1,0 +1,15 @@
+/* AtlantaFX overrides – RDR app (PrimerLight) */
+
+.root {
+    /* Optional: accent or spacing overrides on top of PrimerLight */
+}
+
+/* Buttons / controls – fine-tune if needed */
+.button {
+    -fx-cursor: hand;
+}
+
+/* Chart / content areas – keep readable with theme */
+.content-pane {
+    -fx-background-color: transparent;
+}

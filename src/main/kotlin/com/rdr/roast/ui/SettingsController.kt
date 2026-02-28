@@ -7,7 +7,9 @@ import com.rdr.roast.app.ConnectionPreset
 import com.rdr.roast.app.ConnectionTester
 import com.rdr.roast.app.MachineConfig
 import com.rdr.roast.app.MachineType
+import com.rdr.roast.app.AppearanceSupport
 import com.rdr.roast.app.SettingsManager
+import com.rdr.roast.app.ThemeSupport
 import com.rdr.roast.app.Transport
 import com.rdr.roast.driver.ConnectionState
 import javafx.application.Platform
@@ -38,6 +40,9 @@ class SettingsController {
     /** Set when user clicks Save; MainController uses this to apply and reconnect. */
     var savedSettings: AppSettings? = null
         private set
+
+    /** When set (e.g. when settings are shown in a drawer), called on Save/Cancel instead of closing a stage. */
+    var onCloseDrawer: ((SettingsController) -> Unit)? = null
 
     private val scope = CoroutineScope(Dispatchers.Default)
 
@@ -70,12 +75,6 @@ class SettingsController {
 
     @FXML
     lateinit var txtSamplingIntervalSec: TextField
-
-    @FXML
-    lateinit var txtServerBaseUrl: TextField
-
-    @FXML
-    lateinit var txtServerToken: TextField
 
     @FXML
     lateinit var btnBrowse: Button
@@ -133,6 +132,18 @@ class SettingsController {
 
     @FXML
     lateinit var lblPhidgetBt: javafx.scene.control.Label
+
+    @FXML
+    lateinit var chkBetweenBatchProtocol: CheckBox
+
+    @FXML
+    lateinit var chkAutoDetectRoaster: CheckBox
+
+    @FXML
+    lateinit var chkRememberLastRoaster: CheckBox
+
+    @FXML
+    lateinit var txtDiscoveryHosts: TextField
 
     @FXML
     lateinit var btnTestConnection: Button
@@ -198,6 +209,30 @@ class SettingsController {
     lateinit var settingsTabPane: TabPane
 
     @FXML
+    lateinit var cmbTheme: ComboBox<String>
+
+    @FXML
+    lateinit var btnApplyTheme: Button
+
+    @FXML
+    lateinit var cmbScale: ComboBox<String>
+
+    @FXML
+    lateinit var cmbFontSize: ComboBox<String>
+
+    @FXML
+    lateinit var cmbDensity: ComboBox<String>
+
+    @FXML
+    lateinit var colorAccent: ColorPicker
+
+    @FXML
+    lateinit var btnAccentDefault: Button
+
+    @FXML
+    lateinit var btnRestoreAppearance: Button
+
+    @FXML
     lateinit var colorLiveBt: ColorPicker
 
     @FXML
@@ -228,6 +263,46 @@ class SettingsController {
     fun initialize() {
         settingsTabPane.tabClosingPolicy = TabPane.TabClosingPolicy.UNAVAILABLE
 
+        cmbTheme.items.setAll(ThemeSupport.themeEntries.map { it.second })
+        cmbTheme.value = ThemeSupport.themeIdToDisplayName(ThemeSupport.loadThemeId()) ?: "Cupertino Light"
+        cmbTheme.valueProperty().addListener { _, _, displayName ->
+            ThemeSupport.displayNameToThemeId(displayName ?: return@addListener)?.let { id ->
+                ThemeSupport.applyTheme(id)
+                ThemeSupport.saveTheme(id)
+            }
+        }
+
+        cmbScale.items.setAll(AppearanceSupport.scaleDisplayValues())
+        cmbScale.value = AppearanceSupport.displayFromScale(AppearanceSupport.loadScale())
+        cmbScale.valueProperty().addListener { _, _, display ->
+            val scale = AppearanceSupport.scaleFromDisplay(display ?: return@addListener)
+            AppearanceSupport.saveScale(scale)
+        }
+
+        cmbFontSize.items.setAll(AppearanceSupport.fontSizeDisplayValues())
+        cmbFontSize.value = AppearanceSupport.displayFromFontSize(AppearanceSupport.loadFontSize())
+        cmbFontSize.valueProperty().addListener { _, _, display ->
+            AppearanceSupport.fontSizeFromDisplay(display ?: return@addListener).let { AppearanceSupport.saveFontSize(it) }
+        }
+
+        cmbDensity.items.setAll(AppearanceSupport.densityDisplayValues())
+        cmbDensity.value = AppearanceSupport.displayFromDensity(AppearanceSupport.loadDensity())
+        cmbDensity.valueProperty().addListener { _, _, display ->
+            AppearanceSupport.densityFromDisplay(display ?: return@addListener).let { AppearanceSupport.saveDensity(it) }
+        }
+
+        val accentHex = AppearanceSupport.loadAccentColor()
+        if (accentHex.isNotBlank()) {
+            try { colorAccent.value = Color.web(accentHex) } catch (_: Exception) { }
+        }
+        colorAccent.valueProperty().addListener { _, _, c ->
+            AppearanceSupport.saveAccentColor(AppearanceSupport.colorToHex(c))
+        }
+        btnAccentDefault.setOnAction { AppearanceSupport.saveAccentColor("") }
+
+        btnApplyTheme.setOnAction { applyAndSaveTheme() }
+        btnRestoreAppearance.setOnAction { restoreAppearanceDefaults() }
+
         val settings = SettingsManager.load()
 
         cmbSource.items.setAll("Simulator", "Besca", "Diedrich")
@@ -250,8 +325,10 @@ class SettingsController {
         txtPhidgetBtChannel.text = settings.machineConfig.phidgetBtChannel.toString()
         txtSavePath.text = settings.savePath
         txtSamplingIntervalSec.text = (settings.machineConfig.pollingIntervalMs / 1000.0).toString()
-        txtServerBaseUrl.text = settings.serverBaseUrl
-        txtServerToken.text = settings.serverToken
+        chkBetweenBatchProtocol.isSelected = settings.betweenBatchProtocolEnabled
+        chkAutoDetectRoaster.isSelected = settings.autoDetectRoaster
+        chkRememberLastRoaster.isSelected = settings.rememberLastDetectedRoaster
+        txtDiscoveryHosts.text = settings.discoveryTcpHosts?.joinToString(", ") ?: ""
 
         when (settings.unit.uppercase()) {
             "F" -> rbFahrenheit.isSelected = true
@@ -420,8 +497,6 @@ class SettingsController {
             val phidgetBt = txtPhidgetBtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 2
             val unit = if (rbFahrenheit.isSelected) "F" else "C"
             val savePath = txtSavePath.text.ifBlank { System.getProperty("user.home") + "/roasts" }
-            val serverBaseUrl = txtServerBaseUrl.text?.trim() ?: ""
-            val serverToken = txtServerToken.text?.trim() ?: ""
 
             val def = ChartColors()
             val chartColors = ChartColors(
@@ -463,14 +538,31 @@ class SettingsController {
                 phidgetBtChannel = phidgetBt,
                 pollingIntervalMs = pollingIntervalMs
             )
+            val discoveryHosts = txtDiscoveryHosts.text?.trim()?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.takeIf { it.isNotEmpty() }
             val newSettings = AppSettings(
                 machineConfig = mc,
                 unit = unit,
                 savePath = savePath,
-                serverBaseUrl = serverBaseUrl,
-                serverToken = serverToken,
+                serverBaseUrl = com.rdr.roast.app.ServerConfig.API_BASE_URL,
+                serverToken = settings.serverToken,
+                serverRefreshToken = settings.serverRefreshToken,
+                serverRememberEmail = settings.serverRememberEmail,
                 chartColors = chartColors,
-                chartConfig = chartConfig
+                chartConfig = chartConfig,
+                layoutDividerCenterRight = settings.layoutDividerCenterRight,
+                layoutDividerReferenceChannels = settings.layoutDividerReferenceChannels,
+                betweenBatchProtocolEnabled = chkBetweenBatchProtocol.isSelected,
+                autoDetectRoaster = chkAutoDetectRoaster.isSelected,
+                discoveryTcpHosts = discoveryHosts,
+                rememberLastDetectedRoaster = chkRememberLastRoaster.isSelected,
+                lastDetectedConfig = settings.lastDetectedConfig,
+                roastPropertiesTitle = settings.roastPropertiesTitle,
+                roastPropertiesReferenceId = settings.roastPropertiesReferenceId,
+                roastPropertiesStockId = settings.roastPropertiesStockId,
+                roastPropertiesBlendId = settings.roastPropertiesBlendId,
+                roastPropertiesWeightInKg = settings.roastPropertiesWeightInKg,
+                roastPropertiesWeightOutKg = settings.roastPropertiesWeightOutKg,
+                roastPropertiesBeansNotes = settings.roastPropertiesBeansNotes
             )
             savedSettings = newSettings
             SettingsManager.save(newSettings)
@@ -514,6 +606,10 @@ class SettingsController {
         txtSlaveId.tooltip = Tooltip("Modbus Slave ID устройства (обычно 1)")
         txtPhidgetEtChannel.tooltip = Tooltip("Номер канала Phidget 1048 для датчика ET (Environment Temperature)")
         txtPhidgetBtChannel.tooltip = Tooltip("Номер канала Phidget 1048 для датчика BT (Bean Temperature)")
+        chkBetweenBatchProtocol.tooltip = Tooltip("После Stop записывать BT/ET до следующего Start (лимит 15 мин). Кнопки Restart / Stop BBP в фазе BBP.")
+        chkAutoDetectRoaster.tooltip = Tooltip("При нажатии «Подключить» приложение попробует найти ростер по сети и COM-портам")
+        chkRememberLastRoaster.tooltip = Tooltip("При следующем подключении сначала пробовать последний успешно определённый ростер")
+        txtDiscoveryHosts.tooltip = Tooltip("IP-адреса для сканирования (Modbus TCP). Пусто = 10.0.0.9, 192.168.1.100, 127.0.0.1")
     }
 
     private fun updatePortFieldsVisibility() {
@@ -682,7 +778,43 @@ class SettingsController {
         }
     }
 
+    private fun applyAndSaveTheme() {
+        ThemeSupport.displayNameToThemeId(cmbTheme.value ?: return)?.let { id ->
+            ThemeSupport.applyTheme(id)
+            ThemeSupport.saveTheme(id)
+        }
+        saveAppearanceFromFields()
+        applyAppearanceToMainScene()
+    }
+
+    private fun saveAppearanceFromFields() {
+        cmbScale.value?.let { AppearanceSupport.saveScale(AppearanceSupport.scaleFromDisplay(it)) }
+        cmbFontSize.value?.let { AppearanceSupport.saveFontSize(AppearanceSupport.fontSizeFromDisplay(it)) }
+        cmbDensity.value?.let { AppearanceSupport.saveDensity(AppearanceSupport.densityFromDisplay(it)) }
+    }
+
+    private fun applyAppearanceToMainScene() {
+        val stage = btnApplyTheme.scene?.window as? Stage ?: return
+        stage.scene?.let { AppearanceSupport.applyToScene(it) }
+    }
+
+    private fun restoreAppearanceDefaults() {
+        ThemeSupport.saveTheme("CupertinoLight")
+        ThemeSupport.applyTheme("CupertinoLight")
+        AppearanceSupport.restoreDefaults()
+        cmbTheme.value = "Cupertino Light"
+        cmbScale.value = "100%"
+        cmbFontSize.value = "Обычный (14px)"
+        cmbDensity.value = "Обычный"
+        applyAppearanceToMainScene()
+    }
+
     private fun closeWindow() {
-        (btnSave.scene?.window as? Stage)?.close()
+        val callback = onCloseDrawer
+        if (callback != null) {
+            callback(this)
+        } else {
+            (btnSave.scene?.window as? Stage)?.close()
+        }
     }
 }

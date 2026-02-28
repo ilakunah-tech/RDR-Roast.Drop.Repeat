@@ -67,7 +67,9 @@ data class RoastProfile(
     val temp1: MutableList<Double> = mutableListOf(),
     val temp2: MutableList<Double> = mutableListOf(),
     val events: MutableList<RoastEvent> = mutableListOf(),
-    val mode: TemperatureUnit = TemperatureUnit.CELSIUS
+    val mode: TemperatureUnit = TemperatureUnit.CELSIUS,
+    /** BBP recorded before this roast (between previous Stop and this Start). Cropster-style. */
+    val betweenBatchLog: BetweenBatchLog? = null
 ) {
     @Synchronized
     fun addSample(sample: TemperatureSample) {

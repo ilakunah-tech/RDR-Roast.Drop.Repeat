@@ -1,0 +1,37 @@
+/* Appearance: font size and density – applied via style class on root */
+
+.font-size-compact {
+    -fx-font-size: 12px;
+}
+
+.font-size-normal {
+    -fx-font-size: 14px;
+}
+
+.font-size-large {
+    -fx-font-size: 16px;
+}
+
+.density-compact .button,
+.density-compact .toggle-button {
+    -fx-padding: 4 10;
+}
+
+.density-compact .text-field,
+.density-compact .combo-box {
+    -fx-padding: 3 6;
+}
+
+.density-compact .label {
+    -fx-padding: 2 0;
+}
+
+.density-compact .check-box,
+.density-compact .radio-button {
+    -fx-padding: 2 0;
+}
+
+.density-normal .button,
+.density-normal .toggle-button {
+    -fx-padding: 6 14;
+}

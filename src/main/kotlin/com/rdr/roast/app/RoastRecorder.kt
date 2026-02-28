@@ -1,5 +1,6 @@
 package com.rdr.roast.app
 
+import com.rdr.roast.domain.BetweenBatchSession
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastEvent
 import com.rdr.roast.domain.RoastProfile
@@ -18,13 +19,16 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
-enum class RecorderState { DISCONNECTED, MONITORING, RECORDING, STOPPED }
+enum class RecorderState { DISCONNECTED, MONITORING, RECORDING, STOPPED, BBP }
 
 class RoastRecorder(
     var dataSource: RoastDataSource
 ) {
     private val log = LoggerFactory.getLogger(RoastRecorder::class.java)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    /** When true, after Stop transition to BBP and record BT/ET until Start or Stop BBP. */
+    var betweenBatchProtocolEnabled: Boolean = true
 
     private val _stateFlow = MutableStateFlow(RecorderState.DISCONNECTED)
     val stateFlow: StateFlow<RecorderState> = _stateFlow.asStateFlow()
@@ -37,6 +41,13 @@ class RoastRecorder(
 
     private val _elapsedSec = MutableStateFlow(0.0)
     val elapsedSec: StateFlow<Double> = _elapsedSec.asStateFlow()
+
+    /** BBP session when state is BBP; receives samples after Stop until Start/Restart/Stop BBP. */
+    var currentBbpSession: BetweenBatchSession? = null
+        private set
+
+    private val _bbpElapsedSec = MutableStateFlow(0.0)
+    val bbpElapsedSec: StateFlow<Double> = _bbpElapsedSec.asStateFlow()
 
     private var connectionJob: kotlinx.coroutines.Job? = null
     private var sampleCollectionJob: kotlinx.coroutines.Job? = null
@@ -74,17 +85,30 @@ class RoastRecorder(
     }
 
     fun startRecording() {
-        if (_stateFlow.value != RecorderState.MONITORING) {
-            log.warn("startRecording ignored: state is {}", _stateFlow.value)
+        val state = _stateFlow.value
+        if (state != RecorderState.MONITORING && state != RecorderState.BBP) {
+            log.warn("startRecording ignored: state is {}", state)
             return
         }
-        val profile = RoastProfile(mode = TemperatureUnit.CELSIUS)
+
+        val pendingBbpLog = if (state == RecorderState.BBP) {
+            sampleCollectionJob?.cancel()
+            sampleCollectionJob = null
+            val session = currentBbpSession
+            currentBbpSession = null
+            _bbpElapsedSec.value = 0.0
+            session?.toLog(_currentProfile.value.mode)
+        } else null
+
+        val profile = RoastProfile(
+            mode = TemperatureUnit.CELSIUS,
+            betweenBatchLog = pendingBbpLog
+        )
         _currentProfile.value = profile
         _currentSample.value = null
         _elapsedSec.value = 0.0
         _stateFlow.value = RecorderState.RECORDING
 
-        sampleCollectionJob?.cancel()
         sampleCollectionJob = scope.launch {
             dataSource.sampleFlow().collect { sample ->
                 if (!isActive) return@collect
@@ -126,7 +150,6 @@ class RoastRecorder(
         }
         sampleCollectionJob?.cancel()
         sampleCollectionJob = null
-        _stateFlow.value = RecorderState.STOPPED
         val live = _currentProfile.value
         val snapshot = synchronized(live) {
             RoastProfile(
@@ -134,10 +157,28 @@ class RoastRecorder(
                 temp1 = ArrayList(live.temp1),
                 temp2 = ArrayList(live.temp2),
                 events = ArrayList(live.events),
-                mode = live.mode
+                mode = live.mode,
+                betweenBatchLog = live.betweenBatchLog
             )
         }
         _currentProfile.value = snapshot
+
+        if (betweenBatchProtocolEnabled) {
+            _stateFlow.value = RecorderState.BBP
+            val session = BetweenBatchSession(startEpochMs = System.currentTimeMillis())
+            currentBbpSession = session
+            _bbpElapsedSec.value = 0.0
+            sampleCollectionJob = scope.launch {
+                dataSource.sampleFlow().collect { sample ->
+                    if (!isActive) return@collect
+                    val bbpTimeSec = (System.currentTimeMillis() - session.startEpochMs) / 1000.0
+                    session.addSample(bbpTimeSec, sample.bt, sample.et)
+                    _bbpElapsedSec.value = bbpTimeSec
+                }
+            }
+        } else {
+            _stateFlow.value = RecorderState.STOPPED
+        }
         return snapshot
     }
 
@@ -158,12 +199,43 @@ class RoastRecorder(
         _stateFlow.value = RecorderState.MONITORING
     }
 
+    /** Transition to MONITORING (from STOPPED or BBP). From BBP cancels BBP job and clears session. */
     fun reset() {
-        if (_stateFlow.value != RecorderState.STOPPED) {
-            log.warn("reset ignored: state is {}", _stateFlow.value)
-            return
+        when (_stateFlow.value) {
+            RecorderState.STOPPED -> _stateFlow.value = RecorderState.MONITORING
+            RecorderState.BBP -> {
+                sampleCollectionJob?.cancel()
+                sampleCollectionJob = null
+                currentBbpSession = null
+                _bbpElapsedSec.value = 0.0
+                _stateFlow.value = RecorderState.MONITORING
+            }
+            else -> log.warn("reset ignored: state is {}", _stateFlow.value)
         }
-        _stateFlow.value = RecorderState.MONITORING
+    }
+
+    /** Restart BBP recording (new session, clear data). Only in BBP state. */
+    fun restartBbp() {
+        if (_stateFlow.value != RecorderState.BBP) return
+        sampleCollectionJob?.cancel()
+        val session = currentBbpSession ?: BetweenBatchSession()
+        session.reset()
+        currentBbpSession = session
+        _bbpElapsedSec.value = 0.0
+        sampleCollectionJob = scope.launch {
+            dataSource.sampleFlow().collect { sample ->
+                if (!isActive) return@collect
+                val bbpTimeSec = (System.currentTimeMillis() - session.startEpochMs) / 1000.0
+                session.addSample(bbpTimeSec, sample.bt, sample.et)
+                _bbpElapsedSec.value = bbpTimeSec
+            }
+        }
+    }
+
+    /** Stop BBP recording (keep data until Start). Only in BBP state. */
+    fun stopBbpRecording() {
+        if (_stateFlow.value != RecorderState.BBP) return
+        currentBbpSession?.setStopped(true)
     }
 
     fun shutdown() {
