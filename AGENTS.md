@@ -27,3 +27,23 @@
 - **Скиллы** (как делать домен, UI, железо, сборку): `.cursor/skills/` — roasting-app-domain, javafx-roasting-ui, hardware-integration, gradle-packaging.
 
 Общий стек и архитектура описаны в `.cursor/rules/project-stack.mdc` (alwaysApply).
+
+## Cursor Cloud specific instructions
+
+### Project overview
+
+RDR (Roast.Drop.Repeat) is a single-module Kotlin/JavaFX desktop coffee roasting logger. No database, no Docker — settings live in `~/.rdr/settings.json`, profiles in `~/roasts/*.alog`.
+
+### Build & run
+
+- **Build**: `./gradlew build -x test` (compiles Kotlin, downloads all deps via Gradle).
+- **Tests**: `./gradlew test` — 3 JUnit 5 test classes (PhasesTest, ProfileStorageTest, RoRTest).
+- **Run app**: `DISPLAY=:1 ./gradlew run` — launches JavaFX UI. Requires a virtual display (Xvfb) on headless Linux; the Cloud VM already provides `DISPLAY=:1`.
+- The app defaults to **Simulator** machine type, so no physical roaster or network is needed for basic testing.
+
+### Gotchas
+
+- The repo ships without a `gradlew` unix script (only `gradlew.bat`). The update script regenerates it from the existing `gradle-wrapper.jar` if missing.
+- CSS warnings about `ClassCastException` on startup are cosmetic (JavaFX 23 strictness with `appearance.css` size values) and do not affect functionality.
+- The external server (`artqqplus.ru`) is optional; the app works fully offline with the simulator. Server-dependent features (login, reference profiles, upload) degrade gracefully without credentials.
+- No lint tool (detekt, ktlint) is configured in the Gradle build. Compilation warnings from `./gradlew build` serve as the primary code-quality check.
