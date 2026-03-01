@@ -48,14 +48,14 @@ data class ConnectionPreset(
 
 /** Custom colours for chart curves (hex strings). Ref series use refAlpha for transparency. */
 data class ChartColors(
-    val liveBt: String = "#d4483b",
-    val liveEt: String = "#3498db",
-    val liveRorBt: String = "#2c3e50",
-    val liveRorEt: String = "#95a5a6",
-    val refBt: String = "#d4483b",
-    val refEt: String = "#3498db",
-    val refRorBt: String = "#888888",
-    val refRorEt: String = "#bbbbbb",
+    val liveBt: String = "#FF6B35",
+    val liveEt: String = "#F59E0B",
+    val liveRorBt: String = "#06B6D4",
+    val liveRorEt: String = "#0EA5E9",
+    val refBt: String = "#FF6B35",
+    val refEt: String = "#F59E0B",
+    val refRorBt: String = "#7DD3FC",
+    val refRorEt: String = "#A5F3FC",
     val refAlpha: Int = 80
 )
 
@@ -87,6 +87,8 @@ data class AppSettings(
     val serverRefreshToken: String = "",
     /** Email to pre-fill in login dialog when "Remember" was used. */
     val serverRememberEmail: String = "",
+    /** Full dynamic UI theme configuration. */
+    val themeSettings: ThemeSettings = ThemeSettings.rdrCoffeeDefault(),
     val chartColors: ChartColors = ChartColors(),
     val chartConfig: ChartConfig = ChartConfig(),
     /** Saved divider position for center|right SplitPane (0..1). */

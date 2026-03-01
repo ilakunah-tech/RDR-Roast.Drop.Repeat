@@ -1,4 +1,4 @@
-/* Appearance: font size and density – applied via style class on root */
+/* Appearance: font size, density, radius – applied via root style / AppearanceSupport */
 
 .font-size-compact {
     -fx-font-size: 12px;
@@ -34,4 +34,16 @@
 .density-normal .button,
 .density-normal .toggle-button {
     -fx-padding: 6 14;
+}
+
+/* Radius is applied via -rdr-radius on .root (set by AppearanceSupport.setRadius) */
+.button, .text-field, .combo-box, .list-view, .table-view,
+.tab-pane, .slider .track, .context-menu {
+    -fx-background-radius: -rdr-radius;
+    -fx-border-radius: -rdr-radius;
+}
+
+.card {
+    -fx-background-radius: -rdr-radius;
+    -fx-border-radius: -rdr-radius;
 }

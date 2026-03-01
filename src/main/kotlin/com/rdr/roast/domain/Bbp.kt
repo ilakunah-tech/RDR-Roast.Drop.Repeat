@@ -24,32 +24,10 @@ data class BetweenBatchLog(
     val isEmpty: Boolean get() = durationMs <= 0 || timex.isEmpty()
 
     /** Index of minimum BT (bean temp) in temp1. */
-    fun lowestTemperatureIndex(): Int? {
-        if (temp1.isEmpty()) return null
-        var minIdx = 0
-        var minVal = temp1[0]
-        for (i in temp1.indices) {
-            if (temp1[i] < minVal) {
-                minVal = temp1[i]
-                minIdx = i
-            }
-        }
-        return minIdx
-    }
+    fun lowestTemperatureIndex(): Int? = temp1.indices.minByOrNull { temp1[it] }
 
     /** Index of maximum BT in temp1. */
-    fun highestTemperatureIndex(): Int? {
-        if (temp1.isEmpty()) return null
-        var maxIdx = 0
-        var maxVal = temp1[0]
-        for (i in temp1.indices) {
-            if (temp1[i] > maxVal) {
-                maxVal = temp1[i]
-                maxIdx = i
-            }
-        }
-        return maxIdx
-    }
+    fun highestTemperatureIndex(): Int? = temp1.indices.maxByOrNull { temp1[it] }
 }
 
 /**
@@ -64,21 +42,23 @@ class BetweenBatchSession(
     val temp1: MutableList<Double> = mutableListOf()
     val temp2: MutableList<Double> = mutableListOf()
 
-    @Volatile
-    var stopped: Boolean = false
-        private set
+    private var _stopped: Boolean = false
+
+    /** Whether this session has been stopped; all access goes through the same monitor. */
+    fun isStopped(): Boolean = synchronized(this) { _stopped }
 
     @Synchronized
     fun addSample(timeSec: Double, bt: Double, et: Double) {
-        if (stopped) return
+        if (_stopped) return
         if (timeSec >= maxDurationSec) return
         timex.add(timeSec)
         temp1.add(bt)
         temp2.add(et)
     }
 
+    @Synchronized
     fun setStopped(value: Boolean) {
-        stopped = value
+        _stopped = value
     }
 
     /** Build immutable log from current data; computes lowest/highest BT times. */
@@ -105,7 +85,7 @@ class BetweenBatchSession(
     /** Clear data and set new start time; re-enable recording. */
     @Synchronized
     fun reset() {
-        stopped = false
+        _stopped = false
         startEpochMs = System.currentTimeMillis()
         timex.clear()
         temp1.clear()

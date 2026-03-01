@@ -8,12 +8,16 @@ object AppearanceSupport {
     private const val PREF_UI_SCALE = "uiScale"
     private const val PREF_FONT_SIZE = "fontSize"
     private const val PREF_DENSITY = "density"
-    private const val PREF_ACCENT_COLOR = "accentColor"
+    private const val PREF_ACCENT_COLOR = "rdr.appearance.accent"
+    private const val PREF_RADIUS = "rdr.appearance.radius"
+    private const val PREF_PANEL_BG = "rdr.appearance.panelBg"
 
     private const val DEFAULT_SCALE = 1.0
     private const val DEFAULT_FONT_SIZE = "normal"
     private const val DEFAULT_DENSITY = "normal"
     private const val DEFAULT_ACCENT = ""
+    private const val DEFAULT_RADIUS = 10
+    private const val DEFAULT_PANEL_BG = "#f5f5f5"
 
     private val scaleEntries = listOf(1.0 to "100%", 1.1 to "110%", 1.25 to "125%")
     private val fontSizeEntries = listOf(
@@ -41,6 +45,32 @@ object AppearanceSupport {
     fun loadAccentColor(): String = prefs().get(PREF_ACCENT_COLOR, DEFAULT_ACCENT)
     fun saveAccentColor(hex: String) { prefs().put(PREF_ACCENT_COLOR, hex) }
 
+    fun loadRadius(): Int = prefs().get(PREF_RADIUS, DEFAULT_RADIUS.toString()).toIntOrNull()?.coerceIn(0, 20) ?: DEFAULT_RADIUS
+    fun saveRadius(px: Int) { prefs().put(PREF_RADIUS, px.toString()) }
+
+    fun loadPanelBackground(): String = prefs().get(PREF_PANEL_BG, DEFAULT_PANEL_BG).takeIf { it.isNotBlank() } ?: DEFAULT_PANEL_BG
+    fun savePanelBackground(hex: String) { prefs().put(PREF_PANEL_BG, hex) }
+
+    /** Apply corner radius to scene root; live preview from Settings. */
+    fun setRadius(px: Int, scene: Scene) {
+        val root = scene.root ?: return
+        var style = (root.style ?: "").replace(Regex("\\s*-rdr-radius:\\s*[^;]+;?"), "").trim()
+        style += " -rdr-radius: ${px.coerceIn(0, 20)}px;"
+        root.style = style
+        saveRadius(px.coerceIn(0, 20))
+    }
+
+    /** Apply accent color to scene root; live preview from Settings. */
+    fun setAccent(hex: String, scene: Scene) {
+        val root = scene.root ?: return
+        var style = (root.style ?: "").replace(Regex("\\s*-rdr-accent:\\s*[^;]+;?"), "").trim()
+            .replace(Regex("\\s*-rdr-accent-hover:\\s*[^;]+;?"), "").trim()
+        val h = hex.takeIf { it.isNotBlank() } ?: "#E8896A"
+        style += " -rdr-accent: $h; -rdr-accent-hover: derive($h, -15%);"
+        root.style = style
+        saveAccentColor(if (hex.isNotBlank()) hex else "")
+    }
+
     fun scaleDisplayValues(): List<String> = scaleEntries.map { it.second }
     fun scaleFromDisplay(display: String): Double = scaleEntries.find { it.second == display }?.first ?: DEFAULT_SCALE
     fun displayFromScale(scale: Double): String = scaleEntries.find { it.first == scale }?.second ?: "100%"
@@ -59,6 +89,7 @@ object AppearanceSupport {
         val fontSize = loadFontSize()
         val density = loadDensity()
         val accentHex = loadAccentColor()
+        val radius = loadRadius()
 
         root.scaleX = scale
         root.scaleY = scale
@@ -69,7 +100,15 @@ object AppearanceSupport {
         root.styleClass.removeAll("density-compact", "density-normal")
         root.styleClass.add("density-$density")
 
+        val panelBg = loadPanelBackground()
         var style = (root.style ?: "").replace(Regex("\\s*-fx-accent-color:\\s*[^;]+;?"), "").trim()
+            .replace(Regex("\\s*-rdr-radius:\\s*[^;]+;?"), "").trim()
+            .replace(Regex("\\s*-rdr-accent:\\s*[^;]+;?"), "").trim()
+            .replace(Regex("\\s*-rdr-accent-hover:\\s*[^;]+;?"), "").trim()
+            .replace(Regex("\\s*-rdr-panel-bg:\\s*[^;]+;?"), "").trim()
+        style += " -rdr-radius: ${radius}px; -rdr-panel-bg: $panelBg;"
+        val accent = if (accentHex.isNotBlank()) accentHex else "#E8896A"
+        style += " -rdr-accent: $accent; -rdr-accent-hover: derive($accent, -15%);"
         if (accentHex.isNotBlank()) style += " -fx-accent-color: $accentHex;"
         root.style = style
     }
@@ -79,6 +118,8 @@ object AppearanceSupport {
         saveFontSize(DEFAULT_FONT_SIZE)
         saveDensity(DEFAULT_DENSITY)
         saveAccentColor(DEFAULT_ACCENT)
+        saveRadius(DEFAULT_RADIUS)
+        savePanelBackground(DEFAULT_PANEL_BG)
     }
 
     fun colorToHex(color: Color): String =

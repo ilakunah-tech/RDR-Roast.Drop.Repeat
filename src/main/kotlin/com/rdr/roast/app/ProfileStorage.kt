@@ -1,6 +1,8 @@
 package com.rdr.roast.app
 
 import com.rdr.roast.domain.BetweenBatchLog
+import com.rdr.roast.domain.ControlEvent
+import com.rdr.roast.domain.ControlEventType
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.RoastEvent
@@ -43,7 +45,7 @@ object ProfileStorage {
         val events = mutableListOf<RoastEvent>()
         if (timeindex.isNotEmpty() && timexList.isNotEmpty()) {
             addEventFromTimeindex(events, timeindex, timexList, btList, etList, 0, EventType.CHARGE)
-            addEventFromTimeindex(events, timeindex, timexList, btList, etList, 1, EventType.DE)   // Dry End
+            addEventFromTimeindex(events, timeindex, timexList, btList, etList, 1, EventType.CC)   // Dry End
             addEventFromTimeindex(events, timeindex, timexList, btList, etList, 2, EventType.FC)   // FCs
             addEventFromTimeindex(events, timeindex, timexList, btList, etList, 6, EventType.DROP)
             addTpEventIfMissing(events, timexList, btList, etList)
@@ -51,14 +53,92 @@ object ProfileStorage {
         }
 
         val bbp = parseBbp(content, mode)
+        val controlEvents = parseControlEvents(content, timexList)
         return RoastProfile(
             timex = timexList,
             temp1 = btList,
             temp2 = etList,
             events = events,
+            controlEvents = controlEvents,
             mode = mode,
             betweenBatchLog = bbp
         )
+    }
+
+    /** Artisan .alog: specialevents = indices into timex, specialeventstype/etypes = type index.
+     * specialeventsvalue = value; specialeventsStrings = display strings (e.g. '20mbar', 'Pilot') shown on chart. */
+    private fun parseControlEvents(content: String, timex: List<Double>): List<ControlEvent> {
+        val indices = parseIntList(content, "specialevents")
+        val types = parseIntList(content, "specialeventstype").ifEmpty { parseIntList(content, "etypes") }
+        val values = parseDoubleList(content, "specialeventsvalue")
+        val strings = parseStringList(content, "specialeventsStrings")
+        if (indices.isEmpty() || timex.isEmpty()) return emptyList()
+        val typeMap = listOf(ControlEventType.AIR, ControlEventType.DRUM, ControlEventType.DAMPER, ControlEventType.GAS)
+        return indices.mapIndexed { i, _ ->
+            val idx = indices[i].coerceIn(0, timex.size - 1)
+            val timeSec = timex[idx]
+            val typeInt = types.getOrNull(i)?.coerceIn(0, 3) ?: 0
+            val value = values.getOrNull(i) ?: 0.0
+            val displayStr = strings.getOrNull(i)?.takeIf { it.isNotBlank() }
+            ControlEvent(timeSec, typeMap[typeInt], value, displayStr)
+        }.sortedBy { it.timeSec }
+    }
+
+    /** Parses Python list of strings from .alog, e.g. ['20mbar', '0', None, '15mbar']. */
+    private fun parseStringList(content: String, key: String): List<String> {
+        val start = indexOfKey(content, key)
+        if (start < 0) return emptyList()
+        val bracket = content.indexOf('[', start)
+        if (bracket < 0) return emptyList()
+        val end = findMatchingBracket(content, bracket)
+        if (end < 0) return emptyList()
+        val inner = content.substring(bracket + 1, end)
+        return parseStringListInner(inner)
+    }
+
+    private fun parseStringListInner(inner: String): List<String> {
+        val result = mutableListOf<String>()
+        var i = 0
+        while (i < inner.length) {
+            while (i < inner.length && (inner[i].isWhitespace() || inner[i] == ',')) i++
+            if (i >= inner.length) break
+            val s = when (inner[i]) {
+                '\'' -> {
+                    val start = i + 1
+                    val end = inner.indexOf('\'', start)
+                    if (end < 0) { i = inner.length; "" }
+                    else {
+                        i = end + 1
+                        inner.substring(start, end).replace("\\'", "'")
+                    }
+                }
+                '"' -> {
+                    val start = i + 1
+                    var e = start
+                    while (e < inner.length) {
+                        val q = inner.indexOf('"', e)
+                        if (q < 0) break
+                        if (inner.getOrNull(q - 1) != '\\') { e = q; break }
+                        e = q + 1
+                    }
+                    i = if (e < inner.length) e + 1 else inner.length
+                    if (e > start) inner.substring(start, e).replace("\\\"", "\"") else ""
+                }
+                else -> {
+                    if (inner.substring(i).trimStart().startsWith("None")) {
+                        i += 4
+                        ""
+                    } else {
+                        val comma = inner.indexOf(',', i).let { if (it < 0) inner.length else it }
+                        val token = inner.substring(i, comma).trim()
+                        i = comma
+                        if (token == "None" || token == "null") "" else token
+                    }
+                }
+            }
+            result.add(s)
+        }
+        return result
     }
 
     private fun parseBbp(content: String, mode: TemperatureUnit): BetweenBatchLog? {
@@ -230,14 +310,40 @@ object ProfileStorage {
         val timeindex = timeindexRaw.take(8)
         if (timeindex.isNotEmpty() && timexList.isNotEmpty()) {
             addEventFromTimeindex(events, timeindex, timexList, bt, et, 0, EventType.CHARGE)
-            addEventFromTimeindex(events, timeindex, timexList, bt, et, 1, EventType.DE)
+            addEventFromTimeindex(events, timeindex, timexList, bt, et, 1, EventType.CC)
             addEventFromTimeindex(events, timeindex, timexList, bt, et, 2, EventType.FC)
             addEventFromTimeindex(events, timeindex, timexList, bt, et, 6, EventType.DROP)
             addTpEventIfMissing(events, timexList, bt, et)
             events.sortBy { it.timeSec }
         }
 
-        return RoastProfile(timex = timexList, temp1 = bt, temp2 = et, events = events, mode = mode)
+        val controlEvents = parseControlEventsFromServerJson(json, timexList)
+
+        return RoastProfile(timex = timexList, temp1 = bt, temp2 = et, events = events, controlEvents = controlEvents, mode = mode)
+    }
+
+    /** Parse specialevents / specialeventstype (or etypes) / specialeventsvalue from server profile JSON. */
+    private fun parseControlEventsFromServerJson(json: Map<String, Any?>, timex: List<Double>): List<ControlEvent> {
+        @Suppress("UNCHECKED_CAST")
+        val indicesRaw = json["specialevents"] as? List<Number> ?: json["specialevents"] as? List<Int> ?: emptyList<Number>()
+        @Suppress("UNCHECKED_CAST")
+        val typesRaw = (json["specialeventstype"] as? List<Number>)?.map { it.toInt() }
+            ?: (json["etypes"] as? List<Number>)?.map { it.toInt() }
+            ?: emptyList()
+        @Suppress("UNCHECKED_CAST")
+        val valuesRaw = (json["specialeventsvalue"] as? List<Number>)?.map { it.toDouble() } ?: emptyList()
+        @Suppress("UNCHECKED_CAST")
+        val stringsRaw = (json["specialeventsStrings"] as? List<*>)?.mapNotNull { it?.toString()?.takeIf { s -> s != "null" } } ?: emptyList()
+        val indices = indicesRaw.map { it.toInt() }
+        if (indices.isEmpty() || timex.isEmpty()) return emptyList()
+        val typeMap = listOf(ControlEventType.AIR, ControlEventType.DRUM, ControlEventType.DAMPER, ControlEventType.GAS)
+        return indices.mapIndexed { i, idx ->
+            val timeSec = timex.getOrNull(idx.coerceIn(0, timex.size - 1)) ?: 0.0
+            val typeInt = typesRaw.getOrNull(i)?.coerceIn(0, 3) ?: 0
+            val value = valuesRaw.getOrNull(i) ?: 0.0
+            val displayStr = stringsRaw.getOrNull(i)?.takeIf { it.isNotBlank() }
+            ControlEvent(timeSec, typeMap[typeInt], value, displayStr)
+        }.sortedBy { it.timeSec }
     }
 
     /**
@@ -268,8 +374,7 @@ object ProfileStorage {
         val temp2 = formatTempList(profile.temp1)  // BT
 
         val chargeIdx = profile.eventIndex(EventType.CHARGE).coerceAtLeast(-1)
-        val deIdx = (profile.eventIndex(EventType.DE).takeIf { it >= 0 }
-            ?: profile.eventIndex(EventType.CC)).coerceAtLeast(-1)
+        val deIdx = profile.eventIndex(EventType.CC).coerceAtLeast(-1)
         val fcIdx = profile.eventIndex(EventType.FC).coerceAtLeast(-1)
         val dropIdx = profile.eventIndex(EventType.DROP).coerceAtLeast(-1)
         val timeindex = listOf(chargeIdx, deIdx, fcIdx, -1, -1, -1, dropIdx, -1)
@@ -292,13 +397,37 @@ object ProfileStorage {
             if (opt.isNotEmpty()) ", $opt" else ""
         } ?: ""
 
+        val specialEventsStr: String
+        val specialEventstypeStr: String
+        val specialEventsvalueStr: String
+        val specialEventsStringsStr: String
+        if (profile.controlEvents.isEmpty()) {
+            specialEventsStr = "[]"
+            specialEventstypeStr = "[]"
+            specialEventsvalueStr = "[]"
+            specialEventsStringsStr = "[]"
+        } else {
+            val timexList = profile.timex
+            val indices = profile.controlEvents.map { ce ->
+                if (timexList.isEmpty()) 0
+                else timexList.withIndex().minByOrNull { (_, t) -> kotlin.math.abs(t - ce.timeSec) }?.index ?: 0
+            }
+            val types = profile.controlEvents.map { it.type.ordinal }
+            val values = profile.controlEvents.map { it.value }
+            val strings = profile.controlEvents.map { ce -> ce.displayString?.let { "'${it.replace("'", "\\'")}'" } ?: "None" }
+            specialEventsStr = formatIntList(indices)
+            specialEventstypeStr = formatIntList(types)
+            specialEventsvalueStr = "[" + values.joinToString(", ") { String.format(Locale.US, "%.1f", it) } + "]"
+            specialEventsStringsStr = "[" + strings.joinToString(", ") + "]"
+        }
+
         // Artisan 4.x–compatible minimal dict: required keys so Artisan can open the file.
         return (
             "{'recording_version': '4.0.1', 'version': '4.0.1', 'mode': '$modeChar', " +
             "'timex': $timex, 'temp1': $temp1, 'temp2': $temp2, " +
             "'timeindex': $timeindexStr, " +
             "'roastisodate': '$roastisodate', 'roasttime': '$roasttime', " +
-            "'specialevents': [], 'specialeventstype': [], 'specialeventsvalue': [], 'specialeventsStrings': [], " +
+            "'specialevents': $specialEventsStr, 'specialeventstype': $specialEventstypeStr, 'specialeventsvalue': $specialEventsvalueStr, 'specialeventsStrings': $specialEventsStringsStr, " +
             "'extratimex': [], 'extratemp1': [], 'extratemp2': []" +
             bbpSuffix + "}"
         )

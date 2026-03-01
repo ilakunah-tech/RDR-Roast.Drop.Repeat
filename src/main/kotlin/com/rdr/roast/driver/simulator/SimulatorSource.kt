@@ -2,6 +2,8 @@ package com.rdr.roast.driver.simulator
 
 import com.rdr.roast.app.MachineConfig
 import com.rdr.roast.driver.ConnectionState
+import com.rdr.roast.driver.ControlSpec
+import com.rdr.roast.driver.RoastControl
 import com.rdr.roast.driver.RoastDataSource
 import com.rdr.roast.domain.TemperatureSample
 import kotlinx.coroutines.delay
@@ -14,6 +16,10 @@ import kotlin.math.sin
 import kotlin.random.Random
 import org.slf4j.LoggerFactory
 
+private const val CONTROL_GAS = "gas"
+private const val CONTROL_AIRFLOW = "airflow"
+private const val CONTROL_DRUM = "drum"
+
 /**
  * Realistic S-curve roast simulator.
  * - Charge: BT starts ~200°C (hot drum), drops to TP ~90–100°C by t≈60–90s.
@@ -22,8 +28,9 @@ import org.slf4j.LoggerFactory
  * - Development (420–540s): BT ~195→210°C, RoR ~5–7 °C/min, drop ~540s.
  * - ET: ~300°C down to ~250°C (smooth, slower than BT).
  * - ±0.3°C noise for realism.
+ * Implements [RoastControl] with Gas/Airflow/Drum sliders for UI testing (same as Besca).
  */
-class SimulatorSource(private val config: MachineConfig) : RoastDataSource {
+class SimulatorSource(private val config: MachineConfig) : RoastDataSource, RoastControl {
 
     private val log = LoggerFactory.getLogger(SimulatorSource::class.java)
 
@@ -104,5 +111,23 @@ class SimulatorSource(private val config: MachineConfig) : RoastDataSource {
         val u = t / endSec
         val smooth = 1.0 - u * u * (3.0 - 2.0 * u)
         return 250.0 + 50.0 * smooth
+    }
+
+    // ── RoastControl (Besca-style sliders for testing) ───────────────────────
+
+    override fun supportsControl(): Boolean = true
+
+    override fun controlSpecs(): List<ControlSpec> = listOf(
+        ControlSpec(CONTROL_GAS, ControlSpec.ControlType.SLIDER, "Gas", 0.0, 100.0, "%"),
+        ControlSpec(CONTROL_AIRFLOW, ControlSpec.ControlType.SLIDER, "Airflow", 0.0, 100.0, "%"),
+        ControlSpec(CONTROL_DRUM, ControlSpec.ControlType.SLIDER, "Drum", 0.0, 100.0, "%")
+    )
+
+    override fun setControl(id: String, value: Double) {
+        log.trace("Simulator setControl {} = {} (no-op)", id, value)
+    }
+
+    override fun setControlState(id: String, on: Boolean) {
+        log.trace("Simulator setControlState {} = {} (no-op)", id, on)
     }
 }

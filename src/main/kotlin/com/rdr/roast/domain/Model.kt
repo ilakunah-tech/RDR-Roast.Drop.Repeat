@@ -1,6 +1,7 @@
 package com.rdr.roast.domain
 
 import kotlin.jvm.Synchronized
+import java.util.Collections
 
 /**
  * Temperature unit for roast profiles and samples.
@@ -12,15 +13,37 @@ enum class TemperatureUnit {
 
 /**
  * Roasting event types: charge, turning point, first crack, drop.
+ * CC covers both "Color Change" and "Dry End" (DE) concepts.
  */
 enum class EventType {
     CHARGE,
     TP,
     CC,
-    DE,   // Dry End (same as CC / color change)
     FC,   // First Crack
     DROP
 }
+
+/**
+ * Control event types from Artisan .alog (specialevents / etypes).
+ * 0=gas, 1=air, 2=drum, 3=damper.
+ */
+enum class ControlEventType {
+    GAS,
+    AIR,
+    DRUM,
+    DAMPER
+}
+
+/**
+ * A control event at a specific time (gas/air/drum/damper setting).
+ * [displayString] from .alog specialeventsStrings (e.g. "20mbar", "Pilot") shown on chart when set.
+ */
+data class ControlEvent(
+    val timeSec: Double,
+    val type: ControlEventType,
+    val value: Double,
+    val displayString: String? = null
+)
 
 /**
  * A roast event at a specific time, with optional bean/environment temperatures.
@@ -62,15 +85,19 @@ data class PhaseDuration(
  * Roast profile with time-ordered temperature series and events.
  * Uses mutable lists for live recording; samples and events are appended during a roast.
  */
-data class RoastProfile(
+class RoastProfile(
     val timex: MutableList<Double> = mutableListOf(),
     val temp1: MutableList<Double> = mutableListOf(),
     val temp2: MutableList<Double> = mutableListOf(),
-    val events: MutableList<RoastEvent> = mutableListOf(),
+    events: MutableList<RoastEvent> = mutableListOf(),
+    /** Gas/air/drum/damper events from .alog specialevents/etypes/specialeventsvalue. */
+    val controlEvents: List<ControlEvent> = emptyList(),
     val mode: TemperatureUnit = TemperatureUnit.CELSIUS,
     /** BBP recorded before this roast (between previous Stop and this Start). Cropster-style. */
     val betweenBatchLog: BetweenBatchLog? = null
 ) {
+    val events: MutableList<RoastEvent> = Collections.synchronizedList(events.toMutableList())
+
     @Synchronized
     fun addSample(sample: TemperatureSample) {
         timex.add(sample.timeSec)
@@ -78,6 +105,7 @@ data class RoastProfile(
         temp2.add(sample.et)
     }
 
+    @Synchronized
     fun addEvent(event: RoastEvent) {
         events.add(event)
     }
@@ -86,7 +114,7 @@ data class RoastProfile(
      * Returns the first event of the given type, or null if none.
      */
     fun eventByType(type: EventType): RoastEvent? =
-        events.firstOrNull { it.type == type }
+        synchronized(events) { events.firstOrNull { it.type == type } }
 
     /**
      * Returns the index in timex closest to the event time for the given type, or -1 if no such event or empty timex.
@@ -97,5 +125,21 @@ data class RoastProfile(
         return timex.withIndex()
             .minByOrNull { (_, t) -> kotlin.math.abs(t - event.timeSec) }
             ?.index ?: -1
+    }
+
+    /**
+     * Returns a deep copy of this profile with copied lists and events.
+     */
+    fun deepCopy(): RoastProfile {
+        val eventsCopy = synchronized(events) { events.toMutableList() }
+        return RoastProfile(
+            timex = timex.toMutableList(),
+            temp1 = temp1.toMutableList(),
+            temp2 = temp2.toMutableList(),
+            events = eventsCopy,
+            controlEvents = controlEvents,
+            mode = mode,
+            betweenBatchLog = betweenBatchLog
+        )
     }
 }

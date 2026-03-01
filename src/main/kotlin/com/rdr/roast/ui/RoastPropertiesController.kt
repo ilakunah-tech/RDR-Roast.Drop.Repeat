@@ -72,6 +72,12 @@ class RoastPropertiesController {
         txtBeans.text = s.roastPropertiesBeansNotes
     }
 
+    /** Fill title and weight from a schedule item (e.g. when user selects a plan row). */
+    fun setFromSchedule(title: String, weightKg: Double?) {
+        txtTitle.text = title
+        txtWeightIn.text = weightKg?.let { "%.2f".format(it) } ?: ""
+    }
+
     private fun selectStockAndBlendInCombos(stockId: String, blendId: String) {
         if (stockId.isNotBlank()) {
             val idx = stockItems.indexOfFirst { it.id == stockId }

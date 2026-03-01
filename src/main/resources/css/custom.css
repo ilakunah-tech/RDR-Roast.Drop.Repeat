@@ -1,15 +1,37 @@
-/* AtlantaFX overrides – RDR app (PrimerLight) */
+/* RDR overrides – use theme variables */
 
 .root {
-    /* Optional: accent or spacing overrides on top of PrimerLight */
+    /* Variables defined in main.css */
 }
 
-/* Buttons / controls – fine-tune if needed */
 .button {
     -fx-cursor: hand;
 }
 
-/* Chart / content areas – keep readable with theme */
 .content-pane {
     -fx-background-color: transparent;
+}
+
+/* Primary action buttons use accent */
+.player-bar .button {
+    -fx-background-color: -rdr-accent;
+    -fx-text-fill: -rdr-accent-text;
+}
+
+.player-bar .button:hover {
+    -fx-background-color: -rdr-accent-hover;
+}
+
+.player-bar .button:disabled {
+    -fx-background-color: -rdr-border;
+    -fx-text-fill: -rdr-text-secondary;
+}
+
+.player-bar #btnAbort {
+    -fx-background-color: -rdr-btn-stop;
+    -fx-text-fill: -rdr-accent-text;
+}
+
+.player-bar #btnAbort:hover {
+    -fx-background-color: derive(-rdr-btn-stop, 20%);
 }

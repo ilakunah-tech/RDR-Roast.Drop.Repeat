@@ -1,29 +1,64 @@
-/* RDR layout – Cropster RI style zones */
+/* RDR light peach theme – CSS variables (looked-up colors) on .root */
 
-.root-pane {
-    -fx-background-color: #f5f5f5;
+.root {
+    -rdr-bg:           #FFFFFF;
+    -rdr-bg-secondary: #FFF8F5;
+    -rdr-surface:      #FFF3EE;
+    -rdr-accent:       #E8896A;
+    -rdr-accent-hover: derive(-rdr-accent, -15%);
+    -rdr-accent-text:  #FFFFFF;
+    -rdr-text-primary:   #2C2C2C;
+    -rdr-text-secondary: #7A7A7A;
+    -rdr-border:       #EDE0DA;
+    -rdr-title-bar:    -rdr-bg;
+    -rdr-radius:       10px;
+    -rdr-panel-bg:    #f5f5f5;
 }
 
-/* Без рамки между левым сайдбаром и центром */
+.root-pane {
+    -fx-background-color: -rdr-bg;
+}
+
 .left-sidebar-region {
     -fx-border-width: 0;
     -fx-border-color: transparent;
+    -fx-background-color: -rdr-panel-bg;
 }
 
-.top-bar {
-    -fx-background-color: #f5f5f5;
-    -fx-padding: 4 10;
+/* Title bar – unified with content, no border */
+.title-bar {
+    -fx-background-color: -rdr-title-bar;
+    -fx-padding: 0 0 0 10;
 }
 
-.top-bar .button {
-    -fx-border-width: 0;
+.title-bar-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -rdr-text-primary;
+}
+
+.title-bar-btn {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+    -fx-min-width: 28px;
+    -fx-max-width: 28px;
+    -fx-min-height: 28px;
+    -fx-max-height: 28px;
+}
+
+.title-bar-btn:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.06);
+}
+
+#btnClose:hover {
+    -fx-background-color: rgba(255, 107, 107, 0.15);
 }
 
 .sidebar-column {
     -fx-padding: 4 1;
     -fx-min-width: 28px;
     -fx-pref-width: 28px;
-    -fx-background-color: #f5f5f5;
+    -fx-background-color: -rdr-panel-bg;
 }
 
 .sidebar-btn {
@@ -31,35 +66,38 @@
     -fx-max-width: 26px;
     -fx-min-height: 22px;
     -fx-border-width: 0;
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
 }
 
 .sidebar-panel-container {
-    -fx-background-color: #f5f5f5;
+    -fx-background-color: -rdr-panel-bg;
 }
 
 .center-split {
     -fx-background-color: transparent;
 }
 
-/* Невидимый разделитель между графиком и правой панелью */
 .center-split .split-pane-divider {
     -fx-background-color: transparent;
-    -fx-padding: 0 0 0 0;
+    -fx-padding: 0;
 }
 
 .right-split {
     -fx-background-color: transparent;
 }
 
-/* Невидимый разделитель между readouts и Reference */
 .right-split .split-pane-divider {
     -fx-background-color: transparent;
-    -fx-padding: 0 0 0 0;
+    -fx-padding: 0;
 }
 
-/* Показатели в стиле Cropster: компактный блок, крупные цифры */
+.slider-vertical {
+    -fx-pref-width: 24px;
+}
+
 .readout-value-bt {
-    -fx-font-size: 28px;
+    -fx-font-size: 32px;
     -fx-font-weight: bold;
     -fx-text-fill: #3498db;
 }
@@ -73,12 +111,12 @@
     -fx-text-fill: #3498db;
 }
 .readout-ror-value-bt {
-    -fx-font-size: 20px;
+    -fx-font-size: 19px;
     -fx-font-weight: bold;
     -fx-text-fill: #3498db;
 }
 .readout-value-et {
-    -fx-font-size: 28px;
+    -fx-font-size: 32px;
     -fx-font-weight: bold;
     -fx-text-fill: #d4483b;
 }
@@ -92,19 +130,132 @@
     -fx-text-fill: #d4483b;
 }
 .readout-ror-value-et {
-    -fx-font-size: 20px;
+    -fx-font-size: 19px;
     -fx-font-weight: bold;
     -fx-text-fill: #d4483b;
 }
 
 .reference-panel {
-    -fx-background-color: #f5f5f5;
+    -fx-background-color: -rdr-bg;
+}
+
+.reference-comment-time {
+    -fx-font-size: 11px;
+    -fx-text-fill: #666;
+    -fx-padding: 2 4 2 4;
+    -fx-min-height: 20;
+    -fx-alignment: center-left;
+}
+
+.reference-comment-text {
+    -fx-font-size: 11px;
+    -fx-text-fill: #333;
+    -fx-padding: 2 6 2 6;
+    -fx-min-height: 20;
+    -fx-alignment: center-left;
+}
+
+.reference-comment-row-odd {
+    -fx-background-color: -rdr-surface;
+}
+
+.reference-comment-row-even {
+    -fx-background-color: transparent;
+}
+
+.control-value-field {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 6 2 6;
+    -fx-pref-width: 64;
+    -fx-max-width: 72;
+    -fx-background-color: #ffffff;
+    -fx-border-color: -rdr-border;
+}
+
+.control-step-button {
+    -fx-min-width: 22px;
+    -fx-pref-width: 22px;
+    -fx-max-width: 22px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
+    -fx-padding: 0;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
 }
 
 .player-bar {
-    -fx-background-color: #f5f5f5;
+    -fx-background-color: -rdr-bg;
 }
 
 .player-bar .button {
     -fx-border-width: 0;
+    -fx-padding: 4px 12px;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+/* Buttons – accent primary, no heavy shadow */
+.button {
+    -fx-cursor: hand;
+    -fx-padding: 8px 16px;
+    -fx-font-size: 13px;
+    -fx-background-radius: -rdr-radius;
+    -fx-border-radius: -rdr-radius;
+}
+
+.button:focused {
+    -fx-background-color: derive(-rdr-accent, -10%);
+}
+
+/* Inputs */
+.text-field, .combo-box {
+    -fx-background-color: -rdr-surface;
+    -fx-border-color: -rdr-border;
+    -fx-background-radius: -rdr-radius;
+    -fx-border-radius: -rdr-radius;
+}
+
+.text-field:focused, .combo-box:focused {
+    -fx-border-color: -rdr-accent;
+}
+
+/* Tab headers – active indicator */
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: transparent;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -rdr-accent transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-font-weight: bold;
+}
+
+/* Scrollbars */
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: -rdr-border;
+    -fx-background-radius: 3;
+    -fx-min-width: 6;
+    -fx-pref-width: 6;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: -rdr-accent;
+}
+
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+/* Context menu */
+.context-menu {
+    -fx-background-radius: -rdr-radius;
+    -fx-border-radius: -rdr-radius;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 2);
 }

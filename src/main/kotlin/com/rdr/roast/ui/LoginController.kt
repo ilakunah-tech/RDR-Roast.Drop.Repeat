@@ -36,6 +36,7 @@ class LoginController {
     private val scope = CoroutineScope(Dispatchers.JavaFx + Job())
 
     var onSuccess: (() -> Unit)? = null
+    var onCancel: (() -> Unit)? = null
 
     fun setStage(s: Stage?) { stage = s }
 
@@ -46,7 +47,7 @@ class LoginController {
     @FXML
     fun initialize() {
         btnOk.setOnAction { doLogin() }
-        btnCancel.setOnAction { stage?.close() }
+        btnCancel.setOnAction { onCancel?.invoke(); stage?.close() }
         linkRegister.setOnAction { openBrowser(linkRegister.text) }
         linkResetPassword.setOnAction { openBrowser(linkResetPassword.text) }
     }

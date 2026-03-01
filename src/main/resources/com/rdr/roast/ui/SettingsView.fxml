@@ -47,6 +47,15 @@
                            style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
                     <ComboBox fx:id="cmbDensity" prefWidth="280"/>
 
+                    <Label text="Скругление углов"
+                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Slider fx:id="sldRadius" min="0" max="20" value="10" blockIncrement="1" majorTickUnit="5" minorTickCount="0" showTickLabels="false" showTickMarks="false" prefWidth="200"/>
+                        <Label fx:id="lblRadiusValue" text="10px" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+                        <Button fx:id="btnRadiusReset" text="Сброс"
+                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
+                    </HBox>
+
                     <Label text="Акцентный цвет"
                            style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
                     <HBox spacing="8" alignment="CENTER_LEFT">
@@ -54,7 +63,25 @@
                         <Button fx:id="btnAccentDefault" text="По умолчанию"
                                 style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
                     </HBox>
+                    <HBox spacing="6" alignment="CENTER_LEFT">
+                        <Label text="Пресеты:" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+                        <Button fx:id="btnPresetPeach" styleClass="accent-preset" style="-fx-background-color: #E8896A; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
+                        <Button fx:id="btnPresetTeal" styleClass="accent-preset" style="-fx-background-color: #4AABA8; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
+                        <Button fx:id="btnPresetIndigo" styleClass="accent-preset" style="-fx-background-color: #5C6BC0; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
+                        <Button fx:id="btnPresetSage" styleClass="accent-preset" style="-fx-background-color: #7BAE7F; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
+                        <Button fx:id="btnPresetRose" styleClass="accent-preset" style="-fx-background-color: #C2666E; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
+                    </HBox>
 
+                    <Label text="Цвет фона панелей (боковая панель, drawer)"
+                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <ColorPicker fx:id="colorPanelBg"/>
+                        <Button fx:id="btnPanelBgDefault" text="По умолчанию"
+                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
+                    </HBox>
+
+                    <Label text="Применить все настройки темы к главному окну"
+                           style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
                     <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 8 0 0 0;">
                         <Button fx:id="btnApplyTheme" text="Применить"
                                 style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>

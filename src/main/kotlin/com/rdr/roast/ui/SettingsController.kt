@@ -230,7 +230,37 @@ class SettingsController {
     lateinit var btnAccentDefault: Button
 
     @FXML
+    lateinit var sldRadius: Slider
+
+    @FXML
+    lateinit var lblRadiusValue: javafx.scene.control.Label
+
+    @FXML
+    lateinit var btnRadiusReset: Button
+
+    @FXML
+    lateinit var btnPresetPeach: Button
+
+    @FXML
+    lateinit var btnPresetTeal: Button
+
+    @FXML
+    lateinit var btnPresetIndigo: Button
+
+    @FXML
+    lateinit var btnPresetSage: Button
+
+    @FXML
+    lateinit var btnPresetRose: Button
+
+    @FXML
     lateinit var btnRestoreAppearance: Button
+
+    @FXML
+    lateinit var colorPanelBg: ColorPicker
+
+    @FXML
+    lateinit var btnPanelBgDefault: Button
 
     @FXML
     lateinit var colorLiveBt: ColorPicker
@@ -296,9 +326,55 @@ class SettingsController {
             try { colorAccent.value = Color.web(accentHex) } catch (_: Exception) { }
         }
         colorAccent.valueProperty().addListener { _, _, c ->
-            AppearanceSupport.saveAccentColor(AppearanceSupport.colorToHex(c))
+            val hex = AppearanceSupport.colorToHex(c)
+            AppearanceSupport.saveAccentColor(hex)
+            (colorAccent.scene?.window as? Stage)?.scene?.let { AppearanceSupport.setAccent(hex, it) }
         }
-        btnAccentDefault.setOnAction { AppearanceSupport.saveAccentColor("") }
+        btnAccentDefault.setOnAction {
+            AppearanceSupport.saveAccentColor("")
+            (btnAccentDefault.scene?.window as? Stage)?.scene?.let { AppearanceSupport.setAccent("", it) }
+        }
+
+        sldRadius.value = AppearanceSupport.loadRadius().toDouble()
+        lblRadiusValue.text = "${AppearanceSupport.loadRadius()}px"
+        sldRadius.valueProperty().addListener { _, _, v ->
+            val px = v.toInt().coerceIn(0, 20)
+            lblRadiusValue.text = "${px}px"
+            (sldRadius.scene?.window as? Stage)?.scene?.let { AppearanceSupport.setRadius(px, it) }
+        }
+        btnRadiusReset.setOnAction {
+            sldRadius.value = 10.0
+            lblRadiusValue.text = "10px"
+            AppearanceSupport.saveRadius(10)
+            (btnRadiusReset.scene?.window as? Stage)?.scene?.let { AppearanceSupport.setRadius(10, it) }
+        }
+
+        listOf(
+            btnPresetPeach to "#E8896A",
+            btnPresetTeal to "#4AABA8",
+            btnPresetIndigo to "#5C6BC0",
+            btnPresetSage to "#7BAE7F",
+            btnPresetRose to "#C2666E"
+        ).forEach { (btn, hex) ->
+            btn.setOnAction {
+                colorAccent.value = Color.web(hex)
+                AppearanceSupport.saveAccentColor(hex)
+                (btn.scene?.window as? Stage)?.scene?.let { AppearanceSupport.setAccent(hex, it) }
+            }
+        }
+
+        val panelBgHex = AppearanceSupport.loadPanelBackground()
+        try { colorPanelBg.value = Color.web(panelBgHex) } catch (_: Exception) { }
+        colorPanelBg.valueProperty().addListener { _, _, c ->
+            val hex = AppearanceSupport.colorToHex(c)
+            AppearanceSupport.savePanelBackground(hex)
+            (colorPanelBg.scene?.window as? Stage)?.scene?.let { AppearanceSupport.applyToScene(it) }
+        }
+        btnPanelBgDefault.setOnAction {
+            AppearanceSupport.savePanelBackground("#f5f5f5")
+            colorPanelBg.value = Color.web("#f5f5f5")
+            (btnPanelBgDefault.scene?.window as? Stage)?.scene?.let { AppearanceSupport.applyToScene(it) }
+        }
 
         btnApplyTheme.setOnAction { applyAndSaveTheme() }
         btnRestoreAppearance.setOnAction { restoreAppearanceDefaults() }
@@ -791,6 +867,9 @@ class SettingsController {
         cmbScale.value?.let { AppearanceSupport.saveScale(AppearanceSupport.scaleFromDisplay(it)) }
         cmbFontSize.value?.let { AppearanceSupport.saveFontSize(AppearanceSupport.fontSizeFromDisplay(it)) }
         cmbDensity.value?.let { AppearanceSupport.saveDensity(AppearanceSupport.densityFromDisplay(it)) }
+        AppearanceSupport.saveRadius(sldRadius.value.toInt().coerceIn(0, 20))
+        AppearanceSupport.saveAccentColor(AppearanceSupport.colorToHex(colorAccent.value))
+        AppearanceSupport.savePanelBackground(AppearanceSupport.colorToHex(colorPanelBg.value))
     }
 
     private fun applyAppearanceToMainScene() {
@@ -806,6 +885,12 @@ class SettingsController {
         cmbScale.value = "100%"
         cmbFontSize.value = "Обычный (14px)"
         cmbDensity.value = "Обычный"
+        sldRadius.value = 10.0
+        lblRadiusValue.text = "10px"
+        colorAccent.value = Color.web("#E8896A")
+        colorPanelBg.value = Color.web("#f5f5f5")
+        AppearanceSupport.saveAccentColor("")
+        AppearanceSupport.savePanelBackground("#f5f5f5")
         applyAppearanceToMainScene()
     }
 

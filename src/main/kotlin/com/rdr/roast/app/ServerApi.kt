@@ -8,6 +8,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
+import java.time.LocalDate
 
 /**
  * Server API: auth (login, refresh), upload/sync roasts, references (see ReferenceApi).
@@ -28,6 +29,25 @@ object ServerApi {
         val userId: String?,
         val email: String?,
         val username: String?
+    )
+
+    /** Schedule list item (GET /schedule). */
+    data class ScheduleItem(
+        val id: String,
+        val title: String,
+        val scheduled_date: String,
+        val scheduled_weight_kg: Double?,
+        val status: String,
+        val coffee_id: String?,
+        val blend_id: String?,
+        val batch_id: String?,
+        val machine_id: String?,
+        val notes: String?
+    )
+
+    /** Response of GET /schedule: data.items, data.total. */
+    data class ScheduleListResult(
+        val data: Map<String, Any?>
     )
 
     /**
@@ -152,6 +172,91 @@ object ServerApi {
             else -> response.statusCode() to null
         }
     }
+
+    /**
+     * GET {baseUrl}/schedule with optional date_from, date_to, status (ISO date YYYY-MM-DD).
+     * Returns list of ScheduleItem and total count; throws on error.
+     */
+    fun listSchedule(
+        baseUrl: String,
+        token: String,
+        dateFrom: LocalDate? = null,
+        dateTo: LocalDate? = null,
+        status: String? = null
+    ): Pair<List<ScheduleItem>, Int> {
+        val path = buildString {
+            append("$baseUrl/schedule?limit=500")
+            dateFrom?.let { append("&date_from=$it") }
+            dateTo?.let { append("&date_to=$it") }
+            status?.takeIf { it.isNotBlank() }?.let { append("&status=$it") }
+        }
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(path))
+            .timeout(Duration.ofSeconds(15))
+            .GET()
+            .header("Authorization", "Bearer $token")
+            .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(Charsets.UTF_8))
+        if (response.statusCode() !in 200..299) {
+            val msg = parseErrorBody(response.body())
+            throw ServerApiException(response.statusCode(), msg)
+        }
+        @Suppress("UNCHECKED_CAST")
+        val map = objectMapper.readValue<Map<String, Any?>>(response.body())
+        val data = map["data"] as? Map<String, Any?> ?: return emptyList<ScheduleItem>() to 0
+        val rawItems = data["items"] as? List<*>
+        val items: List<ScheduleItem> = rawItems?.mapNotNull { raw: Any? ->
+            @Suppress("UNCHECKED_CAST")
+            val item = raw as? Map<String, Any?> ?: return@mapNotNull null
+            ScheduleItem(
+                id = item["id"]?.toString() ?: "",
+                title = item["title"]?.toString() ?: "",
+                scheduled_date = item["scheduled_date"]?.toString() ?: "",
+                scheduled_weight_kg = (item["scheduled_weight_kg"] as? Number)?.toDouble(),
+                status = item["status"]?.toString() ?: "pending",
+                coffee_id = item["coffee_id"]?.toString(),
+                blend_id = item["blend_id"]?.toString(),
+                batch_id = item["batch_id"]?.toString(),
+                machine_id = item["machine_id"]?.toString(),
+                notes = item["notes"]?.toString()
+            )
+        } ?: emptyList()
+        val total = (data["total"] as? Number)?.toInt() ?: items.size
+        return items to total
+    }
+
+    /**
+     * PUT {baseUrl}/schedule/{scheduleId}/complete with roast_id, optional roasted_weight_kg, notes.
+     */
+    fun completeSchedule(
+        baseUrl: String,
+        token: String,
+        scheduleId: java.util.UUID,
+        roastId: java.util.UUID,
+        roastedWeightKg: Double? = null,
+        notes: String? = null
+    ) {
+        val path = "$baseUrl/schedule/$scheduleId/complete"
+        val body = mutableMapOf<String, Any?>(
+            "roast_id" to roastId.toString()
+        ).apply {
+            roastedWeightKg?.let { put("roasted_weight_kg", it) }
+            notes?.takeIf { it.isNotBlank() }?.let { put("notes", it) }
+        }
+        val json = objectMapper.writeValueAsString(body)
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(path))
+            .timeout(Duration.ofSeconds(15))
+            .header("Content-Type", "application/json; charset=utf-8")
+            .header("Authorization", "Bearer $token")
+            .PUT(HttpRequest.BodyPublishers.ofString(json, Charsets.UTF_8))
+            .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(Charsets.UTF_8))
+        if (response.statusCode() !in 200..299) {
+            val msg = parseErrorBody(response.body())
+            throw ServerApiException(response.statusCode(), msg)
+        }
+    }
 }
 
 /**
@@ -170,8 +275,7 @@ fun buildAroastPayload(
     blendId: String? = null
 ): Map<String, Any?> {
     val chargeIdx = profile.eventIndex(com.rdr.roast.domain.EventType.CHARGE).coerceAtLeast(-1)
-    val deIdx = (profile.eventIndex(com.rdr.roast.domain.EventType.DE).takeIf { it >= 0 }
-        ?: profile.eventIndex(com.rdr.roast.domain.EventType.CC)).coerceAtLeast(-1)
+    val deIdx = profile.eventIndex(com.rdr.roast.domain.EventType.CC).coerceAtLeast(-1)
     val fcIdx = profile.eventIndex(com.rdr.roast.domain.EventType.FC).coerceAtLeast(-1)
     val dropIdx = profile.eventIndex(com.rdr.roast.domain.EventType.DROP).coerceAtLeast(-1)
     val timeindex = listOf(chargeIdx, deIdx, fcIdx, -1, -1, -1, dropIdx, -1)
