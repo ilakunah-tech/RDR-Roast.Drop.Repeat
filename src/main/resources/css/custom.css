@@ -1,7 +1,7 @@
-/* RDR overrides – use theme variables */
+/* RDR overrides – accent-driven dashboard theme */
 
 .root {
-    /* Variables defined in main.css */
+    -fx-font-family: "System";
 }
 
 .button {
@@ -33,5 +33,36 @@
 }
 
 .player-bar #btnAbort:hover {
-    -fx-background-color: derive(-rdr-btn-stop, 20%);
+    -fx-background-color: derive(-rdr-btn-stop, 15%);
+}
+
+/* Start button green accent */
+.player-bar #btnStart {
+    -fx-background-color: -rdr-positive;
+    -fx-text-fill: white;
+}
+
+.player-bar #btnStart:hover {
+    -fx-background-color: derive(-rdr-positive, -10%);
+}
+
+.player-bar #btnStart:disabled {
+    -fx-background-color: -rdr-border;
+    -fx-text-fill: -rdr-text-secondary;
+}
+
+/* Stop button */
+.player-bar #btnStop {
+    -fx-background-color: -rdr-text-primary;
+    -fx-text-fill: white;
+}
+
+.player-bar #btnStop:disabled {
+    -fx-background-color: -rdr-border;
+    -fx-text-fill: -rdr-text-secondary;
+}
+
+/* Duration label in player bar */
+.player-bar .label {
+    -fx-text-fill: -rdr-text-primary;
 }

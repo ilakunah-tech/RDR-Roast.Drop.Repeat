@@ -111,7 +111,7 @@ class MainController {
     @FXML lateinit var btnSettings: Button
     @FXML lateinit var lblConnectionStatus: Label
     @FXML lateinit var centerSplit: SplitPane
-    @FXML lateinit var rightSplit: SplitPane
+    @FXML lateinit var rightPanel: VBox
     @FXML lateinit var sidebarPanelContainer: StackPane
     @FXML lateinit var btnAuth: Button
     @FXML lateinit var btnSidebarSystem: ToggleButton
@@ -127,16 +127,15 @@ class MainController {
     @FXML lateinit var lblRefDevTimeRatio: Label
     @FXML lateinit var lblRefEndTemp: Label
     @FXML lateinit var referencePanel: VBox
-    @FXML lateinit var referenceCommentTime1: Label
-    @FXML lateinit var referenceCommentText1: Label
-    @FXML lateinit var referenceCommentTime2: Label
-    @FXML lateinit var referenceCommentText2: Label
-    @FXML lateinit var referenceCommentTime3: Label
-    @FXML lateinit var referenceCommentText3: Label
-    @FXML lateinit var referenceCommentTime4: Label
-    @FXML lateinit var referenceCommentText4: Label
+    /** Live roast events shown in the Comments grid (Cropster-style). */
+    private data class CommentEntry(
+        val timeSec: Double, val tempBt: Double?, val label: String, val confirmed: Boolean = true
+    )
     @FXML lateinit var lblPlayerBarTitle: Label
     @FXML lateinit var controlPanelContainer: VBox
+    @FXML lateinit var commentsBlock: VBox
+    @FXML lateinit var commentsGrid: javafx.scene.layout.GridPane
+    @FXML lateinit var btnCommentsSettings: Button
     @FXML lateinit var titleBar: HBox
     @FXML lateinit var btnMinimize: Button
     @FXML lateinit var btnMaximize: Button
@@ -275,11 +274,22 @@ class MainController {
         // When user adds DE/FC from chart popup, store in profile and refresh phase strip
         chartPanel.onEventAdded = { timeMs, label ->
             val timeSec = timeMs / 1000.0
+            val profile = recorder.currentProfile.value
+            val btAtTime = profile.temp1.lastOrNull()
             when {
-                label.startsWith("DE @") -> recorder.markEventAt(timeSec, EventType.CC)
-                label.startsWith("FC @") -> recorder.markEventAt(timeSec, EventType.FC)
+                label.startsWith("DE @") -> {
+                    recorder.markEventAt(timeSec, EventType.CC)
+                    addLiveComment(timeSec, btAtTime, "Color change")
+                }
+                label.startsWith("FC @") -> {
+                    recorder.markEventAt(timeSec, EventType.FC)
+                    addLiveComment(timeSec, btAtTime, "First crack")
+                }
             }
             updatePhaseStrip()
+        }
+        if (::btnCommentsSettings.isInitialized) {
+            btnCommentsSettings.graphic = FontIcon(FontAwesomeSolid.COG).apply { iconSize = 10 }
         }
     }
 
@@ -333,6 +343,7 @@ class MainController {
                 val tpBt = profile.temp1[tpIdx]
                 curveChart.addEventMarker((tpSec * 1000).toLong(), "TP @ %s · %.1f °C".format(formatSec(tpSec), tpBt),
                     com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
+                addLiveComment(tpSec, tpBt, "Turning point")
             }
         }
 
@@ -354,12 +365,59 @@ class MainController {
     }
 
     private var tpMarkerPlaced = false
+    private val liveComments = mutableListOf<CommentEntry>()
+
+    private fun addLiveComment(timeSec: Double, tempBt: Double?, label: String) {
+        liveComments.add(CommentEntry(timeSec, tempBt, label, true))
+        updateCommentsGrid()
+    }
+
+    private fun updateCommentsGrid() {
+        if (!::commentsGrid.isInitialized) return
+        commentsGrid.children.clear()
+        val profile = recorder.currentProfile.value
+        val chargeTimeSec = profile.eventByType(EventType.CHARGE)?.timeSec ?: 0.0
+        val allComments = mutableListOf<CommentEntry>()
+        allComments.addAll(liveComments)
+        liveComments.sortBy { it.timeSec }
+        val rows = liveComments.takeLast(10)
+        rows.forEachIndexed { i, entry ->
+            val relTimeSec = (entry.timeSec - chargeTimeSec).coerceAtLeast(0.0)
+            val oddClass = if (i % 2 == 0) "comment-row-odd" else "comment-row-even"
+            val timeLabel = Label(formatSec(relTimeSec)).apply {
+                styleClass.addAll("comment-time", oddClass)
+                maxWidth = Double.MAX_VALUE
+            }
+            val tempLabel = Label(entry.tempBt?.let { "%.1f °C".format(it) } ?: "").apply {
+                styleClass.addAll("comment-temp", oddClass)
+                maxWidth = Double.MAX_VALUE
+            }
+            val eventLabel = Label(entry.label).apply {
+                styleClass.addAll("comment-event", oddClass)
+                maxWidth = Double.MAX_VALUE
+            }
+            val checkLabel = Label("✓").apply {
+                styleClass.addAll("comment-check", oddClass)
+            }
+            javafx.scene.layout.GridPane.setRowIndex(timeLabel, i)
+            javafx.scene.layout.GridPane.setColumnIndex(timeLabel, 0)
+            javafx.scene.layout.GridPane.setRowIndex(tempLabel, i)
+            javafx.scene.layout.GridPane.setColumnIndex(tempLabel, 1)
+            javafx.scene.layout.GridPane.setRowIndex(eventLabel, i)
+            javafx.scene.layout.GridPane.setColumnIndex(eventLabel, 2)
+            javafx.scene.layout.GridPane.setRowIndex(checkLabel, i)
+            javafx.scene.layout.GridPane.setColumnIndex(checkLabel, 3)
+            commentsGrid.children.addAll(timeLabel, tempLabel, eventLabel, checkLabel)
+        }
+    }
 
     private fun clearChartAndBbpState() {
         curveChart.clearAll()
         bbpAnnotationSetForCurrentRoast = false
         chartPanel.lastDataTimeMs = null
         tpMarkerPlaced = false
+        liveComments.clear()
+        updateCommentsGrid()
     }
 
     private companion object {
@@ -490,43 +548,26 @@ class MainController {
         if (!showControls) return
         val control = source as RoastControl
         val sliderSpecs = control.controlSpecs().filter { it.type == ControlSpec.ControlType.SLIDER }
-        val buttonSpecs = control.controlSpecs().filter { it.type == ControlSpec.ControlType.BUTTON }
-        if (buttonSpecs.isNotEmpty()) {
-            val buttonRow = HBox(8.0).apply {
-                alignment = Pos.CENTER
-                buttonSpecs.forEach { spec ->
-                    children.add(Button(spec.displayName).apply {
-                        setOnAction { control.setControlState(spec.id, true) }
-                    })
-                }
-            }
-            controlPanelContainer.children.add(buttonRow)
-        }
         if (sliderSpecs.isEmpty()) return
-        val slidersRow = HBox(16.0).apply {
-            alignment = Pos.CENTER
-            spacing = 16.0
+        val stepConfig = SettingsManager.load().sliderStepConfig
+        val slidersRow = HBox(8.0).apply {
+            alignment = Pos.TOP_CENTER
+            HBox.setHgrow(this, Priority.ALWAYS)
         }
         for (spec in sliderSpecs) {
-            val span = (spec.max - spec.min).coerceAtLeast(1.0)
-            val step = (span / 20.0).coerceAtLeast(1.0)
             val slider = Slider(spec.min, spec.max, spec.min).apply {
                 orientation = Orientation.VERTICAL
-                prefHeight = 100.0
+                prefHeight = 120.0
                 minHeight = 80.0
-                blockIncrement = step
-                majorTickUnit = step * 5
-                minorTickCount = 4
+                blockIncrement = 5.0
                 isShowTickLabels = false
                 styleClass.add("slider-vertical")
             }
             val valueField = TextField().apply {
                 text = formatControlValue(slider.value)
-                alignment = Pos.CENTER_RIGHT
-                prefWidth = 64.0
-                maxWidth = 72.0
+                alignment = Pos.CENTER
                 styleClass.add("control-value-field")
-                tooltip = Tooltip("${spec.min.toInt()} - ${spec.max.toInt()} ${spec.unit}")
+                tooltip = Tooltip("${spec.min.toInt()} – ${spec.max.toInt()} ${spec.unit}")
             }
             fun applyFieldValue() {
                 val parsed = valueField.text.replace(',', '.').toDoubleOrNull() ?: return
@@ -535,13 +576,9 @@ class MainController {
                 valueField.text = formatControlValue(clamped)
             }
             valueField.setOnAction { applyFieldValue() }
-            valueField.focusedProperty().addListener { _, _, isFocused ->
-                if (!isFocused) applyFieldValue()
-            }
+            valueField.focusedProperty().addListener { _, _, f -> if (!f) applyFieldValue() }
             slider.valueProperty().addListener { _, _, newVal ->
-                if (!valueField.isFocused) {
-                    valueField.text = formatControlValue(newVal.toDouble())
-                }
+                if (!valueField.isFocused) valueField.text = formatControlValue(newVal.toDouble())
                 controlDebounceJobs[spec.id]?.cancel()
                 controlDebounceJobs[spec.id] = scope.launch {
                     delay(1000L)
@@ -549,37 +586,38 @@ class MainController {
                     control.setControl(spec.id, newVal.toDouble())
                 }
             }
-            val minusButton = Button("-").apply {
-                styleClass.add("control-step-button")
-                isFocusTraversable = false
-                setOnAction {
-                    slider.value = (slider.value - slider.blockIncrement).coerceAtLeast(spec.min)
-                }
-            }
-            val plusButton = Button("+").apply {
-                styleClass.add("control-step-button")
-                isFocusTraversable = false
-                setOnAction {
-                    slider.value = (slider.value + slider.blockIncrement).coerceAtMost(spec.max)
-                }
-            }
-            val sliderWithButtons = HBox(4.0).apply {
-                alignment = Pos.CENTER
-                children.addAll(minusButton, slider, plusButton)
-            }
-            val valueRow = HBox(4.0).apply {
-                alignment = Pos.CENTER
-                children.addAll(valueField, Label(spec.unit).apply {
-                    style = "-fx-font-size: 11px; -fx-text-fill: #666;"
+            val leftStepCol = VBox(1.0).apply { alignment = Pos.TOP_CENTER }
+            val rightStepCol = VBox(1.0).apply { alignment = Pos.TOP_CENTER }
+            for (v in stepConfig.leftSteps.sortedDescending()) {
+                leftStepCol.children.add(Button(v.toString()).apply {
+                    styleClass.add("control-step-button")
+                    isFocusTraversable = false
+                    setOnAction { slider.value = v.toDouble().coerceIn(spec.min, spec.max) }
                 })
             }
-            val column = VBox(4.0).apply {
-                alignment = Pos.CENTER
-                children.add(Label(spec.displayName).apply {
-                    style = "-fx-font-size: 10px; -fx-text-fill: #555;"
+            for (v in stepConfig.rightSteps.sortedDescending()) {
+                rightStepCol.children.add(Button(v.toString()).apply {
+                    styleClass.add("control-step-button")
+                    isFocusTraversable = false
+                    setOnAction { slider.value = v.toDouble().coerceIn(spec.min, spec.max) }
                 })
-                children.add(sliderWithButtons)
-                children.add(valueRow)
+            }
+            val zeroBtn = Button("0").apply {
+                styleClass.add("control-step-button")
+                isFocusTraversable = false
+                setOnAction { slider.value = 0.0 }
+            }
+            val sliderWithSteps = HBox(2.0).apply {
+                alignment = Pos.TOP_CENTER
+                children.addAll(leftStepCol, slider, rightStepCol)
+            }
+            val column = VBox(2.0).apply {
+                alignment = Pos.TOP_CENTER
+                children.add(Label(spec.displayName).apply { styleClass.add("control-label") })
+                children.add(sliderWithSteps)
+                children.add(zeroBtn)
+                children.add(valueField)
+                HBox.setHgrow(this, Priority.ALWAYS)
             }
             slidersRow.children.add(column)
         }
@@ -766,9 +804,9 @@ class MainController {
         if (profile.eventByType(EventType.CHARGE) != null) return
         val sample = recorder.currentSample.value ?: return
         recorder.markEvent(EventType.CHARGE)
+        addLiveComment(sample.timeSec, sample.bt, "Charge")
         val chargeTimeMs = (sample.timeSec * 1000).toLong()
         if (referenceProfile != null) {
-            // Artisan-style: do not rebase; keep live in raw time and shift reference so Ref Charge aligns with live Charge
             curveChart.addEventMarker(chargeTimeMs, "Charge @ %.1f °C".format(sample.bt),
                 com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
             curveChart.setReferenceProfile(referenceProfile, chargeTimeMs)
@@ -782,6 +820,7 @@ class MainController {
     private fun triggerDrop() {
         val sample = recorder.currentSample.value ?: return
         recorder.markEvent(EventType.DROP)
+        addLiveComment(sample.timeSec, sample.bt, "End")
         curveChart.addEventMarker((sample.timeSec * 1000).toLong(), "Drop @ %.1f °C".format(sample.bt),
             com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
         val profile = recorder.stop()
@@ -1038,21 +1077,6 @@ class MainController {
             referenceSummaryBox.isVisible = false
             referenceSummaryBox.isManaged = false
         }
-        if (::referenceCommentTime1.isInitialized) {
-            listOf(
-                referenceCommentTime1 to referenceCommentText1,
-                referenceCommentTime2 to referenceCommentText2,
-                referenceCommentTime3 to referenceCommentText3,
-                referenceCommentTime4 to referenceCommentText4
-            ).forEach { (timeLabel, textLabel) ->
-                timeLabel.text = ""
-                textLabel.text = ""
-                timeLabel.isVisible = false
-                timeLabel.isManaged = false
-                textLabel.isVisible = false
-                textLabel.isManaged = false
-            }
-        }
         curveChart.setReferenceProfile(null)
         updatePlayerBarTitle()
     }
@@ -1118,63 +1142,7 @@ class MainController {
     }
 
     private fun updateReferenceComments(profile: RoastProfile) {
-        if (!::referenceCommentTime1.isInitialized) return
-        val charge = profile.eventByType(EventType.CHARGE)?.timeSec ?: 0.0
-        val eventLabels = mapOf(
-            EventType.CHARGE to "Charge",
-            EventType.TP to "TP",
-            EventType.CC to "Color change",
-            EventType.FC to "First crack",
-            EventType.DROP to "End"
-        )
-        data class CommentRow(val timeSec: Double, val description: String)
-        val rows = mutableListOf<CommentRow>()
-        profile.events.forEach { e ->
-            if (e.timeSec < charge) return@forEach
-            val name = eventLabels[e.type] ?: e.type.name.lowercase()
-            val description = buildString {
-                append(name)
-                e.tempBT?.let { append(" @ %.1f °C".format(it)) }
-            }
-            rows.add(CommentRow(e.timeSec, description))
-        }
-        profile.controlEvents.forEach { ce ->
-            if (ce.timeSec < charge) return@forEach
-            val tag = when (ce.type) {
-                ControlEventType.GAS -> "Gas"
-                ControlEventType.AIR -> "Air"
-                ControlEventType.DRUM -> "Drum"
-                ControlEventType.DAMPER -> "Damper"
-            }
-            val valueOrStr = ce.displayString?.takeIf { it.isNotBlank() } ?: formatControlValue(ce.value)
-            rows.add(CommentRow(ce.timeSec, "$tag: $valueOrStr"))
-        }
-        rows.sortBy { it.timeSec }
-        val displayRows = rows.takeLast(4)
-        val commentRows = listOf(
-            referenceCommentTime1 to referenceCommentText1,
-            referenceCommentTime2 to referenceCommentText2,
-            referenceCommentTime3 to referenceCommentText3,
-            referenceCommentTime4 to referenceCommentText4
-        )
-        commentRows.forEachIndexed { i, (timeLabel, textLabel) ->
-            if (i < displayRows.size) {
-                val row = displayRows[i]
-                timeLabel.text = formatRefMmSs(row.timeSec - charge)
-                textLabel.text = row.description
-                timeLabel.isVisible = true
-                timeLabel.isManaged = true
-                textLabel.isVisible = true
-                textLabel.isManaged = true
-            } else {
-                timeLabel.text = ""
-                textLabel.text = ""
-                timeLabel.isVisible = false
-                timeLabel.isManaged = false
-                textLabel.isVisible = false
-                textLabel.isManaged = false
-            }
-        }
+        // Reference comments are now shown inline in the Comments grid when reference is loaded
     }
 
     private fun updateAuthUi() {
@@ -1298,20 +1266,14 @@ class MainController {
         s.layoutDividerCenterRight?.let { p ->
             if (p in 0.01..0.99) centerSplit.setDividerPosition(0, p)
         }
-        s.layoutDividerReferenceChannels?.let { p ->
-            if (p in 0.01..0.99) rightSplit.setDividerPosition(0, p)
-        }
     }
 
     private fun saveDividerPositions() {
         val positions = centerSplit.dividerPositions
-        val rightPositions = rightSplit.dividerPositions
         val centerRight = if (positions.isNotEmpty()) positions[0] else null
-        val refChannels = if (rightPositions.isNotEmpty()) rightPositions[0] else null
         val current = SettingsManager.load()
         SettingsManager.save(current.copy(
-            layoutDividerCenterRight = centerRight,
-            layoutDividerReferenceChannels = refChannels
+            layoutDividerCenterRight = centerRight
         ))
     }
 

@@ -40,6 +40,26 @@ data class MachineConfig(
     val drumRegister: Int = 0
 )
 
+/** Configuration for control sliders (Gas/Air/Drum) step buttons. */
+data class SliderStepConfig(
+    val leftSteps: List<Int> = listOf(100, 90, 80, 70, 60, 50, 40, 30, 20, 10),
+    val rightSteps: List<Int> = listOf(95, 85, 75, 65, 55, 45, 35, 25, 15, 5),
+    val showGas: Boolean = true,
+    val showAir: Boolean = true,
+    val showDrum: Boolean = true,
+    val min: Int = 0,
+    val max: Int = 100
+)
+
+/** Configuration for which events appear in the Comments panel. */
+data class CommentsConfig(
+    val showCharge: Boolean = true,
+    val showColorChange: Boolean = true,
+    val showFirstCrack: Boolean = true,
+    val showDrop: Boolean = true,
+    val showControlEvents: Boolean = true
+)
+
 /** Named connection preset (like Artisan .aset machine settings). */
 data class ConnectionPreset(
     val name: String,
@@ -112,7 +132,9 @@ data class AppSettings(
     val roastPropertiesBlendId: String = "",
     val roastPropertiesWeightInKg: Double = 0.0,
     val roastPropertiesWeightOutKg: Double = 0.0,
-    val roastPropertiesBeansNotes: String = ""
+    val roastPropertiesBeansNotes: String = "",
+    val sliderStepConfig: SliderStepConfig = SliderStepConfig(),
+    val commentsConfig: CommentsConfig = CommentsConfig()
 )
 
 object SettingsManager {

@@ -638,7 +638,9 @@ class SettingsController {
                 roastPropertiesBlendId = settings.roastPropertiesBlendId,
                 roastPropertiesWeightInKg = settings.roastPropertiesWeightInKg,
                 roastPropertiesWeightOutKg = settings.roastPropertiesWeightOutKg,
-                roastPropertiesBeansNotes = settings.roastPropertiesBeansNotes
+                roastPropertiesBeansNotes = settings.roastPropertiesBeansNotes,
+                sliderStepConfig = settings.sliderStepConfig,
+                commentsConfig = settings.commentsConfig
             )
             savedSettings = newSettings
             SettingsManager.save(newSettings)
