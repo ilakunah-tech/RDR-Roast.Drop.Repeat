@@ -38,7 +38,10 @@ import javafx.geometry.Pos
 import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.ContextMenu
+import javafx.scene.control.CheckMenuItem
 import javafx.scene.control.MenuItem
+import javafx.scene.control.RadioMenuItem
+import javafx.scene.control.SeparatorMenuItem
 import javafx.scene.control.Alert
 import javafx.scene.control.Button
 import javafx.scene.control.Tooltip
@@ -51,6 +54,7 @@ import javafx.scene.control.ScrollPane
 import javafx.scene.control.SelectionMode
 import javafx.scene.control.SplitPane
 import javafx.scene.control.ToggleButton
+import javafx.scene.control.ToggleGroup
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import javafx.animation.TranslateTransition
@@ -109,11 +113,9 @@ class MainController {
     @FXML lateinit var btnReference: Button
     @FXML lateinit var btnShortcuts: Button
     @FXML lateinit var btnSettings: Button
-    @FXML lateinit var lblConnectionStatus: Label
     @FXML lateinit var centerSplit: SplitPane
     @FXML lateinit var rightPanel: VBox
     @FXML lateinit var sidebarPanelContainer: StackPane
-    @FXML lateinit var btnAuth: Button
     @FXML lateinit var btnSidebarSystem: ToggleButton
     @FXML lateinit var btnSidebarPlan: ToggleButton
     @FXML lateinit var btnSidebarProduction: ToggleButton
@@ -123,15 +125,17 @@ class MainController {
     @FXML lateinit var lblReferenceLabel: Label
     @FXML lateinit var referenceSummaryBox: VBox
     @FXML lateinit var lblRefDuration: Label
+    @FXML lateinit var lblRefChargeTemp: Label
+    @FXML lateinit var lblRefDropTemp: Label
     @FXML lateinit var lblRefDevTime: Label
     @FXML lateinit var lblRefDevTimeRatio: Label
-    @FXML lateinit var lblRefEndTemp: Label
     @FXML lateinit var referencePanel: VBox
-    /** Live roast events shown in the Comments grid (Cropster-style). */
-    private data class CommentEntry(
-        val timeSec: Double, val tempBt: Double?, val label: String, val confirmed: Boolean = true
+    private data class RefCommentEntry(
+        val kind: String,
+        val timeSec: Double?,
+        val bt: Double?,
+        val value: String?
     )
-    @FXML lateinit var lblPlayerBarTitle: Label
     @FXML lateinit var controlPanelContainer: VBox
     @FXML lateinit var commentsBlock: VBox
     @FXML lateinit var commentsGrid: javafx.scene.layout.GridPane
@@ -153,10 +157,13 @@ class MainController {
     /** Callback to refresh schedule list (e.g. after complete). Set when building Production panel. */
     private var refreshScheduleList: (() -> Unit)? = null
     private var currentDrawerWidth: Double = 0.0
+    private enum class RefCommentsSortMode { TIME, BT }
+    private var refCommentsSortMode: RefCommentsSortMode = RefCommentsSortMode.TIME
+    private var showRefCommentTime: Boolean = true
+    private var showRefCommentValue: Boolean = true
 
     /** Current reference/background profile (from file or server). Null = none. */
     private var referenceProfile: RoastProfile? = null
-    private var referenceLabel: String? = null
 
     // ── CurveModel pipeline ──────────────────────────────────────────────────
     private val btRaw = StandardCurveModel("BT")
@@ -260,7 +267,6 @@ class MainController {
         }
         setupSidebarPanels()
         updateAuthUi()
-        updatePlayerBarTitle()
         updateReadoutUnits()
         chartContainer.sceneProperty().addListener { _, _, scene ->
             scene?.window?.let { w ->
@@ -274,22 +280,19 @@ class MainController {
         // When user adds DE/FC from chart popup, store in profile and refresh phase strip
         chartPanel.onEventAdded = { timeMs, label ->
             val timeSec = timeMs / 1000.0
-            val profile = recorder.currentProfile.value
-            val btAtTime = profile.temp1.lastOrNull()
             when {
                 label.startsWith("DE @") -> {
                     recorder.markEventAt(timeSec, EventType.CC)
-                    addLiveComment(timeSec, btAtTime, "Color change")
                 }
                 label.startsWith("FC @") -> {
                     recorder.markEventAt(timeSec, EventType.FC)
-                    addLiveComment(timeSec, btAtTime, "First crack")
                 }
             }
             updatePhaseStrip()
         }
         if (::btnCommentsSettings.isInitialized) {
             btnCommentsSettings.graphic = FontIcon(FontAwesomeSolid.COG).apply { iconSize = 10 }
+            btnCommentsSettings.setOnAction { openReferenceCommentsMenu() }
         }
     }
 
@@ -343,7 +346,6 @@ class MainController {
                 val tpBt = profile.temp1[tpIdx]
                 curveChart.addEventMarker((tpSec * 1000).toLong(), "TP @ %s · %.1f °C".format(formatSec(tpSec), tpBt),
                     com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
-                addLiveComment(tpSec, tpBt, "Turning point")
             }
         }
 
@@ -365,59 +367,13 @@ class MainController {
     }
 
     private var tpMarkerPlaced = false
-    private val liveComments = mutableListOf<CommentEntry>()
-
-    private fun addLiveComment(timeSec: Double, tempBt: Double?, label: String) {
-        liveComments.add(CommentEntry(timeSec, tempBt, label, true))
-        updateCommentsGrid()
-    }
-
-    private fun updateCommentsGrid() {
-        if (!::commentsGrid.isInitialized) return
-        commentsGrid.children.clear()
-        val profile = recorder.currentProfile.value
-        val chargeTimeSec = profile.eventByType(EventType.CHARGE)?.timeSec ?: 0.0
-        val allComments = mutableListOf<CommentEntry>()
-        allComments.addAll(liveComments)
-        liveComments.sortBy { it.timeSec }
-        val rows = liveComments.takeLast(10)
-        rows.forEachIndexed { i, entry ->
-            val relTimeSec = (entry.timeSec - chargeTimeSec).coerceAtLeast(0.0)
-            val oddClass = if (i % 2 == 0) "comment-row-odd" else "comment-row-even"
-            val timeLabel = Label(formatSec(relTimeSec)).apply {
-                styleClass.addAll("comment-time", oddClass)
-                maxWidth = Double.MAX_VALUE
-            }
-            val tempLabel = Label(entry.tempBt?.let { "%.1f °C".format(it) } ?: "").apply {
-                styleClass.addAll("comment-temp", oddClass)
-                maxWidth = Double.MAX_VALUE
-            }
-            val eventLabel = Label(entry.label).apply {
-                styleClass.addAll("comment-event", oddClass)
-                maxWidth = Double.MAX_VALUE
-            }
-            val checkLabel = Label("✓").apply {
-                styleClass.addAll("comment-check", oddClass)
-            }
-            javafx.scene.layout.GridPane.setRowIndex(timeLabel, i)
-            javafx.scene.layout.GridPane.setColumnIndex(timeLabel, 0)
-            javafx.scene.layout.GridPane.setRowIndex(tempLabel, i)
-            javafx.scene.layout.GridPane.setColumnIndex(tempLabel, 1)
-            javafx.scene.layout.GridPane.setRowIndex(eventLabel, i)
-            javafx.scene.layout.GridPane.setColumnIndex(eventLabel, 2)
-            javafx.scene.layout.GridPane.setRowIndex(checkLabel, i)
-            javafx.scene.layout.GridPane.setColumnIndex(checkLabel, 3)
-            commentsGrid.children.addAll(timeLabel, tempLabel, eventLabel, checkLabel)
-        }
-    }
 
     private fun clearChartAndBbpState() {
         curveChart.clearAll()
         bbpAnnotationSetForCurrentRoast = false
         chartPanel.lastDataTimeMs = null
         tpMarkerPlaced = false
-        liveComments.clear()
-        updateCommentsGrid()
+        updateReferenceComments(referenceProfile)
     }
 
     private companion object {
@@ -523,15 +479,6 @@ class MainController {
     }
 
     private fun updateConnectionStatus(state: ConnectionState) {
-        if (!::lblConnectionStatus.isInitialized) return
-        val (text, style) = when (state) {
-            is ConnectionState.Disconnected -> "○ Отключено" to "-fx-text-fill: #888888; -fx-font-size: 12px; -fx-min-width: 160;"
-            is ConnectionState.Connecting -> "⟳ Подключение…" to "-fx-text-fill: #e67e22; -fx-font-size: 12px; -fx-min-width: 160;"
-            is ConnectionState.Connected -> "● ${state.deviceName}" to "-fx-text-fill: #27ae60; -fx-font-size: 12px; -fx-min-width: 160;"
-            is ConnectionState.Error -> "⚠ ${state.message.take(40)}${if (state.message.length > 40) "…" else ""}" to "-fx-text-fill: #c0392b; -fx-font-size: 12px; -fx-min-width: 160;"
-        }
-        lblConnectionStatus.text = text
-        lblConnectionStatus.style = style
         updateControlPanel(state, recorder.dataSource)
     }
 
@@ -555,6 +502,12 @@ class MainController {
             HBox.setHgrow(this, Priority.ALWAYS)
         }
         for (spec in sliderSpecs) {
+            val sliderKind = when {
+                spec.id.contains("gas", ignoreCase = true) || spec.displayName.contains("gas", ignoreCase = true) -> "gas"
+                spec.id.contains("air", ignoreCase = true) || spec.displayName.contains("air", ignoreCase = true) -> "air"
+                spec.id.contains("drum", ignoreCase = true) || spec.displayName.contains("drum", ignoreCase = true) -> "drum"
+                else -> "generic"
+            }
             val slider = Slider(spec.min, spec.max, spec.min).apply {
                 orientation = Orientation.VERTICAL
                 prefHeight = 120.0
@@ -562,6 +515,7 @@ class MainController {
                 blockIncrement = 5.0
                 isShowTickLabels = false
                 styleClass.add("slider-vertical")
+                styleClass.add("slider-vertical-$sliderKind")
             }
             val valueField = TextField().apply {
                 text = formatControlValue(slider.value)
@@ -591,6 +545,7 @@ class MainController {
             for (v in stepConfig.leftSteps.sortedDescending()) {
                 leftStepCol.children.add(Button(v.toString()).apply {
                     styleClass.add("control-step-button")
+                    styleClass.add("control-step-button-$sliderKind")
                     isFocusTraversable = false
                     setOnAction { slider.value = v.toDouble().coerceIn(spec.min, spec.max) }
                 })
@@ -598,12 +553,14 @@ class MainController {
             for (v in stepConfig.rightSteps.sortedDescending()) {
                 rightStepCol.children.add(Button(v.toString()).apply {
                     styleClass.add("control-step-button")
+                    styleClass.add("control-step-button-$sliderKind")
                     isFocusTraversable = false
                     setOnAction { slider.value = v.toDouble().coerceIn(spec.min, spec.max) }
                 })
             }
             val zeroBtn = Button("0").apply {
                 styleClass.add("control-step-button")
+                styleClass.add("control-step-button-$sliderKind")
                 isFocusTraversable = false
                 setOnAction { slider.value = 0.0 }
             }
@@ -804,7 +761,6 @@ class MainController {
         if (profile.eventByType(EventType.CHARGE) != null) return
         val sample = recorder.currentSample.value ?: return
         recorder.markEvent(EventType.CHARGE)
-        addLiveComment(sample.timeSec, sample.bt, "Charge")
         val chargeTimeMs = (sample.timeSec * 1000).toLong()
         if (referenceProfile != null) {
             curveChart.addEventMarker(chargeTimeMs, "Charge @ %.1f °C".format(sample.bt),
@@ -820,7 +776,6 @@ class MainController {
     private fun triggerDrop() {
         val sample = recorder.currentSample.value ?: return
         recorder.markEvent(EventType.DROP)
-        addLiveComment(sample.timeSec, sample.bt, "End")
         curveChart.addEventMarker((sample.timeSec * 1000).toLong(), "Drop @ %.1f °C".format(sample.bt),
             com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
         val profile = recorder.stop()
@@ -1067,7 +1022,6 @@ class MainController {
 
     private fun clearReference() {
         referenceProfile = null
-        referenceLabel = null
         if (::lblReferenceLabel.isInitialized) lblReferenceLabel.text = "No reference loaded."
         if (::referencePanel.isInitialized) {
             referencePanel.isVisible = false
@@ -1078,12 +1032,11 @@ class MainController {
             referenceSummaryBox.isManaged = false
         }
         curveChart.setReferenceProfile(null)
-        updatePlayerBarTitle()
+        updateReferenceComments(null)
     }
 
     private fun setReference(profile: RoastProfile, label: String) {
         referenceProfile = profile
-        referenceLabel = label
         if (::lblReferenceLabel.isInitialized) lblReferenceLabel.text = label
         if (::referencePanel.isInitialized) {
             referencePanel.isVisible = true
@@ -1091,7 +1044,6 @@ class MainController {
         }
         updateReferenceSummary(profile)
         updateReferenceComments(profile)
-        updatePlayerBarTitle()
         // If live was already rebased (Charge pressed without ref), 0 = Charge so align ref at 0; else ref at 0 until user presses C
         val alignMs = if (curveChart.getChargeOffsetMs() > 0) 0L else null
         curveChart.setReferenceProfile(profile, alignMs)
@@ -1104,21 +1056,6 @@ class MainController {
         return "%d:%02d".format(m, secPart)
     }
 
-    private fun updatePlayerBarTitle() {
-        if (!::lblPlayerBarTitle.isInitialized) return
-        val title = SettingsManager.load().roastPropertiesTitle.trim()
-        val ref = referenceLabel ?: ""
-        val text = when {
-            title.isNotEmpty() && ref.isNotEmpty() -> "$title ($ref)"
-            title.isNotEmpty() -> title
-            ref.isNotEmpty() -> "($ref)"
-            else -> ""
-        }
-        lblPlayerBarTitle.text = text
-        lblPlayerBarTitle.isVisible = text.isNotEmpty()
-        lblPlayerBarTitle.isManaged = text.isNotEmpty()
-    }
-
     private fun updateReferenceSummary(profile: RoastProfile) {
         if (!::referenceSummaryBox.isInitialized) return
         val charge = profile.eventByType(EventType.CHARGE)?.timeSec ?: 0.0
@@ -1129,20 +1066,129 @@ class MainController {
         val fc = profile.eventByType(EventType.FC)?.timeSec
         val devTimeSec = if (fc != null && fc >= charge) ((dropSec ?: endSec) - fc).coerceAtLeast(0.0) else 0.0
         val devTimeRatio = if (durationSec > 0) (devTimeSec / durationSec * 100.0) else 0.0
-        val lastIdx = profile.timex.indexOfLast { it <= endSec }.coerceAtLeast(0)
-        val endTemp = profile.eventByType(EventType.DROP)?.tempBT
-            ?: profile.temp1.getOrNull(lastIdx)
+        val chargeIdx = profile.timex.indexOfLast { it <= charge }.coerceAtLeast(0)
+        val dropIdx = profile.timex.indexOfLast { it <= (dropSec ?: endSec) }.coerceAtLeast(0)
+        val chargeTemp = profile.eventByType(EventType.CHARGE)?.tempBT
+            ?: profile.temp1.getOrNull(chargeIdx)
+            ?: 0.0
+        val dropTemp = profile.eventByType(EventType.DROP)?.tempBT
+            ?: profile.temp1.getOrNull(dropIdx)
             ?: 0.0
         lblRefDuration.text = formatRefMmSs(durationSec)
+        lblRefChargeTemp.text = "%.1f °C".format(chargeTemp)
+        lblRefDropTemp.text = "%.1f °C".format(dropTemp)
         lblRefDevTime.text = formatRefMmSs(devTimeSec)
         lblRefDevTimeRatio.text = "%.1f%%".format(devTimeRatio)
-        lblRefEndTemp.text = "%.1f °C".format(endTemp)
         referenceSummaryBox.isVisible = true
         referenceSummaryBox.isManaged = true
     }
 
-    private fun updateReferenceComments(profile: RoastProfile) {
-        // Reference comments are now shown inline in the Comments grid when reference is loaded
+    private fun openReferenceCommentsMenu() {
+        val menu = ContextMenu()
+        val modeGroup = ToggleGroup()
+        val byTime = RadioMenuItem("Order by time").apply {
+            toggleGroup = modeGroup
+            isSelected = refCommentsSortMode == RefCommentsSortMode.TIME
+        }
+        val byBt = RadioMenuItem("Order by BT").apply {
+            toggleGroup = modeGroup
+            isSelected = refCommentsSortMode == RefCommentsSortMode.BT
+        }
+        val showTime = CheckMenuItem("Show time").apply { isSelected = showRefCommentTime }
+        val showValue = CheckMenuItem("Show value").apply { isSelected = showRefCommentValue }
+        byTime.setOnAction {
+            refCommentsSortMode = RefCommentsSortMode.TIME
+            updateReferenceComments(referenceProfile)
+        }
+        byBt.setOnAction {
+            refCommentsSortMode = RefCommentsSortMode.BT
+            updateReferenceComments(referenceProfile)
+        }
+        showTime.setOnAction {
+            showRefCommentTime = showTime.isSelected
+            updateReferenceComments(referenceProfile)
+        }
+        showValue.setOnAction {
+            showRefCommentValue = showValue.isSelected
+            updateReferenceComments(referenceProfile)
+        }
+        menu.items.addAll(byTime, byBt, SeparatorMenuItem(), showTime, showValue)
+        menu.show(btnCommentsSettings, javafx.geometry.Side.BOTTOM, 0.0, 0.0)
+    }
+
+    private fun buildReferenceComments(profile: RoastProfile): List<RefCommentEntry> {
+        val charge = profile.eventByType(EventType.CHARGE)?.timeSec ?: 0.0
+        val out = mutableListOf<RefCommentEntry>()
+        profile.events.forEach { event ->
+            val relSec = (event.timeSec - charge).coerceAtLeast(0.0)
+            val kind = when (event.type) {
+                EventType.CHARGE -> "CHARGE"
+                EventType.TP -> "TP"
+                EventType.CC -> "DE"
+                EventType.FC -> "FC"
+                EventType.DROP -> "DROP"
+            }
+            out += RefCommentEntry(kind = kind, timeSec = relSec, bt = event.tempBT, value = null)
+        }
+        profile.controlEvents.forEach { ce ->
+            val relSec = (ce.timeSec - charge).coerceAtLeast(0.0)
+            val kind = when (ce.type) {
+                ControlEventType.GAS -> "GAS"
+                ControlEventType.AIR -> "AIR"
+                ControlEventType.DRUM -> "DRUM"
+                ControlEventType.DAMPER -> "DAMPER"
+            }
+            val display = ce.displayString?.takeIf { it.isNotBlank() } ?: ce.value.toInt().toString()
+            val idx = profile.timex.indexOfLast { it <= ce.timeSec }.coerceAtLeast(0)
+            val bt = profile.temp1.getOrNull(idx)
+            out += RefCommentEntry(kind = kind, timeSec = relSec, bt = bt, value = display)
+        }
+        return when (refCommentsSortMode) {
+            RefCommentsSortMode.TIME -> out.sortedBy { it.timeSec ?: Double.MAX_VALUE }
+            RefCommentsSortMode.BT -> out.sortedBy { it.bt ?: Double.MAX_VALUE }
+        }
+    }
+
+    private fun updateReferenceComments(profile: RoastProfile?) {
+        if (!::commentsGrid.isInitialized) return
+        commentsGrid.children.clear()
+        if (profile == null) return
+        val rows = buildReferenceComments(profile).take(24)
+        rows.forEachIndexed { i, row ->
+            val oddClass = if (i % 2 == 0) "comment-row-odd" else "comment-row-even"
+            val timeText = when {
+                !showRefCommentTime -> ""
+                refCommentsSortMode == RefCommentsSortMode.BT -> row.bt?.let { "%.1f °C".format(it) } ?: "--"
+                else -> row.timeSec?.let { formatSec(it) } ?: "--:--"
+            }
+            val btText = row.bt?.let { "%.1f °C".format(it) } ?: ""
+            val valueText = if (showRefCommentValue) (row.value ?: "") else ""
+            val timeLabel = Label(timeText).apply {
+                styleClass.addAll("comment-time", oddClass)
+                maxWidth = Double.MAX_VALUE
+            }
+            val btLabel = Label(btText).apply {
+                styleClass.addAll("comment-temp", oddClass)
+                maxWidth = Double.MAX_VALUE
+            }
+            val kindLabel = Label(row.kind).apply {
+                styleClass.addAll("comment-event", oddClass)
+                maxWidth = Double.MAX_VALUE
+            }
+            val valueLabel = Label(valueText).apply {
+                styleClass.addAll("comment-check", oddClass)
+                maxWidth = Double.MAX_VALUE
+            }
+            javafx.scene.layout.GridPane.setRowIndex(timeLabel, i)
+            javafx.scene.layout.GridPane.setColumnIndex(timeLabel, 0)
+            javafx.scene.layout.GridPane.setRowIndex(btLabel, i)
+            javafx.scene.layout.GridPane.setColumnIndex(btLabel, 1)
+            javafx.scene.layout.GridPane.setRowIndex(kindLabel, i)
+            javafx.scene.layout.GridPane.setColumnIndex(kindLabel, 2)
+            javafx.scene.layout.GridPane.setRowIndex(valueLabel, i)
+            javafx.scene.layout.GridPane.setColumnIndex(valueLabel, 3)
+            commentsGrid.children.addAll(timeLabel, btLabel, kindLabel, valueLabel)
+        }
     }
 
     private fun updateAuthUi() {
@@ -1248,7 +1294,7 @@ class MainController {
     }
 
     private fun setupTitleBarIcons() {
-        val size = 14
+        val size = 12
         btnClose.graphic = FontIcon(FontAwesomeSolid.TIMES).apply { iconSize = size }
         btnMinimize.graphic = FontIcon(FontAwesomeSolid.MINUS).apply { iconSize = size }
         updateMaximizeButtonIcon()
@@ -1258,7 +1304,7 @@ class MainController {
         val stage = btnMaximize.scene?.window as? Stage ?: return
         btnMaximize.graphic = FontIcon(
             if (stage.isMaximized) FontAwesomeSolid.COMPRESS else FontAwesomeSolid.EXPAND
-        ).apply { iconSize = 14 }
+        ).apply { iconSize = 12 }
     }
 
     private fun restoreDividerPositions() {
@@ -1287,7 +1333,7 @@ class MainController {
     }
 
     private fun setupSidebarPanels() {
-        val authDrawerWidth = 240.0
+        val authDrawerWidth = 380.0
         val settingsDrawerWidth = 440.0
         val planDrawerWidth = 320.0
         val productionDrawerWidth = 360.0
@@ -1336,7 +1382,15 @@ class MainController {
             padding = Insets(12.0)
             children.add(Label("Вход").apply { style = "-fx-font-weight: bold; -fx-font-size: 12;" })
             children.add(accountAuthLabel)
-            children.add(loginRoot)
+            val loginScroll = ScrollPane(loginRoot).apply {
+                isFitToWidth = true
+                isPannable = false
+                hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
+                vbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
+                minHeight = 0.0
+            }
+            children.add(loginScroll)
+            VBox.setVgrow(loginScroll, Priority.ALWAYS)
             children.add(logoutButton)
         }
         val settingsLoader = FXMLLoader(javaClass.getResource("/com/rdr/roast/ui/SettingsView.fxml"))
@@ -1386,12 +1440,10 @@ class MainController {
         roastPropertiesController?.onApply = { _, profile ->
             if (profile != null) setReference(profile, "Server (Roast Properties)")
             else clearReference()
-            updatePlayerBarTitle()
         }
         roastPropertiesController?.onCloseDrawer = {
             closeDrawer()
             btnSidebarProduction.isSelected = false
-            updatePlayerBarTitle()
         }
         val scheduleItems = FXCollections.observableArrayList<ServerApi.ScheduleItem>()
         val scheduleListView = ListView<ServerApi.ScheduleItem>().apply {

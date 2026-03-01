@@ -241,6 +241,20 @@
 
                     <CheckBox fx:id="chkChartShowGrid" text="Показать сетку"
                               style="-fx-text-fill: #333333;"/>
+                    <CheckBox fx:id="chkChartShowBt" text="Показывать BT"
+                              style="-fx-text-fill: #333333;"/>
+                    <CheckBox fx:id="chkChartShowEt" text="Показывать ET"
+                              style="-fx-text-fill: #333333;"/>
+                    <CheckBox fx:id="chkChartShowRorBt" text="Показывать RoR BT"
+                              style="-fx-text-fill: #333333;"/>
+                    <CheckBox fx:id="chkChartShowRorEt" text="Показывать RoR ET"
+                              style="-fx-text-fill: #333333;"/>
+                    <CheckBox fx:id="chkChartShowReferenceCurves" text="Показывать reference curves"
+                              style="-fx-text-fill: #333333;"/>
+                    <CheckBox fx:id="chkChartShowReferenceEvents" text="Показывать reference events"
+                              style="-fx-text-fill: #333333;"/>
+                    <CheckBox fx:id="chkChartShowPhaseStrips" text="Показывать phase strips"
+                              style="-fx-text-fill: #333333;"/>
 
                     <Label text="Толщина линий"
                            style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>

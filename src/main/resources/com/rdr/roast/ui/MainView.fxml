@@ -41,9 +41,9 @@
         </HBox>
     </top>
 
-    <!-- Left: sidebar column (buttons) + sliding panel container -->
+    <!-- Left: sidebar column (buttons) -->
     <left>
-        <HBox fx:id="leftSidebarRegion" styleClass="left-sidebar-region" spacing="0">
+        <HBox fx:id="leftSidebarRegion" styleClass="left-sidebar-region" spacing="0" BorderPane.alignment="CENTER_LEFT">
             <VBox fx:id="sidebarColumn" styleClass="sidebar-column" alignment="TOP_CENTER">
                 <padding><Insets top="12" bottom="12"/></padding>
                 <ToggleButton fx:id="btnSidebarSystem" styleClass="sidebar-btn"/>
@@ -53,8 +53,6 @@
                 <Region VBox.vgrow="ALWAYS"/>
                 <ToggleButton fx:id="btnSidebarAccount" styleClass="sidebar-btn"/>
             </VBox>
-            <StackPane fx:id="sidebarPanelContainer" styleClass="sidebar-panel-container"
-                       minWidth="0" prefWidth="0" maxWidth="460"/>
         </HBox>
     </left>
 
@@ -66,6 +64,8 @@
                 <center>
                     <StackPane fx:id="chartContainer" style="-fx-background-color: -rdr-panel-bg;">
                         <padding><Insets top="2" right="2" bottom="2" left="2"/></padding>
+                        <StackPane fx:id="sidebarPanelContainer" styleClass="sidebar-panel-container"
+                                   StackPane.alignment="TOP_LEFT" minWidth="0" prefWidth="0" maxWidth="460"/>
                     </StackPane>
                 </center>
             </BorderPane>
@@ -78,7 +78,7 @@
                 <VBox fx:id="referencePanel" styleClass="reference-panel" spacing="2"
                       visible="false" managed="false">
                     <HBox alignment="CENTER_LEFT" spacing="4">
-                        <Label text="Reference" styleClass="right-panel-header"/>
+                        <Label text="Reference Information" styleClass="right-panel-header"/>
                     </HBox>
                     <Label fx:id="lblReferenceLabel" text="No reference loaded."
                            style="-fx-text-fill: -rdr-text-hint; -fx-font-size: 10px;"/>
@@ -88,22 +88,26 @@
                                 <ColumnConstraints minWidth="80" prefWidth="85"/>
                                 <ColumnConstraints hgrow="ALWAYS"/>
                             </columnConstraints>
-                            <Label text="Duration" styleClass="reference-summary-label"
+                            <Label text="Total time" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                             <Label fx:id="lblRefDuration" text="--:--" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                            <Label text="Dev. time" styleClass="reference-summary-label"
+                            <Label text="Charge temp" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                            <Label fx:id="lblRefDevTime" text="--:--" styleClass="reference-summary-value"
+                            <Label fx:id="lblRefChargeTemp" text="-- °C" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                            <Label text="Dev. time ratio" styleClass="reference-summary-label"
+                            <Label text="Drop temp" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                            <Label fx:id="lblRefDevTimeRatio" text="--%" styleClass="reference-summary-value"
+                            <Label fx:id="lblRefDropTemp" text="-- °C" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                            <Label text="End temp" styleClass="reference-summary-label"
+                            <Label text="Dev. time" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                            <Label fx:id="lblRefEndTemp" text="-- °C" styleClass="reference-summary-value"
+                            <Label fx:id="lblRefDevTime" text="--:--" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                            <Label text="DTR %" styleClass="reference-summary-label"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                            <Label fx:id="lblRefDevTimeRatio" text="--%" styleClass="reference-summary-value"
+                                   GridPane.columnIndex="1" GridPane.rowIndex="4"/>
                         </GridPane>
                     </VBox>
                 </VBox>
@@ -111,17 +115,17 @@
                 <!-- Comments block (grows to fill) -->
                 <VBox fx:id="commentsBlock" styleClass="right-panel-section" spacing="2" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="4">
-                        <Label text="Comments" styleClass="comments-header"/>
+                        <Label text="Reference Comments" styleClass="comments-header"/>
                         <Region HBox.hgrow="ALWAYS"/>
                         <Button fx:id="btnCommentsSettings" styleClass="title-bar-btn"
                                 style="-fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20;"/>
                     </HBox>
                     <GridPane fx:id="commentsGrid" styleClass="comments-grid" VBox.vgrow="ALWAYS">
                         <columnConstraints>
-                            <ColumnConstraints minWidth="42" prefWidth="42" maxWidth="48"/>
-                            <ColumnConstraints minWidth="50" prefWidth="55" maxWidth="60"/>
+                            <ColumnConstraints minWidth="46" prefWidth="52" maxWidth="64"/>
+                            <ColumnConstraints minWidth="56" prefWidth="62" maxWidth="72"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
-                            <ColumnConstraints minWidth="20" prefWidth="20" maxWidth="20"/>
+                            <ColumnConstraints minWidth="44" prefWidth="52" maxWidth="64"/>
                         </columnConstraints>
                     </GridPane>
                 </VBox>
@@ -129,6 +133,7 @@
                 <!-- Live values block -->
                 <VBox fx:id="valuesPanel" spacing="0" alignment="TOP_LEFT"
                       style="-fx-padding: 6 10; -fx-border-color: -rdr-border; -fx-border-width: 1 0 0 0;">
+                    <Label fx:id="lblDuration" text="Pre-heat" styleClass="readout-status"/>
                     <!-- Bean temp -->
                     <HBox alignment="BASELINE_LEFT" spacing="2">
                         <Label fx:id="lblBTValue" text="--.-" styleClass="readout-value-bt"/>
@@ -161,30 +166,19 @@
                       visible="false" managed="false"
                       style="-fx-padding: 6; -fx-border-color: -rdr-border; -fx-border-width: 1 0 0 0;">
                 </VBox>
+
+                <VBox spacing="6" alignment="CENTER" style="-fx-padding: 6 8 8 8; -fx-border-color: -rdr-border; -fx-border-width: 1 0 0 0;">
+                    <HBox alignment="CENTER" spacing="8">
+                        <Button fx:id="btnAbort" text="Abort" disable="true"/>
+                        <Button fx:id="btnStart" text="Start"/>
+                        <Button fx:id="btnStop" text="Stop" disable="true"/>
+                    </HBox>
+                    <HBox alignment="CENTER" spacing="8">
+                        <Button fx:id="btnRestartBbp" text="Restart" visible="false" managed="false"/>
+                        <Button fx:id="btnStopBbp" text="Stop BBP" visible="false" managed="false"/>
+                    </HBox>
+                </VBox>
             </VBox>
         </SplitPane>
     </center>
-
-    <!-- Bottom: player bar -->
-    <bottom>
-        <VBox styleClass="player-bar">
-            <HBox spacing="16" alignment="CENTER" style="-fx-padding: 6 12;">
-                <Label fx:id="lblConnectionStatus" text="○ Disconnected"
-                       style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 11px; -fx-min-width: 140;"/>
-                <Label fx:id="lblPlayerBarTitle" text=""
-                       style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 11px;"
-                       visible="false" managed="false"/>
-                <Button fx:id="btnAuth" visible="false" managed="false"
-                        style="-fx-min-width: 32; -fx-min-height: 32; -fx-max-width: 32; -fx-max-height: 32;"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Button fx:id="btnAbort" text="Abort" disable="true"/>
-                <Button fx:id="btnRestartBbp" text="Restart" visible="false" managed="false"/>
-                <Button fx:id="btnStopBbp" text="Stop BBP" visible="false" managed="false"/>
-                <Button fx:id="btnStart" text="Start"/>
-                <Label fx:id="lblDuration" text="Pre-heat"
-                       style="-fx-text-fill: -rdr-text-primary; -fx-font-size: 22; -fx-font-weight: bold;"/>
-                <Button fx:id="btnStop" text="Stop" disable="true"/>
-            </HBox>
-        </VBox>
-    </bottom>
 </BorderPane>

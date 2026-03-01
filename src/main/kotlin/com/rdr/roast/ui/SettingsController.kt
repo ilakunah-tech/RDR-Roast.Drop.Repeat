@@ -186,6 +186,20 @@ class SettingsController {
 
     @FXML
     lateinit var chkChartShowGrid: CheckBox
+    @FXML
+    lateinit var chkChartShowBt: CheckBox
+    @FXML
+    lateinit var chkChartShowEt: CheckBox
+    @FXML
+    lateinit var chkChartShowRorBt: CheckBox
+    @FXML
+    lateinit var chkChartShowRorEt: CheckBox
+    @FXML
+    lateinit var chkChartShowReferenceCurves: CheckBox
+    @FXML
+    lateinit var chkChartShowReferenceEvents: CheckBox
+    @FXML
+    lateinit var chkChartShowPhaseStrips: CheckBox
 
     @FXML
     lateinit var txtChartBtLineWidth: TextField
@@ -443,6 +457,13 @@ class SettingsController {
         txtChartRorMax.text = config.rorMax.toString()
         txtChartTimeRange.text = config.timeRangeMin.toString()
         chkChartShowGrid.isSelected = config.showGrid
+        chkChartShowBt.isSelected = config.showBt
+        chkChartShowEt.isSelected = config.showEt
+        chkChartShowRorBt.isSelected = config.showRorBt
+        chkChartShowRorEt.isSelected = config.showRorEt
+        chkChartShowReferenceCurves.isSelected = config.showReferenceCurves
+        chkChartShowReferenceEvents.isSelected = config.showReferenceEvents
+        chkChartShowPhaseStrips.isSelected = config.showPhaseStrips
         txtChartBtLineWidth.text = config.btLineWidth.toString()
         txtChartEtLineWidth.text = config.etLineWidth.toString()
         txtChartRorLineWidth.text = config.rorLineWidth.toString()
@@ -593,6 +614,13 @@ class SettingsController {
                 rorMax = txtChartRorMax.text.toDoubleOrNull() ?: ChartConfig().rorMax,
                 timeRangeMin = txtChartTimeRange.text.toIntOrNull()?.coerceIn(1, 60) ?: ChartConfig().timeRangeMin,
                 showGrid = chkChartShowGrid.isSelected,
+                showBt = chkChartShowBt.isSelected,
+                showEt = chkChartShowEt.isSelected,
+                showRorBt = chkChartShowRorBt.isSelected,
+                showRorEt = chkChartShowRorEt.isSelected,
+                showReferenceCurves = chkChartShowReferenceCurves.isSelected,
+                showReferenceEvents = chkChartShowReferenceEvents.isSelected,
+                showPhaseStrips = chkChartShowPhaseStrips.isSelected,
                 btLineWidth = txtChartBtLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: ChartConfig().btLineWidth,
                 etLineWidth = txtChartEtLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: ChartConfig().etLineWidth,
                 rorLineWidth = txtChartRorLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: ChartConfig().rorLineWidth,
