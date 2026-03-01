@@ -43,5 +43,7 @@
                 style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 8 24; -fx-background-radius: 4;"/>
         <Button fx:id="btnCancel" text="Отмена" cancelButton="true"
                 style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 8 24; -fx-background-radius: 4;"/>
+        <Button fx:id="btnLoadFile" text="..."
+                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 8 16; -fx-background-radius: 4; -fx-font-weight: bold;"/>
     </HBox>
 </VBox>

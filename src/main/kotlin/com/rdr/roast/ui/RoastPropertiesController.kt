@@ -1,6 +1,7 @@
 package com.rdr.roast.ui
 
 import com.rdr.roast.app.CatalogApi
+import com.rdr.roast.app.ProfileStorage
 import com.rdr.roast.app.ReferenceApi
 import com.rdr.roast.app.ReferenceItem
 import com.rdr.roast.app.ServerConfig
@@ -12,6 +13,8 @@ import javafx.scene.control.Button
 import javafx.scene.control.ComboBox
 import javafx.scene.control.TextArea
 import javafx.scene.control.TextField
+import javafx.scene.control.Tooltip
+import javafx.stage.FileChooser
 import javafx.stage.Stage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,8 +34,11 @@ class RoastPropertiesController {
     @FXML lateinit var txtBeans: TextArea
     @FXML lateinit var btnOk: Button
     @FXML lateinit var btnCancel: Button
+    @FXML lateinit var btnLoadFile: Button
 
     private var stage: Stage? = null
+    private var loadedFileProfile: RoastProfile? = null
+    private var loadedFileName: String? = null
     private val scope = CoroutineScope(Dispatchers.JavaFx + Job())
     private var referenceItems: List<ReferenceItem> = emptyList()
     private var stockItems: List<CatalogApi.StockItem> = emptyList()
@@ -61,6 +67,40 @@ class RoastPropertiesController {
         btnCancel.setOnAction {
             stage?.close()
             onCloseDrawer?.invoke()
+        }
+        btnLoadFile.tooltip = Tooltip("Загрузить профиль .alog с компьютера")
+        btnLoadFile.setOnAction { loadProfileFromFile() }
+    }
+
+    private fun loadProfileFromFile() {
+        val chooser = FileChooser().apply {
+            title = "Загрузить профиль .alog"
+            extensionFilters.add(FileChooser.ExtensionFilter("Artisan profile", "*.alog"))
+        }
+        val window = btnLoadFile.scene?.window
+        val file = chooser.showOpenDialog(window) ?: return
+        try {
+            val profile = ProfileStorage.loadProfile(file.toPath())
+            loadedFileProfile = profile
+            loadedFileName = file.name
+            onApply?.invoke(
+                RoastPropertiesState(
+                    title = txtTitle.text?.trim() ?: "",
+                    referenceId = "",
+                    stockId = "",
+                    blendId = "",
+                    weightInKg = txtWeightIn.text?.toDoubleOrNull() ?: 0.0,
+                    weightOutKg = txtWeightOut.text?.toDoubleOrNull() ?: 0.0,
+                    beansNotes = txtBeans.text?.trim() ?: ""
+                ),
+                profile
+            )
+        } catch (e: Exception) {
+            Alert(Alert.AlertType.ERROR).apply {
+                title = "Ошибка загрузки"
+                headerText = "Не удалось загрузить профиль"
+                contentText = e.message ?: e.toString()
+            }.showAndWait()
         }
     }
 
