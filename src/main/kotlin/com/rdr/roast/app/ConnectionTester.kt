@@ -12,7 +12,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 object ConnectionTester {
 
-    private const val TIMEOUT_MS = 5000L
+    private const val TIMEOUT_MS = 20000L  // 20 sec so TCP connect has time on slow networks
     private const val POLL_INTERVAL_MS = 50L
 
     /**

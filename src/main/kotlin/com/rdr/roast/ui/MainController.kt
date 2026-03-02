@@ -13,8 +13,10 @@ import com.rdr.roast.app.ServerApi
 import com.rdr.roast.app.ServerApiException
 import com.rdr.roast.app.ServerConfig
 import com.rdr.roast.app.buildAroastPayload
+import com.rdr.roast.app.CustomButtonConfig
 import com.rdr.roast.app.RoastRecorder
 import com.rdr.roast.app.SettingsManager
+import com.rdr.roast.app.EventQuantifiersConfig
 import com.rdr.roast.domain.ControlEventType
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
@@ -25,6 +27,8 @@ import com.rdr.roast.domain.curves.RorCurveModel
 import com.rdr.roast.domain.curves.StandardCurveModel
 import com.rdr.roast.driver.ConnectionState
 import com.rdr.roast.driver.RoastControl
+import com.rdr.roast.driver.modbus.core.ModbusCommandExecutor
+import com.rdr.roast.driver.modbus.core.ModbusCommandRunner
 import com.rdr.roast.driver.ControlSpec
 import com.rdr.roast.driver.simulator.SimulatorSource
 import com.rdr.roast.ui.chart.ChartPanelFx
@@ -95,7 +99,7 @@ import javafx.collections.FXCollections
 class MainController {
 
     @FXML lateinit var centerPane: BorderPane
-    @FXML lateinit var chartContainer: StackPane
+    @FXML lateinit var chartContainer: Pane
     @FXML lateinit var lblBTValue: Label
     @FXML lateinit var lblBTUnit: Label
     @FXML lateinit var lblRoRBTValue: Label
@@ -137,6 +141,7 @@ class MainController {
         val value: String?
     )
     @FXML lateinit var controlPanelContainer: VBox
+    @FXML lateinit var customButtonsPanel: VBox
     @FXML lateinit var commentsBlock: VBox
     @FXML lateinit var commentsGrid: javafx.scene.layout.GridPane
     @FXML lateinit var btnCommentsSettings: Button
@@ -196,11 +201,16 @@ class MainController {
         curveChart.bindDefaultCurves(btSmooth, etSmooth, rorBt, rorEt)
         val settings = SettingsManager.load()
         curveChart.applySettings(settings.chartColors, settings.chartConfig)
+        refreshCustomButtonsPanel()
 
-        // Add ChartPanelFx to the container and stretch it to fill
+        // Add ChartPanelFx and sidebar overlay to container (chart behind, drawer on top)
         chartPanel.prefWidthProperty().bind(chartContainer.widthProperty())
         chartPanel.prefHeightProperty().bind(chartContainer.heightProperty())
-        chartContainer.children.setAll(chartPanel)
+        chartContainer.children.setAll(chartPanel, sidebarPanelContainer)
+        // Pane does not stretch children; sidebar uses pref width (0 when closed)
+        sidebarPanelContainer.layoutX = 0.0
+        sidebarPanelContainer.layoutY = 0.0
+        sidebarPanelContainer.prefHeightProperty().bind(chartContainer.heightProperty())
 
         recorder.betweenBatchProtocolEnabled = SettingsManager.load().betweenBatchProtocolEnabled
 
@@ -277,14 +287,16 @@ class MainController {
         // Connect to configured roaster on startup (or run discovery if auto-detect enabled)
         connectOrDiscover()
 
-        // When user adds DE/FC from chart popup, store in profile and refresh phase strip
+        // When user adds DE/FC from chart popup, run event command (if configured) then store in profile and refresh phase strip
         chartPanel.onEventAdded = { timeMs, label ->
             val timeSec = timeMs / 1000.0
             when {
                 label.startsWith("DE @") -> {
+                    runEventCommand("DRY_END")
                     recorder.markEventAt(timeSec, EventType.CC)
                 }
                 label.startsWith("FC @") -> {
+                    runEventCommand("FC_START")
                     recorder.markEventAt(timeSec, EventType.FC)
                 }
             }
@@ -391,50 +403,9 @@ class MainController {
     }
 
     private fun connectOrDiscover() {
-        val settings = SettingsManager.load()
-        if (!settings.autoDetectRoaster) {
-            recorder.connect()
-            startConnectionStateCollector()
-            return
-        }
-        scope.launch(kotlinx.coroutines.Dispatchers.Default) {
-            var list: List<DetectedRoaster>
-            val lastConfig = settings.lastDetectedConfig
-            if (settings.rememberLastDetectedRoaster && lastConfig != null) {
-                val result = withTimeoutOrNull(2500L) { ConnectionTester.test(lastConfig) }
-                if (result != null && result.isSuccess && result.getOrNull() is ConnectionState.Connected) {
-                    Platform.runLater {
-                        applyDetectedConfig(lastConfig)
-                        recorder.connect()
-                        startConnectionStateCollector()
-                        persistLastDetected(lastConfig)
-                    }
-                    return@launch
-                }
-            }
-            list = RoasterDiscovery.discover(settings.discoveryTcpHosts)
-            Platform.runLater {
-                when {
-                    list.isEmpty() -> {
-                        recorder.connect()
-                        startConnectionStateCollector()
-                    }
-                    list.size == 1 -> {
-                        applyDetectedConfig(list[0].config)
-                        recorder.connect()
-                        startConnectionStateCollector()
-                        persistLastDetected(list[0].config)
-                    }
-                    else -> {
-                        val applied = showDetectedChoiceDialog(list)
-                        if (!applied) {
-                            recorder.connect()
-                            startConnectionStateCollector()
-                        }
-                    }
-                }
-            }
-        }
+        // Big-bang cutover: old auto-discovery flow removed; use canonical configured runtime.
+        recorder.connect()
+        startConnectionStateCollector()
     }
 
     private fun applyDetectedConfig(config: MachineConfig) {
@@ -497,35 +468,55 @@ class MainController {
         val sliderSpecs = control.controlSpecs().filter { it.type == ControlSpec.ControlType.SLIDER }
         if (sliderSpecs.isEmpty()) return
         val stepConfig = SettingsManager.load().sliderStepConfig
+        val eventQuantifiers: EventQuantifiersConfig = SettingsManager.load().eventQuantifiers
+        fun specToEventType(spec: ControlSpec): ControlEventType = when {
+            spec.id.contains("gas", ignoreCase = true) || spec.displayName.contains("gas", ignoreCase = true) -> ControlEventType.GAS
+            spec.id.contains("air", ignoreCase = true) || spec.displayName.contains("air", ignoreCase = true) -> ControlEventType.AIR
+            spec.id.contains("drum", ignoreCase = true) || spec.displayName.contains("drum", ignoreCase = true) -> ControlEventType.DRUM
+            spec.id.contains("damper", ignoreCase = true) || spec.displayName.contains("damper", ignoreCase = true) -> ControlEventType.DAMPER
+            else -> ControlEventType.GAS
+        }
         val slidersRow = HBox(8.0).apply {
             alignment = Pos.TOP_CENTER
             HBox.setHgrow(this, Priority.ALWAYS)
         }
         for (spec in sliderSpecs) {
-            val sliderKind = when {
-                spec.id.contains("gas", ignoreCase = true) || spec.displayName.contains("gas", ignoreCase = true) -> "gas"
-                spec.id.contains("air", ignoreCase = true) || spec.displayName.contains("air", ignoreCase = true) -> "air"
-                spec.id.contains("drum", ignoreCase = true) || spec.displayName.contains("drum", ignoreCase = true) -> "drum"
-                else -> "generic"
+            val eventType = specToEventType(spec)
+            val q = eventQuantifiers.get(eventType)
+            val rangeMin = q.min.toDouble().coerceIn(spec.min, spec.max)
+            val rangeMax = q.max.toDouble().coerceIn(spec.min, spec.max)
+            val effectiveMin = minOf(rangeMin, rangeMax)
+            val effectiveMax = maxOf(rangeMin, rangeMax)
+            val step = q.step.coerceIn(0.1, (effectiveMax - effectiveMin).coerceAtLeast(1.0))
+            val sliderKind = when (eventType) {
+                ControlEventType.GAS -> "gas"
+                ControlEventType.AIR -> "air"
+                ControlEventType.DRUM -> "drum"
+                ControlEventType.DAMPER -> "generic"
             }
-            val slider = Slider(spec.min, spec.max, spec.min).apply {
+            val slider = Slider(effectiveMin, effectiveMax, effectiveMin).apply {
                 orientation = Orientation.VERTICAL
                 prefHeight = 120.0
                 minHeight = 80.0
-                blockIncrement = 5.0
+                blockIncrement = step
                 isShowTickLabels = false
                 styleClass.add("slider-vertical")
                 styleClass.add("slider-vertical-$sliderKind")
+            }
+            val rangeHint = when (q.source.name) {
+                "ET" -> " (source: ET)"
+                "BT" -> " (source: BT)"
+                else -> ""
             }
             val valueField = TextField().apply {
                 text = formatControlValue(slider.value)
                 alignment = Pos.CENTER
                 styleClass.add("control-value-field")
-                tooltip = Tooltip("${spec.min.toInt()} – ${spec.max.toInt()} ${spec.unit}")
+                tooltip = Tooltip("${effectiveMin.toInt()} – ${effectiveMax.toInt()} ${spec.unit}$rangeHint")
             }
             fun applyFieldValue() {
                 val parsed = valueField.text.replace(',', '.').toDoubleOrNull() ?: return
-                val clamped = parsed.coerceIn(spec.min, spec.max)
+                val clamped = parsed.coerceIn(effectiveMin, effectiveMax)
                 slider.value = clamped
                 valueField.text = formatControlValue(clamped)
             }
@@ -547,7 +538,7 @@ class MainController {
                     styleClass.add("control-step-button")
                     styleClass.add("control-step-button-$sliderKind")
                     isFocusTraversable = false
-                    setOnAction { slider.value = v.toDouble().coerceIn(spec.min, spec.max) }
+                    setOnAction { slider.value = v.toDouble().coerceIn(effectiveMin, effectiveMax) }
                 })
             }
             for (v in stepConfig.rightSteps.sortedDescending()) {
@@ -555,14 +546,14 @@ class MainController {
                     styleClass.add("control-step-button")
                     styleClass.add("control-step-button-$sliderKind")
                     isFocusTraversable = false
-                    setOnAction { slider.value = v.toDouble().coerceIn(spec.min, spec.max) }
+                    setOnAction { slider.value = v.toDouble().coerceIn(effectiveMin, effectiveMax) }
                 })
             }
             val zeroBtn = Button("0").apply {
                 styleClass.add("control-step-button")
                 styleClass.add("control-step-button-$sliderKind")
                 isFocusTraversable = false
-                setOnAction { slider.value = 0.0 }
+                setOnAction { slider.value = effectiveMin }
             }
             val sliderWithSteps = HBox(2.0).apply {
                 alignment = Pos.TOP_CENTER
@@ -579,6 +570,48 @@ class MainController {
             slidersRow.children.add(column)
         }
         controlPanelContainer.children.add(slidersRow)
+    }
+
+    /** Build custom event buttons from settings (visibility = true). On click run command via ModbusCommandExecutor on background thread. */
+    private fun refreshCustomButtonsPanel() {
+        if (!::customButtonsPanel.isInitialized) return
+        val buttons = SettingsManager.load().customButtons.filter { it.visibility }
+        customButtonsPanel.children.clear()
+        if (buttons.isEmpty()) {
+            customButtonsPanel.isVisible = false
+            customButtonsPanel.isManaged = false
+            return
+        }
+        customButtonsPanel.isVisible = true
+        customButtonsPanel.isManaged = true
+        val flow = HBox(6.0).apply { alignment = Pos.CENTER }
+        for (cfg in buttons) {
+            val cmd = cfg.commandString.trim()
+            val btn = Button(cfg.label.ifBlank { "…" }).apply {
+                style = "-fx-background-color: ${cfg.backgroundColor}; -fx-text-fill: ${cfg.textColor}; -fx-padding: 6 12; -fx-background-radius: 4;"
+                tooltip = Tooltip(
+                    (if (cfg.description.isNotBlank()) cfg.description + "\n" else "") +
+                        "Command: ${if (cmd.isNotBlank()) cmd else "(none)"}"
+                )
+                setOnAction {
+                    if (cmd.isEmpty()) return@setOnAction
+                    val runner = recorder.dataSource as? ModbusCommandRunner
+                    if (runner == null) {
+                        ErrorLogBuffer.append(IllegalStateException("Not connected to Modbus"), "Custom button \"${cfg.label}\"")
+                        return@setOnAction
+                    }
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            ModbusCommandExecutor.execute(runner, cmd)
+                        } catch (e: Exception) {
+                            Platform.runLater { ErrorLogBuffer.append(e, "Custom button \"${cfg.label}\"") }
+                        }
+                    }
+                }
+            }
+            flow.children.add(btn)
+        }
+        customButtonsPanel.children.add(flow)
     }
 
     private fun formatControlValue(value: Double): String {
@@ -756,10 +789,25 @@ class MainController {
         }
     }
 
+    /** Run configured Modbus event command for the given key (CHARGE, DROP, DRY_END, FC_START, COOL_END) on background thread. */
+    private fun runEventCommand(key: String) {
+        val runner = recorder.dataSource as? ModbusCommandRunner ?: return
+        val cmd = SettingsManager.load().machineConfig.eventCommands[key]?.trim() ?: return
+        if (cmd.isEmpty()) return
+        scope.launch(Dispatchers.IO) {
+            try {
+                ModbusCommandExecutor.execute(runner, cmd)
+            } catch (e: Exception) {
+                Platform.runLater { ErrorLogBuffer.append(e, "Event command $key") }
+            }
+        }
+    }
+
     private fun triggerCharge() {
         val profile = recorder.currentProfile.value
         if (profile.eventByType(EventType.CHARGE) != null) return
         val sample = recorder.currentSample.value ?: return
+        runEventCommand("CHARGE")
         recorder.markEvent(EventType.CHARGE)
         val chargeTimeMs = (sample.timeSec * 1000).toLong()
         if (referenceProfile != null) {
@@ -775,6 +823,7 @@ class MainController {
 
     private fun triggerDrop() {
         val sample = recorder.currentSample.value ?: return
+        runEventCommand("DROP")
         recorder.markEvent(EventType.DROP)
         curveChart.addEventMarker((sample.timeSec * 1000).toLong(), "Drop @ %.1f °C".format(sample.bt),
             com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
@@ -1411,6 +1460,7 @@ class MainController {
             val updated = SettingsManager.load()
             curveChart.applySettings(updated.chartColors, updated.chartConfig)
             updateReadoutUnits()
+            refreshCustomButtonsPanel()
         }
         val systemPanel = VBox().apply {
             minWidth = settingsDrawerWidth

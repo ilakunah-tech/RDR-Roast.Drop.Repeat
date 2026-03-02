@@ -8,6 +8,7 @@
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
@@ -62,11 +63,11 @@
             <!-- Left: chart -->
             <BorderPane fx:id="centerPane" style="-fx-background-color: transparent;">
                 <center>
-                    <StackPane fx:id="chartContainer" style="-fx-background-color: -rdr-panel-bg;">
+                    <Pane fx:id="chartContainer" style="-fx-background-color: -rdr-panel-bg;">
                         <padding><Insets top="2" right="2" bottom="2" left="2"/></padding>
                         <StackPane fx:id="sidebarPanelContainer" styleClass="sidebar-panel-container"
-                                   StackPane.alignment="TOP_LEFT" minWidth="0" prefWidth="0" maxWidth="460"/>
-                    </StackPane>
+                                   minWidth="0" prefWidth="0" maxWidth="460"/>
+                    </Pane>
                 </center>
             </BorderPane>
 
@@ -163,6 +164,12 @@
 
                 <!-- Control sliders (hidden if no PID) -->
                 <VBox fx:id="controlPanelContainer" spacing="4" alignment="CENTER"
+                      visible="false" managed="false"
+                      style="-fx-padding: 6; -fx-border-color: -rdr-border; -fx-border-width: 1 0 0 0;">
+                </VBox>
+
+                <!-- Custom event buttons (from Settings → Event Buttons) -->
+                <VBox fx:id="customButtonsPanel" spacing="4" alignment="CENTER"
                       visible="false" managed="false"
                       style="-fx-padding: 6; -fx-border-color: -rdr-border; -fx-border-width: 1 0 0 0;">
                 </VBox>

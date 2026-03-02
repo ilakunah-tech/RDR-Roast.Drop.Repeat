@@ -2,6 +2,7 @@ package com.rdr.roast.ui.chart
 
 import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.ChartColors
+import com.rdr.roast.app.GridStyle
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.domain.ControlEventType
 import com.rdr.roast.domain.EventType
@@ -964,10 +965,19 @@ class CurveChartFx : CurveModelListener {
     fun applyChartConfig(config: ChartConfig) {
         Platform.runLater {
             lastChartConfig = config
-            val timeRangeMs = config.timeRangeMin * 60 * 1000.0
-            plot.domainAxis.setRange(0.0, timeRangeMs)
+            val (timeMinMs, timeMaxMs) = if (config.timeAxisLock || !config.timeAxisAuto) {
+                config.timeAxisMin * 60.0 * 1000.0 to config.timeAxisMax * 60.0 * 1000.0
+            } else {
+                0.0 to (config.timeRangeMin * 60 * 1000.0)
+            }
+            plot.domainAxis.setRange(timeMinMs, timeMaxMs)
+            if (config.timeAxisStepSec > 0) {
+                (plot.domainAxis as? NumberAxis)?.setTickUnit(NumberTickUnit((config.timeAxisStepSec * 1000).toDouble(), MmSsFormat()))
+            }
             plot.getRangeAxis(0).setRange(config.tempMin, config.tempMax)
-            plot.getRangeAxis(1).setRange(config.rorMin, config.rorMax)
+            (plot.getRangeAxis(0) as? NumberAxis)?.setTickUnit(NumberTickUnit(config.tempAxisStep.coerceIn(1.0, 100.0)))
+            plot.getRangeAxis(1).setRange(config.deltaMin, config.deltaMax)
+            (plot.getRangeAxis(1) as? NumberAxis)?.setTickUnit(NumberTickUnit(config.deltaStep.coerceIn(0.5, 50.0)))
             (plot.getRenderer(0) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.btLineWidth))
             (plot.getRenderer(1) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.etLineWidth))
             (plot.getRenderer(2) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.rorLineWidth))
@@ -978,10 +988,14 @@ class CurveChartFx : CurveModelListener {
             (plot.getRenderer(6) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
             (plot.getRenderer(7) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
             plot.setBackgroundPaint(Color.decode(config.backgroundColor))
-            plot.setDomainGridlinePaint(Color.decode(config.gridColor))
-            plot.setRangeGridlinePaint(Color.decode(config.gridColor))
-            plot.isDomainGridlinesVisible = config.showGrid
-            plot.isRangeGridlinesVisible = config.showGrid
+            val gridStroke = gridStrokeFromConfig(config)
+            val gridPaint = gridPaintFromConfig(config)
+            plot.setDomainGridlineStroke(gridStroke)
+            plot.setRangeGridlineStroke(gridStroke)
+            plot.setDomainGridlinePaint(gridPaint)
+            plot.setRangeGridlinePaint(gridPaint)
+            plot.isDomainGridlinesVisible = config.showGrid && config.gridTime
+            plot.isRangeGridlinesVisible = config.showGrid && config.gridTemp
             applySeriesVisibility(config)
             if (!config.showPhaseStrips) {
                 phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
@@ -999,19 +1013,39 @@ class CurveChartFx : CurveModelListener {
         applyChartConfig(config)
     }
 
-    /** Reset X axis to the default 0..15 min window (or saved ChartConfig). Called by toolbar Reset button. */
+    /** Reset axes to saved ChartConfig or defaults. Called by toolbar Reset button. */
     fun resetAxes() {
         val config = lastChartConfig
         if (config != null) {
-            val timeRangeMs = config.timeRangeMin * 60 * 1000.0
-            plot.domainAxis.setRange(0.0, timeRangeMs)
+            val (timeMinMs, timeMaxMs) = if (config.timeAxisLock || !config.timeAxisAuto) {
+                config.timeAxisMin * 60.0 * 1000.0 to config.timeAxisMax * 60.0 * 1000.0
+            } else {
+                0.0 to (config.timeRangeMin * 60 * 1000.0)
+            }
+            plot.domainAxis.setRange(timeMinMs, timeMaxMs)
             plot.getRangeAxis(0).setRange(config.tempMin, config.tempMax)
-            plot.getRangeAxis(1).setRange(config.rorMin, config.rorMax)
+            plot.getRangeAxis(1).setRange(config.deltaMin, config.deltaMax)
         } else {
             plot.domainAxis.setRange(0.0, TIME_RANGE_MS)
             plot.getRangeAxis(0).setRange(TEMP_MIN, TEMP_MAX)
             plot.getRangeAxis(1).setRange(MIN_ROR, MAX_ROR)
         }
+    }
+
+    private fun gridStrokeFromConfig(config: ChartConfig): BasicStroke {
+        val w = config.gridWidth.toFloat().coerceIn(1f, 5f)
+        return when (config.gridStyle) {
+            GridStyle.DASHED -> BasicStroke(w, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(8f, 4f), 0f)
+            GridStyle.DASHED_DOT -> BasicStroke(w, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(10f, 4f, 2f, 4f), 0f)
+            GridStyle.DOTTED -> BasicStroke(w, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(2f, 2f), 0f)
+            GridStyle.SOLID -> BasicStroke(w)
+        }
+    }
+
+    private fun gridPaintFromConfig(config: ChartConfig): Color {
+        val base = Color.decode(config.gridColor)
+        val alpha = config.gridOpaqueness.coerceIn(0.1, 1.0).toFloat()
+        return Color(base.red.toFloat(), base.green.toFloat(), base.blue.toFloat(), alpha)
     }
 
     private fun applySeriesVisibility(config: ChartConfig) {

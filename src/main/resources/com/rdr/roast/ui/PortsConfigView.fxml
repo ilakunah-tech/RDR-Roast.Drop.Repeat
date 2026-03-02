@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DialogPane?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.PortsConfigController"
+      spacing="12" style="-fx-background-color: #ffffff; -fx-padding: 16; -fx-text-fill: #333333;">
+
+    <Label text="Ports Configuration (Artisan-style)"
+           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
+
+    <TabPane fx:id="tabPane">
+        <!-- Tab 1: Comm Port (settings for non-MODBUS serial) -->
+        <Tab text="Comm Port">
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <Label text="Settings for non-Modbus devices" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="100" prefWidth="120"/>
+                        <ColumnConstraints minWidth="180" prefWidth="220"/>
+                    </columnConstraints>
+                    <Label text="Comm Port" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbComPort" prefWidth="200" promptText="COM4" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbBaudRate" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Byte Size" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbByteSize" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Parity" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbParity" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="3"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Stopbits" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbStopbits" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Timeout" GridPane.columnIndex="0" GridPane.rowIndex="5" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtTimeout" prefWidth="200" promptText="0.5" GridPane.columnIndex="1" GridPane.rowIndex="5"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                </GridPane>
+            </VBox>
+        </Tab>
+
+        <!-- Tab 2: MODBUS (Comm Port + Type + Host + Port, like Artisan) -->
+        <Tab text="MODBUS">
+            <VBox spacing="12" style="-fx-padding: 10;">
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="100" prefWidth="120"/>
+                        <ColumnConstraints minWidth="180" prefWidth="220"/>
+                    </columnConstraints>
+                    <Label text="Comm Port" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusComPort" prefWidth="200" promptText="COM4" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusBaudRate" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Byte Size" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusByteSize" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Parity" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusParity" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="3"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Stopbits" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusStopbits" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Timeout" GridPane.columnIndex="0" GridPane.rowIndex="5" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusTimeout" prefWidth="200" promptText="0.4" GridPane.columnIndex="1" GridPane.rowIndex="5"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Type" GridPane.columnIndex="0" GridPane.rowIndex="6" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusType" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="6"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="7" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusHost" prefWidth="200" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="7"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="8" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusPort" prefWidth="200" promptText="502" GridPane.columnIndex="1" GridPane.rowIndex="8"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Slave ID" GridPane.columnIndex="0" GridPane.rowIndex="9" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtSlaveId" prefWidth="200" promptText="1" GridPane.columnIndex="1" GridPane.rowIndex="9"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                </GridPane>
+                <Separator style="-fx-padding: 8 0;"/>
+                <Label text="Inputs 1–10 (Device, Register, Function, Divider, Mode, Decode)" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
+                <ScrollPane fitToWidth="true" prefHeight="220" style="-fx-background: transparent; -fx-background-color: transparent;">
+                    <GridPane fx:id="modbusInputsGrid" hgap="6" vgap="4" style="-fx-padding: 4;"/>
+                </ScrollPane>
+                <Separator style="-fx-padding: 8 0;"/>
+                <TitledPane text="PID (Device, SV/P/I/D registers, ON/OFF commands)" expanded="true">
+                    <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="60" prefWidth="80"/>
+                            <ColumnConstraints minWidth="80" prefWidth="100"/>
+                            <ColumnConstraints minWidth="60" prefWidth="80"/>
+                            <ColumnConstraints minWidth="80" prefWidth="100"/>
+                        </columnConstraints>
+                        <Label text="Device" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidDevice" prefWidth="60" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="SV" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidSv" prefWidth="60" promptText="0" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                        <Label text="P" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidP" prefWidth="60" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <Label text="I" GridPane.columnIndex="2" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidI" prefWidth="60" promptText="0" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                        <Label text="D" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidD" prefWidth="60" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <Label text="ON command" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidOn" prefWidth="200" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="3"/>
+                        <Label text="OFF command" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidOff" prefWidth="200" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="4"/>
+                    </GridPane>
+                </TitledPane>
+            </VBox>
+        </Tab>
+    </TabPane>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 8 0 0 0;">
+        <Button fx:id="btnOk" text="OK" defaultButton="true"
+                style="-fx-background-color: #4A90D9; -fx-text-fill: white; -fx-padding: 6 16; -fx-background-radius: 4;"/>
+        <Button fx:id="btnCancel" text="Cancel" cancelButton="true"
+                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 16; -fx-background-radius: 4;"/>
+    </HBox>
+</VBox>

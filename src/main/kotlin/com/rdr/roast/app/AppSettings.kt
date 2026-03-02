@@ -1,5 +1,6 @@
 package com.rdr.roast.app
 
+import com.rdr.roast.domain.ControlEventType
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.nio.file.Files
@@ -10,6 +11,45 @@ enum class MachineType { SIMULATOR, BESCA, DIEDRICH }
 
 /** How the app connects to the roaster: serial (Modbus RTU), TCP (Modbus TCP), or Phidget USB. */
 enum class Transport { SERIAL, TCP, PHIDGET }
+enum class ModbusTransportType { SERIAL_RTU, SERIAL_ASCII, TCP, UDP }
+enum class SerialParity { ODD, EVEN, NONE }
+
+/** Artisan-style decode for a MODBUS input register. */
+enum class ModbusInputDecode { UINT16, SINT16, UINT32, SINT32, BCD16, BCD32, FLOAT32 }
+
+/** Artisan-style mode for temperature display: none, Celsius, Fahrenheit. */
+enum class ModbusInputMode { NONE, C, F }
+
+/** Single MODBUS input channel (Artisan Input 1–10): device, register, function, divider, mode, decode. */
+data class ModbusInputConfig(
+    val deviceId: Int = 0,
+    val register: Int = 0,
+    val functionCode: Int = 3,
+    /** 0 = 1, 1 = 1/10, 2 = 1/100 */
+    val dividerIndex: Int = 0,
+    val mode: ModbusInputMode = ModbusInputMode.C,
+    val decode: ModbusInputDecode = ModbusInputDecode.UINT16
+) {
+    fun divisionFactor(): Double = when (dividerIndex) {
+        1 -> 10.0
+        2 -> 100.0
+        else -> 1.0
+    }
+}
+
+/** Artisan-style MODBUS PID section: device, SV/P/I/D registers, ON/OFF command strings. */
+data class ModbusPidConfig(
+    val deviceId: Int = 0,
+    val svRegister: Int = 0,
+    val pRegister: Int = 0,
+    val iRegister: Int = 0,
+    val dRegister: Int = 0,
+    val onCommand: String = "",
+    val offCommand: String = ""
+)
+
+/** Default list of 10 MODBUS inputs (Artisan channels). */
+fun defaultModbusInputs(): List<ModbusInputConfig> = List(10) { ModbusInputConfig() }
 
 data class MachineConfig(
     val machineType: MachineType = MachineType.SIMULATOR,
@@ -22,11 +62,30 @@ data class MachineConfig(
     /** Serial port (e.g. "COM4", "/dev/cu.usbserial-*"). Used when transport == SERIAL. */
     val port: String = "COM4",
     val baudRate: Int = 9600,
+    /** Serial byte size. Artisan default: 8. */
+    val byteSize: Int = 8,
+    /** Serial parity. Artisan default: NONE. */
+    val parity: SerialParity = SerialParity.NONE,
+    /** Serial stop bits. Artisan default: 1. */
+    val stopBits: Int = 1,
+    /** Serial timeout in seconds. Artisan default ~0.4-0.5. */
+    val serialTimeoutSec: Double = 0.5,
+    /** MODBUS transport type (Artisan-style). */
+    val modbusTransportType: ModbusTransportType = ModbusTransportType.SERIAL_RTU,
+    /** MODBUS IP timeout in seconds for TCP/UDP. */
+    val ipTimeoutSec: Double = 0.5,
+    /** MODBUS retries for TCP/UDP. */
+    val ipRetries: Int = 1,
+    /** Disconnect connection when comm errors exceed threshold. */
+    val disconnectOnError: Boolean = true,
+    /** Allowed read/write errors before forced reconnect. */
+    val acceptableErrors: Int = 3,
     val slaveId: Int = 1,
-    val btRegister: Int = 45,
-    val etRegister: Int = 46,
+    /** Artisan Besca Full Auto defaults: Input1=reg6, Input2=reg7, Divider=1/10. */
+    val btRegister: Int = 6,
+    val etRegister: Int = 7,
     val functionCode: Int = 3,
-    val divisionFactor: Double = 1.0,
+    val divisionFactor: Double = 10.0,
     val pollingIntervalMs: Long = 1000,
     /** Phidget 1048: ET thermocouple channel (1-based). Used when transport == PHIDGET. */
     val phidgetEtChannel: Int = 1,
@@ -37,10 +96,59 @@ data class MachineConfig(
     /** Modbus register for airflow control (Besca Full Auto: 1003). 0 = no control. */
     val airflowRegister: Int = 0,
     /** Modbus register for drum control (Besca Full Auto: 1001). 0 = no control. */
-    val drumRegister: Int = 0
+    val drumRegister: Int = 0,
+    /** Artisan-style MODBUS inputs 1–10 (Device, Register, Function, Divider, Mode, Decode). */
+    val modbusInputs: List<ModbusInputConfig> = defaultModbusInputs(),
+    /** Artisan-style MODBUS PID (device, SV/P/I/D registers, ON/OFF commands). Null = not configured. */
+    val modbusPid: ModbusPidConfig? = null,
+    /**
+     * Optional Modbus command strings for roast events. Keys: CHARGE, DROP, DRY_END, FC_START, COOL_END.
+     * Format: "write(slaveId,register,value);wcoil(slaveId,coil,0|1);sleep(seconds);..."
+     * Executed when the user triggers that event (e.g. C=Charge, D=Drop, or DE/FC from chart).
+     */
+    val eventCommands: Map<String, String> = emptyMap()
 )
 
-/** Configuration for control sliders (Gas/Air/Drum) step buttons. */
+/** Source for event quantifier: ET (environment temp), BT (bean temp), or none. Aligns with Artisan quantifier source. */
+enum class QuantifierSource { NONE, ET, BT }
+
+/** Per-slider quantifier: source (ET/BT/None), set value, min, max, step, action enabled. Stored per event type (Air, Drum, Damper, Burner). */
+data class EventQuantifierConfig(
+    val source: QuantifierSource = QuantifierSource.NONE,
+    val sv: Double = 0.0,
+    val min: Int = 0,
+    val max: Int = 100,
+    val step: Double = 5.0,
+    val actionEnabled: Boolean = false
+)
+
+/** Quantifiers for each slider event (Air, Drum, Damper, Burner). Used for range limits, step, and ET/BT-based hints. */
+data class EventQuantifiersConfig(
+    val air: EventQuantifierConfig = EventQuantifierConfig(),
+    val drum: EventQuantifierConfig = EventQuantifierConfig(),
+    val damper: EventQuantifierConfig = EventQuantifierConfig(),
+    val burner: EventQuantifierConfig = EventQuantifierConfig()
+) {
+    fun get(type: ControlEventType): EventQuantifierConfig = when (type) {
+        ControlEventType.AIR -> air
+        ControlEventType.DRUM -> drum
+        ControlEventType.DAMPER -> damper
+        ControlEventType.GAS -> burner
+    }
+}
+
+/** Per-channel slider config (Artisan-style: register, min, max, factor, offset, step). Value sent to register = factor * sliderValue + offset. */
+data class SliderChannelConfig(
+    /** Modbus register address; 0 = use machine default from [MachineConfig]. */
+    val register: Int = 0,
+    val min: Double = 0.0,
+    val max: Double = 100.0,
+    val factor: Double = 1.0,
+    val offset: Double = 0.0,
+    val step: Double = 1.0
+)
+
+/** Configuration for control sliders (Gas/Air/Drum) step buttons and per-channel register/factor/offset. */
 data class SliderStepConfig(
     val leftSteps: List<Int> = listOf(100, 90, 80, 70, 60, 50, 40, 30, 20, 10),
     val rightSteps: List<Int> = listOf(95, 85, 75, 65, 55, 45, 35, 25, 15, 5),
@@ -48,7 +156,24 @@ data class SliderStepConfig(
     val showAir: Boolean = true,
     val showDrum: Boolean = true,
     val min: Int = 0,
-    val max: Int = 100
+    val max: Int = 100,
+    /** Per-channel config (Air, Drum, Burner). Null = use machine register and defaults. */
+    val gasChannel: SliderChannelConfig? = null,
+    val airChannel: SliderChannelConfig? = null,
+    val drumChannel: SliderChannelConfig? = null
+)
+
+/** Single custom event button (Artisan-style extraevents). Action type e.g. "Modbus Command"; commandString run via ModbusCommandExecutor. */
+data class CustomButtonConfig(
+    val label: String = "",
+    val description: String = "",
+    /** Display type/action name, e.g. "Modbus Command". */
+    val actionType: String = "Modbus Command",
+    /** Command string for Modbus (write/wcoil/sleep). */
+    val commandString: String = "",
+    val visibility: Boolean = true,
+    val backgroundColor: String = "#e8e8e8",
+    val textColor: String = "#333333"
 )
 
 /** Configuration for which events appear in the Comments panel. */
@@ -79,14 +204,62 @@ data class ChartColors(
     val refAlpha: Int = 80
 )
 
-/** Chart axes, grid, and line widths. */
+/** Grid line style (Artisan Axes dialog). */
+enum class GridStyle { SOLID, DASHED, DASHED_DOT, DOTTED }
+
+/** Legend position (Artisan: upper right, upper left, etc.). Index 0 = none, 1 = upper right, 2 = upper left, ... */
+enum class LegendLocation(val index: Int) {
+    NONE(0),
+    UPPER_RIGHT(1),
+    UPPER_LEFT(2),
+    LOWER_LEFT(3),
+    LOWER_RIGHT(4),
+    RIGHT(5),
+    CENTER_LEFT(6),
+    CENTER_RIGHT(7),
+    LOWER_CENTER(8),
+    UPPER_CENTER(9),
+    CENTER(10);
+    companion object {
+        fun fromIndex(i: Int): LegendLocation = entries.getOrElse(i.coerceIn(0, 10)) { NONE }
+    }
+}
+
+/** Chart axes, grid, and line widths. Artisan-style Axes: Time, Temperature, Legend, Grid, Δ Axis. */
 data class ChartConfig(
     val tempMin: Double = 50.0,
     val tempMax: Double = 300.0,
     val rorMin: Double = -5.0,
     val rorMax: Double = 30.0,
     val timeRangeMin: Int = 15,
+    // Time Axis (Artisan)
+    val timeAxisAuto: Boolean = true,
+    val timeAxisLock: Boolean = false,
+    val timeAxisMin: Double = 0.0,
+    val timeAxisMax: Double = 15.0,
+    val timeAxisStepSec: Int = 60,
+    val recordMinSec: Int = -30,
+    val recordMaxSec: Int = 600,
+    val timeAxisExpand: Boolean = true,
+    // Temperature Axis
+    val tempAxisStep: Double = 25.0,
+    // Legend
+    val legendLocation: LegendLocation = LegendLocation.NONE,
+    // Grid
     val showGrid: Boolean = true,
+    val gridStyle: GridStyle = GridStyle.SOLID,
+    val gridWidth: Int = 1,
+    val gridTime: Boolean = true,
+    val gridTemp: Boolean = true,
+    val gridOpaqueness: Double = 0.2,
+    // Δ Axis (RoR / delta)
+    val deltaAxisAuto: Boolean = false,
+    val deltaET: Boolean = false,
+    val deltaBT: Boolean = true,
+    val deltaMin: Double = -5.0,
+    val deltaMax: Double = 30.0,
+    val deltaStep: Double = 5.0,
+    // Visibility and line widths
     val showBt: Boolean = true,
     val showEt: Boolean = true,
     val showRorBt: Boolean = true,
@@ -141,7 +314,11 @@ data class AppSettings(
     val roastPropertiesWeightOutKg: Double = 0.0,
     val roastPropertiesBeansNotes: String = "",
     val sliderStepConfig: SliderStepConfig = SliderStepConfig(),
-    val commentsConfig: CommentsConfig = CommentsConfig()
+    val commentsConfig: CommentsConfig = CommentsConfig(),
+    /** Per-event quantifiers (Source, SV, Min, Max, Step, Action) for Air, Drum, Damper, Burner. Used in slider/event logic. */
+    val eventQuantifiers: EventQuantifiersConfig = EventQuantifiersConfig(),
+    /** Custom buttons (label, Modbus command, visibility, color). Shown in main window; on click run command via ModbusCommandExecutor. */
+    val customButtons: List<CustomButtonConfig> = emptyList()
 )
 
 object SettingsManager {
