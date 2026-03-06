@@ -402,7 +402,7 @@ class MainController {
 
     private fun setupCommentsListView() {
         val list = commentsList()
-        list.placeholder = Label("No events or comments.").apply {
+        list.placeholder = Label("No reference roast selected.").apply {
             styleClass.add("comments-placeholder")
         }
         list.setCellFactory {
@@ -487,76 +487,31 @@ class MainController {
             val bt = profile.temp1.getOrNull(idx)
             out += CommentListEntry(title = title, timeSec = relSec, bt = bt, value = display, source = CommentListSource.REFERENCE)
         }
+        synchronized(profile.comments) {
+            profile.comments.forEach { comment ->
+                val relSec = (comment.timeSec - charge).coerceAtLeast(0.0)
+                out += CommentListEntry(
+                    title = "Comment",
+                    timeSec = relSec,
+                    bt = comment.tempBT,
+                    value = formatCommentEntry(comment),
+                    source = CommentListSource.REFERENCE
+                )
+            }
+        }
         return when (refCommentsSortMode) {
             RefCommentsSortMode.TIME -> out.sortedBy { it.timeSec ?: Double.MAX_VALUE }
             RefCommentsSortMode.BT -> out.sortedBy { it.bt ?: Double.MAX_VALUE }
         }
     }
 
-    private fun buildRoastCommentEntries(profile: RoastProfile): List<CommentListEntry> {
-        val eventEntries = synchronized(profile.events) {
-            profile.events.map { event ->
-                val title = when (event.type) {
-                    EventType.CHARGE -> "Charge"
-                    EventType.TP -> "Turning point"
-                    EventType.CC -> "Dry end"
-                    EventType.FC -> "First crack"
-                    EventType.DROP -> "Drop"
-                }
-                CommentListEntry(title = title, timeSec = event.timeSec, bt = event.tempBT, source = CommentListSource.LIVE)
-            }
-        }
-        val commentEntries = synchronized(profile.comments) {
-            profile.comments.map { comment ->
-                CommentListEntry(
-                    title = "Comment",
-                    timeSec = comment.timeSec,
-                    bt = comment.tempBT,
-                    value = formatCommentEntry(comment),
-                    source = CommentListSource.LIVE
-                )
-            }
-        }
-        return (eventEntries + commentEntries).sortedBy { it.timeSec ?: Double.MAX_VALUE }
-    }
-
-    private fun buildBbpCommentEntries(): List<CommentListEntry> {
-        val session = recorder.currentBbpSession ?: return emptyList()
-        return session.comments.sortedBy { it.timeSec }.map { comment ->
-            CommentListEntry(
-                title = "Between batch",
-                timeSec = comment.timeSec,
-                bt = comment.tempBT,
-                value = formatCommentEntry(comment),
-                source = CommentListSource.BBP
-            )
-        }
-    }
-
     private fun refreshCommentsList() {
         if (!::commentsListView.isInitialized) return
         val list = commentsList()
-        val state = recorder.stateFlow.value
-        val rows = when {
-            state == RecorderState.BBP -> {
-                lblCommentsHeader.text = "Events & comments"
-                buildBbpCommentEntries().takeLast(10)
-            }
-            state == RecorderState.RECORDING || state == RecorderState.STOPPED -> {
-                lblCommentsHeader.text = "Events & comments"
-                buildRoastCommentEntries(recorder.currentProfile.value).takeLast(10)
-            }
-            referenceProfile != null -> {
-                lblCommentsHeader.text = "Reference comments"
-                buildReferenceComments(referenceProfile!!)
-            }
-            else -> {
-                lblCommentsHeader.text = "Events & comments"
-                emptyList()
-            }
-        }
+        val rows = referenceProfile?.let { buildReferenceComments(it) } ?: emptyList()
+        lblCommentsHeader.text = "Events & comments"
         if (::btnCommentsSettings.isInitialized) {
-            btnCommentsSettings.isDisable = referenceProfile == null || state == RecorderState.RECORDING || state == RecorderState.BBP
+            btnCommentsSettings.isDisable = referenceProfile == null
         }
         list.items = FXCollections.observableArrayList(rows)
         list.opacity = 0.0
