@@ -1,0 +1,436 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.PortsConfigController"
+      spacing="12" style="-fx-background-color: #ffffff; -fx-padding: 16; -fx-text-fill: #333333;">
+
+    <Label text="Device Assignment (Artisan-style)"
+           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
+
+    <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE">
+        <!-- Tab 1: Comm Port -->
+        <Tab text="ET/BT">
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <HBox spacing="16" alignment="CENTER_LEFT">
+                    <CheckBox fx:id="chkEtCurve" text="ET curve"/>
+                    <CheckBox fx:id="chkBtCurve" text="BT curve"/>
+                    <CheckBox fx:id="chkEtLcd" text="ET LCD"/>
+                    <CheckBox fx:id="chkBtLcd" text="BT LCD"/>
+                    <CheckBox fx:id="chkSwapEtBt" text="Swap ET/BT"/>
+                    <CheckBox fx:id="chkDeviceLogging" text="Logging"/>
+                    <CheckBox fx:id="chkDeviceControl" text="Control"/>
+                </HBox>
+                <Label text="Settings for non-Modbus devices" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="100" prefWidth="120"/>
+                        <ColumnConstraints minWidth="180" prefWidth="220"/>
+                    </columnConstraints>
+                    <Label text="Comm Port" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbComPort" prefWidth="200" promptText="COM4" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbBaudRate" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Byte Size" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbByteSize" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Parity" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbParity" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="3"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Stopbits" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbStopbits" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Timeout" GridPane.columnIndex="0" GridPane.rowIndex="5" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtTimeout" prefWidth="200" promptText="0.5" GridPane.columnIndex="1" GridPane.rowIndex="5"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                </GridPane>
+            </VBox>
+        </Tab>
+
+        <!-- Tab 2: Extra -->
+        <Tab text="Extra Devices">
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <TableView fx:id="extraDevicesTable" prefHeight="260">
+                    <columns>
+                        <TableColumn fx:id="colExtraDevice" text="Device" prefWidth="110"/>
+                        <TableColumn fx:id="colExtraCommPort" text="Comm Port" prefWidth="110"/>
+                        <TableColumn fx:id="colExtraBaudRate" text="Baud Rate" prefWidth="95"/>
+                        <TableColumn fx:id="colExtraByteSize" text="Byte Size" prefWidth="85"/>
+                        <TableColumn fx:id="colExtraParity" text="Parity" prefWidth="80"/>
+                        <TableColumn fx:id="colExtraStopbits" text="Stopbits" prefWidth="85"/>
+                        <TableColumn fx:id="colExtraTimeout" text="Timeout" prefWidth="85"/>
+                    </columns>
+                </TableView>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Button fx:id="btnAddExtraDevice" text="Add"/>
+                    <Button fx:id="btnDeleteExtraDevice" text="Delete"/>
+                </HBox>
+            </VBox>
+        </Tab>
+
+        <Tab text="Symb ET/BT">
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <Label text="Symbolic formulas for ET/BT override (Artisan style)." style="-fx-text-fill: #555555;"/>
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="120" prefWidth="140"/>
+                        <ColumnConstraints minWidth="260" prefWidth="420"/>
+                    </columnConstraints>
+                    <Label text="ET expression" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <TextField fx:id="txtSymbEt" promptText="Example: Y1*1.02+0.5" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="BT expression" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <TextField fx:id="txtSymbBt" promptText="Example: Y2*0.98-0.3" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                </GridPane>
+            </VBox>
+        </Tab>
+
+        <Tab text="Phidgets">
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <HBox spacing="16" alignment="CENTER_LEFT">
+                    <CheckBox fx:id="chkPhidgetRemote" text="Remote"/>
+                    <CheckBox fx:id="chkPhidgetRemoteOnly" text="Remote only"/>
+                </HBox>
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="120" prefWidth="140"/>
+                        <ColumnConstraints minWidth="220" prefWidth="320"/>
+                    </columnConstraints>
+                    <Label text="Server ID" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <TextField fx:id="txtPhidgetServerId" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <TextField fx:id="txtPhidgetPort" promptText="5661" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    <Label text="Password" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <PasswordField fx:id="txtPhidgetPassword" promptText="" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    <Label text="ET channel" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                    <TextField fx:id="txtPhidgetEtChannel" promptText="1" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                    <Label text="BT channel" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                    <TextField fx:id="txtPhidgetBtChannel" promptText="2" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                </GridPane>
+            </VBox>
+        </Tab>
+
+        <Tab text="Yoctopuce">
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <CheckBox fx:id="chkYoctoRemote" text="Use remote VirtualHub"/>
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="120" prefWidth="140"/>
+                        <ColumnConstraints minWidth="220" prefWidth="320"/>
+                    </columnConstraints>
+                    <Label text="VirtualHub" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <TextField fx:id="txtYoctoVirtualHub" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="IR emissivity" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <TextField fx:id="txtYoctoEmissivity" promptText="1.0" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                </GridPane>
+            </VBox>
+        </Tab>
+
+        <Tab text="Ambient">
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <Label text="Ambient sensors and source mapping." style="-fx-text-fill: #555555;"/>
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="150" prefWidth="170"/>
+                        <ColumnConstraints minWidth="220" prefWidth="260"/>
+                        <ColumnConstraints minWidth="150" prefWidth="170"/>
+                        <ColumnConstraints minWidth="220" prefWidth="260"/>
+                    </columnConstraints>
+                    <Label text="Temp device" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <ComboBox fx:id="cmbAmbientTempDevice" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="Temp source" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                    <ComboBox fx:id="cmbAmbientTempSource" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                    <Label text="Humidity device" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <ComboBox fx:id="cmbAmbientHumidityDevice" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    <Label text="Humidity source" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                    <ComboBox fx:id="cmbAmbientHumiditySource" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                    <Label text="Pressure device" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <ComboBox fx:id="cmbAmbientPressureDevice" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    <Label text="Pressure source" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                    <ComboBox fx:id="cmbAmbientPressureSource" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                    <Label text="Elevation (m)" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                    <TextField fx:id="txtAmbientElevation" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                </GridPane>
+            </VBox>
+        </Tab>
+
+        <Tab text="Networks">
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="120" prefWidth="140"/>
+                        <ColumnConstraints minWidth="220" prefWidth="260"/>
+                        <ColumnConstraints minWidth="90" prefWidth="110"/>
+                        <ColumnConstraints minWidth="120" prefWidth="140"/>
+                    </columnConstraints>
+                    <Label text="S7 host" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <TextField fx:id="txtNetS7Host" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="S7 port" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                    <TextField fx:id="txtNetS7Port" promptText="102" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                    <Label text="Santoker host" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <TextField fx:id="txtNetSantokerHost" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    <Label text="Santoker port" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                    <TextField fx:id="txtNetSantokerPort" promptText="20001" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                    <Label text="Kaleido host" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <TextField fx:id="txtNetKaleidoHost" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    <Label text="Kaleido port" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                    <TextField fx:id="txtNetKaleidoPort" promptText="20002" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                    <Label text="WebSocket host" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                    <TextField fx:id="txtNetWsHost" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                    <Label text="WebSocket port" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                    <TextField fx:id="txtNetWsPort" promptText="80" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                </GridPane>
+            </VBox>
+        </Tab>
+
+        <!-- Tab 3: MODBUS -->
+        <Tab text="MODBUS">
+            <VBox spacing="12" style="-fx-padding: 10;">
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="100" prefWidth="120"/>
+                        <ColumnConstraints minWidth="180" prefWidth="220"/>
+                    </columnConstraints>
+                    <Label text="Comm Port" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusComPort" prefWidth="200" promptText="COM4" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusBaudRate" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Byte Size" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusByteSize" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Parity" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusParity" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="3"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Stopbits" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusStopbits" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Timeout" GridPane.columnIndex="0" GridPane.rowIndex="5" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusTimeout" prefWidth="200" promptText="0.4" GridPane.columnIndex="1" GridPane.rowIndex="5"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Type" GridPane.columnIndex="0" GridPane.rowIndex="6" style="-fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbModbusType" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="6"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="7" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusHost" prefWidth="200" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="7"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="8" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusPort" prefWidth="200" promptText="502" GridPane.columnIndex="1" GridPane.rowIndex="8"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Slave ID" GridPane.columnIndex="0" GridPane.rowIndex="9" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtSlaveId" prefWidth="200" promptText="1" GridPane.columnIndex="1" GridPane.rowIndex="9"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Serial Delay" GridPane.columnIndex="0" GridPane.rowIndex="10" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusSerialDelay" prefWidth="200" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="10"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="Serial Retries" GridPane.columnIndex="0" GridPane.rowIndex="11" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusSerialRetries" prefWidth="200" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="11"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="UDP/TCP Timeout" GridPane.columnIndex="0" GridPane.rowIndex="12" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusIpTimeout" prefWidth="200" promptText="0.4" GridPane.columnIndex="1" GridPane.rowIndex="12"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                    <Label text="UDP/TCP Retries" GridPane.columnIndex="0" GridPane.rowIndex="13" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtModbusIpRetries" prefWidth="200" promptText="1" GridPane.columnIndex="1" GridPane.rowIndex="13"
+                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
+                </GridPane>
+                <HBox spacing="16" alignment="CENTER_LEFT">
+                    <CheckBox fx:id="chkModbusLittleEndian" text="little-endian"/>
+                    <CheckBox fx:id="chkModbusLittleEndianWords" text="little-endian words"/>
+                    <CheckBox fx:id="chkModbusOptimize" text="optimize"/>
+                    <CheckBox fx:id="chkModbusFetchFullBlocks" text="fetch full blocks"/>
+                </HBox>
+                <Separator style="-fx-padding: 8 0;"/>
+                <Label text="Inputs 1–10 (Device, Register, Function, Divider, Mode, Decode)" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
+                <ScrollPane fitToWidth="true" prefHeight="220" style="-fx-background: transparent; -fx-background-color: transparent;">
+                    <GridPane fx:id="modbusInputsGrid" hgap="6" vgap="4" style="-fx-padding: 4;"/>
+                </ScrollPane>
+                <Separator style="-fx-padding: 8 0;"/>
+                <TitledPane text="PID (Device, SV/P/I/D registers, ON/OFF commands)" expanded="true">
+                    <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="60" prefWidth="80"/>
+                            <ColumnConstraints minWidth="80" prefWidth="100"/>
+                            <ColumnConstraints minWidth="60" prefWidth="80"/>
+                            <ColumnConstraints minWidth="80" prefWidth="100"/>
+                        </columnConstraints>
+                        <Label text="Device" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidDevice" prefWidth="60" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="SV" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidSv" prefWidth="60" promptText="0" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                        <Label text="P" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidP" prefWidth="60" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <Label text="I" GridPane.columnIndex="2" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidI" prefWidth="60" promptText="0" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                        <Label text="D" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidD" prefWidth="60" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <Label text="ON command" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidOn" prefWidth="200" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="3"/>
+                        <Label text="OFF command" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtPidOff" prefWidth="200" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="4"/>
+                    </GridPane>
+                </TitledPane>
+            </VBox>
+        </Tab>
+
+        <!-- Tab 4: S7 -->
+        <Tab text="S7">
+            <VBox spacing="12" style="-fx-padding: 10;">
+                <GridPane hgap="12" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="100" prefWidth="120"/>
+                        <ColumnConstraints minWidth="180" prefWidth="220"/>
+                    </columnConstraints>
+                    <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtS7Host" prefWidth="200" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtS7Port" prefWidth="200" promptText="102" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    <Label text="Rack" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtS7Rack" prefWidth="200" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    <Label text="Slot" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
+                    <TextField fx:id="txtS7Slot" prefWidth="200" promptText="1" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                </GridPane>
+                <HBox spacing="16" alignment="CENTER_LEFT">
+                    <CheckBox fx:id="chkS7Optimize" text="optimize"/>
+                    <CheckBox fx:id="chkS7FetchFullBlocks" text="fetch full blocks"/>
+                </HBox>
+                <Separator/>
+                <Label text="Inputs 1–12 (Area, DB#, Start, Type, Factor, Mode)" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
+                <ScrollPane fitToWidth="true" prefHeight="220">
+                    <GridPane fx:id="s7InputsGrid" hgap="6" vgap="4" style="-fx-padding: 4;"/>
+                </ScrollPane>
+                <Separator/>
+                <TitledPane text="PID" expanded="true">
+                    <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="80" prefWidth="100"/>
+                            <ColumnConstraints minWidth="100" prefWidth="120"/>
+                            <ColumnConstraints minWidth="80" prefWidth="100"/>
+                            <ColumnConstraints minWidth="100" prefWidth="120"/>
+                        </columnConstraints>
+                        <Label text="Device" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtS7PidDevice" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="SV" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtS7PidSv" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                        <Label text="P" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtS7PidP" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <Label text="I" GridPane.columnIndex="2" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtS7PidI" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                        <Label text="D" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
+                        <TextField fx:id="txtS7PidD" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    </GridPane>
+                </TitledPane>
+            </VBox>
+        </Tab>
+
+        <!-- Tab 5: WebSocket -->
+        <Tab text="WebSocket">
+            <ScrollPane fitToWidth="true" prefHeight="500">
+                <VBox spacing="12" style="-fx-padding: 10;">
+                    <TitledPane text="Machine" expanded="true">
+                        <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="110" prefWidth="130"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                                <ColumnConstraints minWidth="110" prefWidth="130"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                            </columnConstraints>
+                            <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0"/><TextField fx:id="txtWsHost" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Port" GridPane.columnIndex="2" GridPane.rowIndex="0"/><TextField fx:id="txtWsPort" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                            <Label text="Path" GridPane.columnIndex="0" GridPane.rowIndex="1"/><TextField fx:id="txtWsPath" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="ID" GridPane.columnIndex="2" GridPane.rowIndex="1"/><TextField fx:id="txtWsId" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                        </GridPane>
+                    </TitledPane>
+                    <TitledPane text="Timeouts (seconds)" expanded="true">
+                        <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="140" prefWidth="160"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                            </columnConstraints>
+                            <Label text="Connect"/><TextField fx:id="txtWsTimeoutConnect" GridPane.columnIndex="1"/>
+                            <Label text="Reconnect" GridPane.rowIndex="1"/><TextField fx:id="txtWsTimeoutReconnect" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="Request" GridPane.rowIndex="2"/><TextField fx:id="txtWsTimeoutRequest" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        </GridPane>
+                    </TitledPane>
+                    <TitledPane text="Nodes" expanded="true">
+                        <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="140" prefWidth="160"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                                <ColumnConstraints minWidth="140" prefWidth="160"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                            </columnConstraints>
+                            <Label text="Message ID"/><TextField fx:id="txtWsNodeMessageId" GridPane.columnIndex="1"/>
+                            <Label text="Machine ID" GridPane.columnIndex="2"/><TextField fx:id="txtWsNodeMachineId" GridPane.columnIndex="3"/>
+                            <Label text="Command" GridPane.rowIndex="1"/><TextField fx:id="txtWsNodeCommand" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="Data" GridPane.columnIndex="2" GridPane.rowIndex="1"/><TextField fx:id="txtWsNodeData" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                            <Label text="Message" GridPane.rowIndex="2"/><TextField fx:id="txtWsNodeMessage" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        </GridPane>
+                    </TitledPane>
+                    <TitledPane text="Commands / Messages / Flags" expanded="true">
+                        <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="140" prefWidth="160"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                                <ColumnConstraints minWidth="140" prefWidth="160"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                            </columnConstraints>
+                            <Label text="Data Request"/><TextField fx:id="txtWsCommandDataRequest" GridPane.columnIndex="1"/>
+                            <Label text="Message CHARGE" GridPane.columnIndex="2"/><TextField fx:id="txtWsMessageCharge" GridPane.columnIndex="3"/>
+                            <Label text="Message DROP" GridPane.rowIndex="1"/><TextField fx:id="txtWsMessageDrop" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="START on CHARGE" GridPane.columnIndex="2" GridPane.rowIndex="1"/><TextField fx:id="txtWsFlagStartOnCharge" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                            <Label text="OFF on DROP" GridPane.rowIndex="2"/><TextField fx:id="txtWsFlagOffOnDrop" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <CheckBox fx:id="chkWsCompression" text="compression" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                        </GridPane>
+                    </TitledPane>
+                    <TitledPane text="Events (Event / Node / DRY / FCs / FCe / SCs / SCe)" expanded="true">
+                        <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="100" prefWidth="120"/>
+                                <ColumnConstraints minWidth="120" prefWidth="150"/>
+                                <ColumnConstraints minWidth="100" prefWidth="120"/>
+                                <ColumnConstraints minWidth="120" prefWidth="150"/>
+                            </columnConstraints>
+                            <Label text="Event"/><TextField fx:id="txtWsEventEvent" GridPane.columnIndex="1"/>
+                            <Label text="Node" GridPane.columnIndex="2"/><TextField fx:id="txtWsEventNode" GridPane.columnIndex="3"/>
+                            <Label text="DRY" GridPane.rowIndex="1"/><TextField fx:id="txtWsEventDry" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="FCs" GridPane.columnIndex="2" GridPane.rowIndex="1"/><TextField fx:id="txtWsEventFcs" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                            <Label text="FCe" GridPane.rowIndex="2"/><TextField fx:id="txtWsEventFce" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <Label text="SCs" GridPane.columnIndex="2" GridPane.rowIndex="2"/><TextField fx:id="txtWsEventScs" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                            <Label text="SCe" GridPane.rowIndex="3"/><TextField fx:id="txtWsEventSce" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                        </GridPane>
+                    </TitledPane>
+                    <TitledPane text="Inputs 1-10 (Request / Node / Mode)" expanded="true">
+                        <GridPane fx:id="wsInputsGrid" hgap="6" vgap="4" style="-fx-padding: 8;"/>
+                    </TitledPane>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+    </TabPane>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 8 0 0 0;">
+        <Button fx:id="btnOk" text="OK" defaultButton="true"
+                style="-fx-background-color: #4A90D9; -fx-text-fill: white; -fx-padding: 6 16; -fx-background-radius: 4;"/>
+        <Button fx:id="btnCancel" text="Cancel" cancelButton="true"
+                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 16; -fx-background-radius: 4;"/>
+    </HBox>
+</VBox>

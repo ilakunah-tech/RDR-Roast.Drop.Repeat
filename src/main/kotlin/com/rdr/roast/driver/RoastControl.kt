@@ -9,7 +9,9 @@ data class ControlSpec(
     val displayName: String,
     val min: Double = 0.0,
     val max: Double = 100.0,
-    val unit: String = "%"
+    val unit: String = "%",
+    /** Slider step (block increment and rounding). Artisan-style. */
+    val step: Double = 1.0
 ) {
     enum class ControlType { SLIDER, BUTTON }
 }

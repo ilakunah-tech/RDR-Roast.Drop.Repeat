@@ -57,7 +57,7 @@ data class RoastEvent(
 
 /**
  * Free-text chart comment, optionally enriched with BT / gas / airflow values.
- * Used both for roast comments and Between Batch Protocol (BBP) comments.
+ * Used for roast comments and Between Batch Protocol (BBP) comments.
  */
 data class ProtocolComment(
     val timeSec: Double,
@@ -104,13 +104,19 @@ class RoastProfile(
     events: MutableList<RoastEvent> = mutableListOf(),
     comments: MutableList<ProtocolComment> = mutableListOf(),
     /** Gas/air/drum/damper events from .alog specialevents/etypes/specialeventsvalue. */
-    val controlEvents: List<ControlEvent> = emptyList(),
+    controlEvents: List<ControlEvent> = emptyList(),
     val mode: TemperatureUnit = TemperatureUnit.CELSIUS,
     /** BBP recorded before this roast (between previous Stop and this Start). Cropster-style. */
     val betweenBatchLog: BetweenBatchLog? = null
 ) {
     val events: MutableList<RoastEvent> = Collections.synchronizedList(events.toMutableList())
     val comments: MutableList<ProtocolComment> = Collections.synchronizedList(comments.toMutableList())
+    val controlEvents: MutableList<ControlEvent> = controlEvents.toMutableList()
+
+    @Synchronized
+    fun addControlEvent(timeSec: Double, type: ControlEventType, value: Double, displayString: String? = null) {
+        controlEvents.add(ControlEvent(timeSec, type, value, displayString))
+    }
 
     @Synchronized
     fun addSample(sample: TemperatureSample) {
@@ -149,16 +155,18 @@ class RoastProfile(
     /**
      * Returns a deep copy of this profile with copied lists and events.
      */
+    @Synchronized
     fun deepCopy(): RoastProfile {
         val eventsCopy = synchronized(events) { events.toMutableList() }
         val commentsCopy = synchronized(comments) { comments.toMutableList() }
+        val controlEventsCopy = controlEvents.toMutableList()
         return RoastProfile(
             timex = timex.toMutableList(),
             temp1 = temp1.toMutableList(),
             temp2 = temp2.toMutableList(),
             events = eventsCopy,
             comments = commentsCopy,
-            controlEvents = controlEvents,
+            controlEvents = controlEventsCopy,
             mode = mode,
             betweenBatchLog = betweenBatchLog
         )

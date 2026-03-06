@@ -4,16 +4,26 @@ import com.rdr.roast.app.AppSettings
 import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.ChartColors
 import com.rdr.roast.app.ConnectionPreset
+import com.rdr.roast.app.EventQuantifierConfig
+import com.rdr.roast.app.EventQuantifiersConfig
+import com.rdr.roast.app.QuantifierSource
 import com.rdr.roast.app.ConnectionTester
+import com.rdr.roast.app.DeviceAssignmentConfig
 import com.rdr.roast.app.MachineConfig
 import com.rdr.roast.app.MachineType
+import com.rdr.roast.app.ModbusInputConfig
+import com.rdr.roast.app.ModbusPidConfig
+import com.rdr.roast.app.ModbusTransportType
 import com.rdr.roast.app.AppearanceSupport
+import com.rdr.roast.app.SerialParity
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.app.ThemeSupport
 import com.rdr.roast.app.Transport
 import com.rdr.roast.driver.ConnectionState
 import javafx.application.Platform
 import javafx.fxml.FXML
+import javafx.fxml.FXMLLoader
+import javafx.scene.Scene
 import javafx.scene.control.Alert
 import javafx.scene.control.Button
 import javafx.scene.control.CheckBox
@@ -36,6 +46,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class SettingsController {
+    private data class PortsAdvanced(
+        val modbusType: ModbusTransportType,
+        val byteSize: Int,
+        val parity: SerialParity,
+        val stopBits: Int,
+        val serialTimeoutSec: Double,
+        val ipTimeoutSec: Double,
+        val ipRetries: Int
+    )
 
     /** Set when user clicks Save; MainController uses this to apply and reconnect. */
     var savedSettings: AppSettings? = null
@@ -45,6 +64,15 @@ class SettingsController {
     var onCloseDrawer: ((SettingsController) -> Unit)? = null
 
     private val scope = CoroutineScope(Dispatchers.Default)
+    private var portsAdvanced: PortsAdvanced? = null
+    /** Set when user clicks OK in Ports Configuration (Artisan pattern: caller applies). */
+    private var portsModbusInputs: List<ModbusInputConfig>? = null
+    private var portsModbusPid: ModbusPidConfig? = null
+    private var deviceAssignmentConfig: DeviceAssignmentConfig? = null
+    /** Set when user clicks OK/Apply in Event Buttons dialog (caller applies on Save). */
+    private var eventButtonsDialogResult: EventButtonsDialogResult? = null
+    /** Separate Axes dialog state; merged into ChartConfig on Save. */
+    private var axesConfigDraft: ChartConfig? = null
 
     @FXML
     lateinit var cmbSource: ComboBox<String>
@@ -128,10 +156,31 @@ class SettingsController {
     lateinit var lblSlaveId: javafx.scene.control.Label
 
     @FXML
+    lateinit var txtBtRegister: TextField
+
+    @FXML
+    lateinit var txtEtRegister: TextField
+
+    @FXML
+    lateinit var txtDivider: TextField
+
+    @FXML
+    lateinit var lblBtRegister: javafx.scene.control.Label
+
+    @FXML
+    lateinit var lblEtRegister: javafx.scene.control.Label
+
+    @FXML
+    lateinit var lblDivider: javafx.scene.control.Label
+
+    @FXML
     lateinit var lblPhidgetEt: javafx.scene.control.Label
 
     @FXML
     lateinit var lblPhidgetBt: javafx.scene.control.Label
+
+    @FXML
+    lateinit var lblEtBtSource: javafx.scene.control.Label
 
     @FXML
     lateinit var chkBetweenBatchProtocol: CheckBox
@@ -146,7 +195,28 @@ class SettingsController {
     lateinit var txtDiscoveryHosts: TextField
 
     @FXML
+    lateinit var btnPortsConfig: javafx.scene.control.Button
+
+    @FXML
+    lateinit var btnEventButtons: Button
+
+    @FXML
     lateinit var btnTestConnection: Button
+
+    @FXML
+    lateinit var txtEventCharge: TextField
+
+    @FXML
+    lateinit var txtEventDrop: TextField
+
+    @FXML
+    lateinit var txtEventDryEnd: TextField
+
+    @FXML
+    lateinit var txtEventFcStart: TextField
+
+    @FXML
+    lateinit var txtEventCoolEnd: TextField
 
     @FXML
     lateinit var chkVerifyBeforeSave: CheckBox
@@ -170,22 +240,24 @@ class SettingsController {
     lateinit var btnResetColors: Button
 
     @FXML
-    lateinit var txtChartTempMin: TextField
-
-    @FXML
-    lateinit var txtChartTempMax: TextField
-
-    @FXML
-    lateinit var txtChartRorMin: TextField
-
-    @FXML
-    lateinit var txtChartRorMax: TextField
-
-    @FXML
     lateinit var txtChartTimeRange: TextField
 
     @FXML
     lateinit var chkChartShowGrid: CheckBox
+    @FXML
+    lateinit var chkChartShowBt: CheckBox
+    @FXML
+    lateinit var chkChartShowEt: CheckBox
+    @FXML
+    lateinit var chkChartShowRorBt: CheckBox
+    @FXML
+    lateinit var chkChartShowRorEt: CheckBox
+    @FXML
+    lateinit var chkChartShowReferenceCurves: CheckBox
+    @FXML
+    lateinit var chkChartShowReferenceEvents: CheckBox
+    @FXML
+    lateinit var chkChartShowPhaseStrips: CheckBox
 
     @FXML
     lateinit var txtChartBtLineWidth: TextField
@@ -204,6 +276,9 @@ class SettingsController {
 
     @FXML
     lateinit var txtChartGridColor: TextField
+
+    @FXML
+    lateinit var btnAxesConfig: Button
 
     @FXML
     lateinit var settingsTabPane: TabPane
@@ -288,6 +363,55 @@ class SettingsController {
 
     @FXML
     lateinit var txtColorLiveRorEt: TextField
+
+    @FXML
+    lateinit var cmbQuantAirSource: ComboBox<String>
+    @FXML
+    lateinit var txtQuantAirSv: TextField
+    @FXML
+    lateinit var txtQuantAirMin: TextField
+    @FXML
+    lateinit var txtQuantAirMax: TextField
+    @FXML
+    lateinit var txtQuantAirStep: TextField
+    @FXML
+    lateinit var chkQuantAirAction: CheckBox
+    @FXML
+    lateinit var cmbQuantDrumSource: ComboBox<String>
+    @FXML
+    lateinit var txtQuantDrumSv: TextField
+    @FXML
+    lateinit var txtQuantDrumMin: TextField
+    @FXML
+    lateinit var txtQuantDrumMax: TextField
+    @FXML
+    lateinit var txtQuantDrumStep: TextField
+    @FXML
+    lateinit var chkQuantDrumAction: CheckBox
+    @FXML
+    lateinit var cmbQuantDamperSource: ComboBox<String>
+    @FXML
+    lateinit var txtQuantDamperSv: TextField
+    @FXML
+    lateinit var txtQuantDamperMin: TextField
+    @FXML
+    lateinit var txtQuantDamperMax: TextField
+    @FXML
+    lateinit var txtQuantDamperStep: TextField
+    @FXML
+    lateinit var chkQuantDamperAction: CheckBox
+    @FXML
+    lateinit var cmbQuantBurnerSource: ComboBox<String>
+    @FXML
+    lateinit var txtQuantBurnerSv: TextField
+    @FXML
+    lateinit var txtQuantBurnerMin: TextField
+    @FXML
+    lateinit var txtQuantBurnerMax: TextField
+    @FXML
+    lateinit var txtQuantBurnerStep: TextField
+    @FXML
+    lateinit var chkQuantBurnerAction: CheckBox
 
     @FXML
     fun initialize() {
@@ -380,6 +504,16 @@ class SettingsController {
         btnRestoreAppearance.setOnAction { restoreAppearanceDefaults() }
 
         val settings = SettingsManager.load()
+        deviceAssignmentConfig = settings.deviceAssignment
+        portsAdvanced = PortsAdvanced(
+            modbusType = settings.machineConfig.modbusTransportType,
+            byteSize = settings.machineConfig.byteSize,
+            parity = settings.machineConfig.parity,
+            stopBits = settings.machineConfig.stopBits,
+            serialTimeoutSec = settings.machineConfig.serialTimeoutSec,
+            ipTimeoutSec = settings.machineConfig.ipTimeoutSec,
+            ipRetries = settings.machineConfig.ipRetries
+        )
 
         cmbSource.items.setAll("Simulator", "Besca", "Diedrich")
         cmbSource.value = when (settings.machineConfig.machineType) {
@@ -399,12 +533,22 @@ class SettingsController {
         txtTcpPort.text = settings.machineConfig.tcpPort.toString()
         txtPhidgetEtChannel.text = settings.machineConfig.phidgetEtChannel.toString()
         txtPhidgetBtChannel.text = settings.machineConfig.phidgetBtChannel.toString()
+        txtBtRegister.text = settings.machineConfig.btRegister.toString()
+        txtEtRegister.text = settings.machineConfig.etRegister.toString()
+        txtDivider.text = settings.machineConfig.divisionFactor.toString()
         txtSavePath.text = settings.savePath
         txtSamplingIntervalSec.text = (settings.machineConfig.pollingIntervalMs / 1000.0).toString()
         chkBetweenBatchProtocol.isSelected = settings.betweenBatchProtocolEnabled
         chkAutoDetectRoaster.isSelected = settings.autoDetectRoaster
         chkRememberLastRoaster.isSelected = settings.rememberLastDetectedRoaster
         txtDiscoveryHosts.text = settings.discoveryTcpHosts?.joinToString(", ") ?: ""
+
+        val ec = settings.machineConfig.eventCommands
+        txtEventCharge.text = ec["CHARGE"] ?: ""
+        txtEventDrop.text = ec["DROP"] ?: ""
+        txtEventDryEnd.text = ec["DRY_END"] ?: ""
+        txtEventFcStart.text = ec["FC_START"] ?: ""
+        txtEventCoolEnd.text = ec["COOL_END"] ?: ""
 
         when (settings.unit.uppercase()) {
             "F" -> rbFahrenheit.isSelected = true
@@ -437,18 +581,49 @@ class SettingsController {
             s.toIntOrNull()?.coerceIn(0, 255)?.let { sldRefAlpha.value = it.toDouble() }
         }
         val config = settings.chartConfig
-        txtChartTempMin.text = config.tempMin.toString()
-        txtChartTempMax.text = config.tempMax.toString()
-        txtChartRorMin.text = config.rorMin.toString()
-        txtChartRorMax.text = config.rorMax.toString()
+        axesConfigDraft = config
         txtChartTimeRange.text = config.timeRangeMin.toString()
         chkChartShowGrid.isSelected = config.showGrid
+        chkChartShowBt.isSelected = config.showBt
+        chkChartShowEt.isSelected = config.showEt
+        chkChartShowRorBt.isSelected = config.showRorBt
+        chkChartShowRorEt.isSelected = config.showRorEt
+        chkChartShowReferenceCurves.isSelected = config.showReferenceCurves
+        chkChartShowReferenceEvents.isSelected = config.showReferenceEvents
+        chkChartShowPhaseStrips.isSelected = config.showPhaseStrips
         txtChartBtLineWidth.text = config.btLineWidth.toString()
         txtChartEtLineWidth.text = config.etLineWidth.toString()
         txtChartRorLineWidth.text = config.rorLineWidth.toString()
         txtChartRefLineWidth.text = config.refLineWidth.toString()
         txtChartBackground.text = config.backgroundColor
         txtChartGridColor.text = config.gridColor
+
+        val quantifiers = settings.eventQuantifiers
+        val sourceItems = listOf("None", "ET", "BT")
+        listOf(
+            cmbQuantAirSource to quantifiers.air,
+            cmbQuantDrumSource to quantifiers.drum,
+            cmbQuantDamperSource to quantifiers.damper,
+            cmbQuantBurnerSource to quantifiers.burner
+        ).forEach { (combo, q) ->
+            combo.items.setAll(sourceItems)
+            combo.value = when (q.source) {
+                QuantifierSource.NONE -> "None"
+                QuantifierSource.ET -> "ET"
+                QuantifierSource.BT -> "BT"
+            }
+        }
+        fun setQuantFields(sv: TextField, min: TextField, max: TextField, step: TextField, action: CheckBox, q: EventQuantifierConfig) {
+            sv.text = q.sv.toString()
+            min.text = q.min.toString()
+            max.text = q.max.toString()
+            step.text = q.step.toString()
+            action.isSelected = q.actionEnabled
+        }
+        setQuantFields(txtQuantAirSv, txtQuantAirMin, txtQuantAirMax, txtQuantAirStep, chkQuantAirAction, quantifiers.air)
+        setQuantFields(txtQuantDrumSv, txtQuantDrumMin, txtQuantDrumMax, txtQuantDrumStep, chkQuantDrumAction, quantifiers.drum)
+        setQuantFields(txtQuantDamperSv, txtQuantDamperMin, txtQuantDamperMax, txtQuantDamperStep, chkQuantDamperAction, quantifiers.damper)
+        setQuantFields(txtQuantBurnerSv, txtQuantBurnerMin, txtQuantBurnerMax, txtQuantBurnerStep, chkQuantBurnerAction, quantifiers.burner)
 
         btnResetColors.setOnAction {
             val d = ChartColors()
@@ -469,6 +644,9 @@ class SettingsController {
         }
 
         btnRefreshPorts.setOnAction { refreshSerialPorts() }
+        btnPortsConfig.setOnAction { openPortsConfigDialog() }
+        btnAxesConfig.setOnAction { openAxesConfigDialog() }
+        btnEventButtons.setOnAction { openEventButtonsDialog() }
         btnTestConnection.setOnAction { runTestConnection() }
         updatePortFieldsVisibility()
         updateTransportCombo()
@@ -522,6 +700,38 @@ class SettingsController {
         btnCancel.setOnAction { closeWindow() }
     }
 
+    private fun parseQuantifierRow(
+        sourceCombo: ComboBox<String>,
+        sv: TextField,
+        min: TextField,
+        max: TextField,
+        step: TextField,
+        action: CheckBox
+    ): EventQuantifierConfig {
+        val src = when (sourceCombo.value?.uppercase()) {
+            "ET" -> QuantifierSource.ET
+            "BT" -> QuantifierSource.BT
+            else -> QuantifierSource.NONE
+        }
+        return EventQuantifierConfig(
+            source = src,
+            sv = sv.text.toDoubleOrNull() ?: 0.0,
+            min = min.text.toIntOrNull()?.coerceIn(0, 10000) ?: 0,
+            max = max.text.toIntOrNull()?.coerceIn(0, 10000) ?: 100,
+            step = step.text.toDoubleOrNull()?.coerceIn(0.1, 1000.0) ?: 5.0,
+            actionEnabled = action.isSelected
+        )
+    }
+
+    private fun buildEventQuantifiersFromFields(): EventQuantifiersConfig {
+        return EventQuantifiersConfig(
+            air = parseQuantifierRow(cmbQuantAirSource, txtQuantAirSv, txtQuantAirMin, txtQuantAirMax, txtQuantAirStep, chkQuantAirAction),
+            drum = parseQuantifierRow(cmbQuantDrumSource, txtQuantDrumSv, txtQuantDrumMin, txtQuantDrumMax, txtQuantDrumStep, chkQuantDrumAction),
+            damper = parseQuantifierRow(cmbQuantDamperSource, txtQuantDamperSv, txtQuantDamperMin, txtQuantDamperMax, txtQuantDamperStep, chkQuantDamperAction),
+            burner = parseQuantifierRow(cmbQuantBurnerSource, txtQuantBurnerSv, txtQuantBurnerMin, txtQuantBurnerMax, txtQuantBurnerStep, chkQuantBurnerAction)
+        )
+    }
+
     private fun buildMachineConfigFromFields(): MachineConfig {
         val settings = SettingsManager.load()
         val machineType = when (cmbSource.value) {
@@ -537,18 +747,56 @@ class SettingsController {
         val portRaw = (cmbPort.value ?: cmbPort.editor?.text)?.trim().orEmpty()
         val port = (if (portRaw.startsWith("Другой: ")) portRaw.removePrefix("Другой: ").trim() else portRaw).ifBlank { "COM4" }
         val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(100L, 3000L)) ?: 1000L
+        val advanced = portsAdvanced ?: PortsAdvanced(
+            modbusType = settings.machineConfig.modbusTransportType,
+            byteSize = settings.machineConfig.byteSize,
+            parity = settings.machineConfig.parity,
+            stopBits = settings.machineConfig.stopBits,
+            serialTimeoutSec = settings.machineConfig.serialTimeoutSec,
+            ipTimeoutSec = settings.machineConfig.ipTimeoutSec,
+            ipRetries = settings.machineConfig.ipRetries
+        )
+        // Для TCP: если Host пуст, использовать первый IP из "IP для сканирования" (fallback)
+        val hostForTcp = txtHost.text?.trim()?.takeIf { it.isNotBlank() }
+            ?: txtDiscoveryHosts.text?.trim()?.split(",")?.map { it.trim() }?.firstOrNull { it.isNotEmpty() }
         return settings.machineConfig.copy(
             machineType = machineType,
             transport = transport,
-            host = txtHost.text?.trim()?.takeIf { it.isNotBlank() },
+            modbusTransportType = if (transport == Transport.TCP) ModbusTransportType.TCP else advanced.modbusType,
+            host = hostForTcp,
             tcpPort = txtTcpPort.text.toIntOrNull() ?: 502,
             port = port,
             baudRate = txtBaudRate.text.toIntOrNull() ?: 9600,
+            byteSize = advanced.byteSize,
+            parity = advanced.parity,
+            stopBits = advanced.stopBits,
+            serialTimeoutSec = advanced.serialTimeoutSec,
+            ipTimeoutSec = advanced.ipTimeoutSec,
+            ipRetries = advanced.ipRetries,
             slaveId = txtSlaveId.text.toIntOrNull() ?: 1,
+            btRegister = txtBtRegister.text.toIntOrNull() ?: 6,
+            etRegister = txtEtRegister.text.toIntOrNull() ?: 7,
+            divisionFactor = txtDivider.text.toDoubleOrNull() ?: 10.0,
             phidgetEtChannel = txtPhidgetEtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 1,
             phidgetBtChannel = txtPhidgetBtChannel.text.toIntOrNull()?.coerceIn(1, 4) ?: 2,
-            pollingIntervalMs = pollingIntervalMs
+            pollingIntervalMs = pollingIntervalMs,
+            modbusInputs = portsModbusInputs ?: settings.machineConfig.modbusInputs,
+            modbusPid = portsModbusPid ?: settings.machineConfig.modbusPid,
+            eventCommands = buildEventCommandsFromFields()
         )
+    }
+
+    private fun buildEventCommandsFromFields(): Map<String, String> {
+        eventButtonsDialogResult?.let { return it.eventCommands }
+        val map = mutableMapOf<String, String>()
+        listOf(
+            "CHARGE" to (txtEventCharge.text?.trim() ?: ""),
+            "DROP" to (txtEventDrop.text?.trim() ?: ""),
+            "DRY_END" to (txtEventDryEnd.text?.trim() ?: ""),
+            "FC_START" to (txtEventFcStart.text?.trim() ?: ""),
+            "COOL_END" to (txtEventCoolEnd.text?.trim() ?: "")
+        ).forEach { (k, v) -> if (v.isNotEmpty()) map[k] = v }
+        return map
     }
 
     private fun performSave() {
@@ -563,7 +811,9 @@ class SettingsController {
                 machineType == MachineType.DIEDRICH && cmbTransport.value == "Phidget 1048 (USB)" -> Transport.PHIDGET
                 else -> Transport.SERIAL
             }
+            // Для TCP: если Host пуст, использовать первый IP из "IP для сканирования" (fallback)
             val host = txtHost.text?.trim()?.takeIf { it.isNotBlank() }
+                ?: txtDiscoveryHosts.text?.trim()?.split(",")?.map { it.trim() }?.firstOrNull { it.isNotEmpty() }
             val tcpPort = txtTcpPort.text.toIntOrNull() ?: 502
             val portRaw = (cmbPort.value ?: cmbPort.editor?.text)?.trim().orEmpty()
             val port = (if (portRaw.startsWith("Другой: ")) portRaw.removePrefix("Другой: ").trim() else portRaw).ifBlank { "COM4" }
@@ -586,33 +836,60 @@ class SettingsController {
                 refRorEt = def.refRorEt,
                 refAlpha = sldRefAlpha.value.toInt().coerceIn(0, 255)
             )
-            val chartConfig = ChartConfig(
-                tempMin = txtChartTempMin.text.toDoubleOrNull() ?: ChartConfig().tempMin,
-                tempMax = txtChartTempMax.text.toDoubleOrNull() ?: ChartConfig().tempMax,
-                rorMin = txtChartRorMin.text.toDoubleOrNull() ?: ChartConfig().rorMin,
-                rorMax = txtChartRorMax.text.toDoubleOrNull() ?: ChartConfig().rorMax,
-                timeRangeMin = txtChartTimeRange.text.toIntOrNull()?.coerceIn(1, 60) ?: ChartConfig().timeRangeMin,
+            val defC = ChartConfig()
+            val baseAxes = axesConfigDraft ?: settings.chartConfig
+            val chartConfig = baseAxes.copy(
+                timeRangeMin = txtChartTimeRange.text.toIntOrNull()?.coerceIn(1, 60) ?: defC.timeRangeMin,
                 showGrid = chkChartShowGrid.isSelected,
-                btLineWidth = txtChartBtLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: ChartConfig().btLineWidth,
-                etLineWidth = txtChartEtLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: ChartConfig().etLineWidth,
-                rorLineWidth = txtChartRorLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: ChartConfig().rorLineWidth,
-                refLineWidth = txtChartRefLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: ChartConfig().refLineWidth,
-                backgroundColor = txtChartBackground.text?.trim()?.takeIf { it.isNotBlank() } ?: ChartConfig().backgroundColor,
-                gridColor = txtChartGridColor.text?.trim()?.takeIf { it.isNotBlank() } ?: ChartConfig().gridColor
+                showBt = chkChartShowBt.isSelected,
+                showEt = chkChartShowEt.isSelected,
+                showRorBt = chkChartShowRorBt.isSelected,
+                showRorEt = chkChartShowRorEt.isSelected,
+                showReferenceCurves = chkChartShowReferenceCurves.isSelected,
+                showReferenceEvents = chkChartShowReferenceEvents.isSelected,
+                showPhaseStrips = chkChartShowPhaseStrips.isSelected,
+                btLineWidth = txtChartBtLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: defC.btLineWidth,
+                etLineWidth = txtChartEtLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: defC.etLineWidth,
+                rorLineWidth = txtChartRorLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: defC.rorLineWidth,
+                refLineWidth = txtChartRefLineWidth.text.toFloatOrNull()?.coerceIn(0.5f, 5f) ?: defC.refLineWidth,
+                backgroundColor = txtChartBackground.text?.trim()?.takeIf { it.isNotBlank() } ?: defC.backgroundColor,
+                gridColor = txtChartGridColor.text?.trim()?.takeIf { it.isNotBlank() } ?: defC.gridColor
             )
 
             val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(100L, 3000L)) ?: 1000L
+            val advanced = portsAdvanced ?: PortsAdvanced(
+                modbusType = settings.machineConfig.modbusTransportType,
+                byteSize = settings.machineConfig.byteSize,
+                parity = settings.machineConfig.parity,
+                stopBits = settings.machineConfig.stopBits,
+                serialTimeoutSec = settings.machineConfig.serialTimeoutSec,
+                ipTimeoutSec = settings.machineConfig.ipTimeoutSec,
+                ipRetries = settings.machineConfig.ipRetries
+            )
             val mc = settings.machineConfig.copy(
                 machineType = machineType,
                 transport = transport,
+                modbusTransportType = if (transport == Transport.TCP) ModbusTransportType.TCP else advanced.modbusType,
                 host = host,
                 tcpPort = tcpPort,
                 port = port,
                 baudRate = baudRate,
+                byteSize = advanced.byteSize,
+                parity = advanced.parity,
+                stopBits = advanced.stopBits,
+                serialTimeoutSec = advanced.serialTimeoutSec,
+                ipTimeoutSec = advanced.ipTimeoutSec,
+                ipRetries = advanced.ipRetries,
                 slaveId = slaveId,
+                btRegister = txtBtRegister.text.toIntOrNull() ?: 6,
+                etRegister = txtEtRegister.text.toIntOrNull() ?: 7,
+                divisionFactor = txtDivider.text.toDoubleOrNull() ?: 10.0,
                 phidgetEtChannel = phidgetEt,
                 phidgetBtChannel = phidgetBt,
-                pollingIntervalMs = pollingIntervalMs
+                pollingIntervalMs = pollingIntervalMs,
+                modbusInputs = portsModbusInputs ?: settings.machineConfig.modbusInputs,
+                modbusPid = portsModbusPid ?: settings.machineConfig.modbusPid,
+                eventCommands = buildEventCommandsFromFields()
             )
             val discoveryHosts = txtDiscoveryHosts.text?.trim()?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.takeIf { it.isNotEmpty() }
             val newSettings = AppSettings(
@@ -639,8 +916,13 @@ class SettingsController {
                 roastPropertiesWeightInKg = settings.roastPropertiesWeightInKg,
                 roastPropertiesWeightOutKg = settings.roastPropertiesWeightOutKg,
                 roastPropertiesBeansNotes = settings.roastPropertiesBeansNotes,
-                sliderStepConfig = settings.sliderStepConfig,
-                commentsConfig = settings.commentsConfig
+                sliderStepConfig = eventButtonsDialogResult?.sliderStepConfig ?: settings.sliderStepConfig,
+                commentsConfig = settings.commentsConfig,
+                eventQuantifiers = eventButtonsDialogResult?.eventQuantifiers ?: buildEventQuantifiersFromFields(),
+                customButtons = eventButtonsDialogResult?.customButtons ?: settings.customButtons,
+                eventButtonsConfig = eventButtonsDialogResult?.eventButtonsConfig ?: settings.eventButtonsConfig,
+                eventSliders = eventButtonsDialogResult?.eventSliders ?: settings.eventSliders,
+                deviceAssignment = deviceAssignmentConfig ?: settings.deviceAssignment
             )
             savedSettings = newSettings
             SettingsManager.save(newSettings)
@@ -675,6 +957,120 @@ class SettingsController {
         }
     }
 
+    /**
+     * Opens Artisan-style "Ports Configuration" dialog. On OK, applies MODBUS tab values
+     * to the Connection tab (caller-applies pattern like Artisan main.py after comportDlg).
+     */
+    private fun openPortsConfigDialog() {
+        val url = SettingsController::class.java.getResource("/com/rdr/roast/ui/PortsConfigView.fxml") ?: return
+        val loader = FXMLLoader(url)
+        val root = loader.load() as? javafx.scene.Parent ?: return
+        val portsController = loader.getController<PortsConfigController>() ?: return
+        val stage = Stage().apply {
+            title = "Device Assignment"
+            scene = Scene(root)
+            isResizable = true
+            initModality(javafx.stage.Modality.APPLICATION_MODAL)
+            initOwner(btnPortsConfig.scene?.window)
+        }
+        stage.showAndWait()
+        if (!portsController.applied) return
+        // Apply MODBUS tab to Connection tab (Artisan: main.py reads dialog and sets modbus.host/port etc.)
+        val typeIndex = portsController.getModbusTypeIndex()
+        val isTcp = typeIndex == 3
+        cmbSource.selectionModel.select("Besca")
+        updateTransportCombo()
+        cmbTransport.selectionModel.select(if (isTcp) "TCP (Ethernet)" else "Serial (COM port)")
+        updateTransportFieldsVisibility()
+        txtHost.text = portsController.getModbusHost()
+        txtTcpPort.text = portsController.getModbusPort().toString()
+        val modbusPort = portsController.getModbusComPort()
+        if (modbusPort in cmbPort.items) cmbPort.selectionModel.select(modbusPort)
+        else {
+            cmbPort.items.add(modbusPort)
+            cmbPort.selectionModel.select(modbusPort)
+        }
+        txtBaudRate.text = portsController.getModbusBaudRate().toString()
+        txtSlaveId.text = portsController.getSlaveId().toString()
+        portsAdvanced = PortsAdvanced(
+            modbusType = when (typeIndex) {
+                1 -> ModbusTransportType.SERIAL_ASCII
+                3 -> ModbusTransportType.TCP
+                4 -> ModbusTransportType.UDP
+                else -> ModbusTransportType.SERIAL_RTU
+            },
+            byteSize = portsController.getModbusByteSize(),
+            parity = when (portsController.getModbusParity()) {
+                "O" -> SerialParity.ODD
+                "E" -> SerialParity.EVEN
+                else -> SerialParity.NONE
+            },
+            stopBits = portsController.getModbusStopbits(),
+            serialTimeoutSec = portsController.getModbusTimeout(),
+            ipTimeoutSec = portsController.getModbusTimeout(),
+            ipRetries = 1
+        )
+        portsModbusInputs = portsController.getModbusInputs()
+        portsModbusPid = portsController.getModbusPid()
+        val da = portsController.getDeviceAssignmentConfig()
+        deviceAssignmentConfig = da
+        txtPhidgetEtChannel.text = da.phidgets.etChannel.toString()
+        txtPhidgetBtChannel.text = da.phidgets.btChannel.toString()
+    }
+
+    /** Opens Event Buttons dialog. On OK/Apply stores state; caller persists on Save. */
+    private fun openEventButtonsDialog() {
+        val url = SettingsController::class.java.getResource("/com/rdr/roast/ui/EventButtonsView.fxml") ?: return
+        val loader = FXMLLoader(url)
+        val root = loader.load() as? javafx.scene.Parent ?: return
+        val controller = loader.getController<EventButtonsController>() ?: return
+        val settings = SettingsManager.load()
+        val merged = if (eventButtonsDialogResult == null) {
+            settings
+        } else {
+            settings.copy(
+                machineConfig = settings.machineConfig.copy(eventCommands = eventButtonsDialogResult!!.eventCommands),
+                sliderStepConfig = eventButtonsDialogResult!!.sliderStepConfig,
+                eventQuantifiers = eventButtonsDialogResult!!.eventQuantifiers,
+                customButtons = eventButtonsDialogResult!!.customButtons,
+                eventButtonsConfig = eventButtonsDialogResult!!.eventButtonsConfig,
+                eventSliders = eventButtonsDialogResult!!.eventSliders
+            )
+        }
+        controller.loadFrom(merged)
+        val stage = Stage().apply {
+            title = "Event Buttons"
+            scene = Scene(root)
+            isResizable = true
+            initModality(javafx.stage.Modality.APPLICATION_MODAL)
+            initOwner(btnEventButtons.scene?.window)
+        }
+        stage.showAndWait()
+        if (controller.applied) {
+            controller.getResult()?.let { eventButtonsDialogResult = it }
+        }
+    }
+
+    /** Opens separate Artisan-style Axes dialog (Config -> Axes path). */
+    private fun openAxesConfigDialog() {
+        val url = SettingsController::class.java.getResource("/com/rdr/roast/ui/AxesConfigView.fxml") ?: return
+        val loader = FXMLLoader(url)
+        val root = loader.load() as? javafx.scene.Parent ?: return
+        val controller = loader.getController<AxesConfigController>() ?: return
+        controller.loadFrom(axesConfigDraft ?: SettingsManager.load().chartConfig)
+        val stage = Stage().apply {
+            title = "Axes"
+            scene = Scene(root)
+            isResizable = false
+            initModality(javafx.stage.Modality.APPLICATION_MODAL)
+            initOwner(btnAxesConfig.scene?.window)
+        }
+        stage.showAndWait()
+        if (controller.applied) {
+            controller.getResult()?.let { axesConfigDraft = it }
+        }
+    }
+
     private fun setupConnectionTooltips() {
         cmbTransport.tooltip = Tooltip("Способ подключения: COM-порт (Modbus RTU), TCP или Phidget USB")
         txtHost.tooltip = Tooltip("IP-адрес ростера при подключении по TCP (Ethernet)")
@@ -684,7 +1080,7 @@ class SettingsController {
         txtSlaveId.tooltip = Tooltip("Modbus Slave ID устройства (обычно 1)")
         txtPhidgetEtChannel.tooltip = Tooltip("Номер канала Phidget 1048 для датчика ET (Environment Temperature)")
         txtPhidgetBtChannel.tooltip = Tooltip("Номер канала Phidget 1048 для датчика BT (Bean Temperature)")
-        chkBetweenBatchProtocol.tooltip = Tooltip("После Stop записывать BT/ET до следующего Start (лимит 15 мин). Кнопки Restart / Stop BBP в фазе BBP.")
+        chkBetweenBatchProtocol.tooltip = Tooltip("When enabled, after you stop a roast the Between Batch timer and BT/ET curves are shown during pre- and post-roast (up to 15 min). Cropster: Roasting \u2192 Interface.")
         chkAutoDetectRoaster.tooltip = Tooltip("При нажатии «Подключить» приложение попробует найти ростер по сети и COM-портам")
         chkRememberLastRoaster.tooltip = Tooltip("При следующем подключении сначала пробовать последний успешно определённый ростер")
         txtDiscoveryHosts.tooltip = Tooltip("IP-адреса для сканирования (Modbus TCP). Пусто = 10.0.0.9, 192.168.1.100, 127.0.0.1")
@@ -731,6 +1127,19 @@ class SettingsController {
         txtBaudRate.isManaged = !isDiedrichPhidget
         txtSlaveId.isVisible = !isDiedrichPhidget
         txtSlaveId.isManaged = !isDiedrichPhidget
+        val isModbus = !isDiedrichPhidget
+        lblBtRegister.isVisible = isModbus
+        lblBtRegister.isManaged = isModbus
+        txtBtRegister.isVisible = isModbus
+        txtBtRegister.isManaged = isModbus
+        lblEtRegister.isVisible = isModbus
+        lblEtRegister.isManaged = isModbus
+        txtEtRegister.isVisible = isModbus
+        txtEtRegister.isManaged = isModbus
+        lblDivider.isVisible = isModbus
+        lblDivider.isManaged = isModbus
+        txtDivider.isVisible = isModbus
+        txtDivider.isManaged = isModbus
         lblPhidgetEt.isVisible = isDiedrichPhidget
         lblPhidgetEt.isManaged = isDiedrichPhidget
         txtPhidgetEtChannel.isVisible = isDiedrichPhidget
@@ -739,6 +1148,17 @@ class SettingsController {
         lblPhidgetBt.isManaged = isDiedrichPhidget
         txtPhidgetBtChannel.isVisible = isDiedrichPhidget
         txtPhidgetBtChannel.isManaged = isDiedrichPhidget
+        updateEtBtSourceLabel()
+    }
+
+    private fun updateEtBtSourceLabel() {
+        lblEtBtSource.text = when {
+            cmbSource.value == "Simulator" -> "ET/BT source: Simulator"
+            cmbSource.value == "Diedrich" && cmbTransport.value == "Phidget 1048 (USB)" -> "ET/BT source: Phidget"
+            cmbSource.value == "Besca" -> "ET/BT source: Modbus (Host, Port, Registers from below)"
+            cmbSource.value == "Diedrich" -> "ET/BT source: Modbus (Serial)"
+            else -> "ET/BT source: —"
+        }
     }
 
     private fun refreshSerialPorts() {

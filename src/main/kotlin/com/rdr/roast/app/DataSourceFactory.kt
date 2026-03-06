@@ -13,28 +13,29 @@ import com.rdr.roast.driver.simulator.SimulatorSource
 object DataSourceFactory {
 
     /** Cropster Besca Full Auto default control registers (gas, airflow, drum). */
-    private val BESCA_TCP_DEFAULT_GAS_REG = 3904
-    private val BESCA_TCP_DEFAULT_AIRFLOW_REG = 1003
-    private val BESCA_TCP_DEFAULT_DRUM_REG = 1001
+    private const val BESCA_TCP_DEFAULT_GAS_REG = 3904
+    private const val BESCA_TCP_DEFAULT_AIRFLOW_REG = 1003
+    private const val BESCA_TCP_DEFAULT_DRUM_REG = 1001
 
     fun create(config: MachineConfig): RoastDataSource = when (config.machineType) {
         MachineType.SIMULATOR -> SimulatorSource(config)
         MachineType.BESCA -> when (config.transport) {
             Transport.TCP -> {
-                val cfg = if (config.gasRegister == 0 && config.airflowRegister == 0 && config.drumRegister == 0)
-                    config.copy(
+                val configured = config.copy(modbusTransportType = ModbusTransportType.TCP)
+                val cfg = if (configured.gasRegister == 0 && configured.airflowRegister == 0 && configured.drumRegister == 0)
+                    configured.copy(
                         gasRegister = BESCA_TCP_DEFAULT_GAS_REG,
                         airflowRegister = BESCA_TCP_DEFAULT_AIRFLOW_REG,
                         drumRegister = BESCA_TCP_DEFAULT_DRUM_REG
                     )
-                else config
+                else configured
                 BescaModbusTcpSource(cfg)
             }
-            else -> BescaModbusSource(config)
+            else -> BescaModbusSource(config.copy(modbusTransportType = config.modbusTransportType))
         }
         MachineType.DIEDRICH -> when (config.transport) {
             Transport.PHIDGET -> createDiedrichPhidgetSource(config)
-            else -> DiedrichSource(config)
+            else -> DiedrichSource(config.copy(modbusTransportType = config.modbusTransportType))
         }
     }
 

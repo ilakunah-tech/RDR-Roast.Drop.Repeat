@@ -3,11 +3,14 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
@@ -29,51 +32,59 @@
                     <Image url="@../app-icon.png"/>
                 </image>
             </ImageView>
-            <Label text="RDR – Roast.Drop.Repeat" styleClass="title-bar-label"/>
-            <Button fx:id="btnReference" text="Reference roast" styleClass="reference-title-btn"/>
+            <Label text="RDR" styleClass="title-bar-label"/>
             <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnReference" text="Reference roast" styleClass="reference-title-btn"/>
+            <Button fx:id="btnShowSliders" text="S" styleClass="title-bar-btn, title-bar-sliders-btn" visible="false" managed="false"/>
             <Button fx:id="btnMinimize" styleClass="title-bar-btn" minWidth="32" maxWidth="32" minHeight="32" maxHeight="32"/>
             <Button fx:id="btnMaximize" styleClass="title-bar-btn" minWidth="32" maxWidth="32" minHeight="32" maxHeight="32"/>
             <Button fx:id="btnClose" styleClass="title-bar-btn" minWidth="32" maxWidth="32" minHeight="32" maxHeight="32"/>
             <Button fx:id="btnShortcuts" visible="false" managed="false"/>
-            <Button fx:id="btnSettings" visible="false" managed="false"/>
+            <Button fx:id="btnSettings" styleClass="title-bar-btn" minWidth="32" maxWidth="32" minHeight="32" maxHeight="32">
+                <tooltip><Tooltip text="Settings"/></tooltip>
+            </Button>
             <Button fx:id="btnSync" visible="false" managed="false"/>
         </HBox>
     </top>
 
-    <!-- Left: sidebar column (buttons) + sliding panel container -->
+    <!-- Left: sidebar column (buttons) -->
     <left>
-        <HBox fx:id="leftSidebarRegion" styleClass="left-sidebar-region" spacing="0">
+        <HBox fx:id="leftSidebarRegion" styleClass="left-sidebar-region" spacing="0" BorderPane.alignment="CENTER_LEFT">
             <VBox fx:id="sidebarColumn" styleClass="sidebar-column" alignment="TOP_CENTER">
                 <padding><Insets top="12" bottom="12"/></padding>
-                <ToggleButton fx:id="btnSidebarSystem" styleClass="sidebar-btn"/>
                 <ToggleButton fx:id="btnSidebarPlan" styleClass="sidebar-btn"/>
                 <ToggleButton fx:id="btnSidebarProduction" styleClass="sidebar-btn"/>
                 <ToggleButton fx:id="btnSidebarSupport" styleClass="sidebar-btn"/>
                 <Region VBox.vgrow="ALWAYS"/>
+                <VBox spacing="4" alignment="CENTER">
+                    <Button fx:id="btnAbort" styleClass="sidebar-btn"/>
+                    <Button fx:id="btnStart" styleClass="sidebar-btn"/>
+                    <Button fx:id="btnStop" styleClass="sidebar-btn"/>
+                </VBox>
                 <ToggleButton fx:id="btnSidebarAccount" styleClass="sidebar-btn"/>
             </VBox>
-            <StackPane fx:id="sidebarPanelContainer" styleClass="sidebar-panel-container"
-                       minWidth="0" prefWidth="0" maxWidth="460"/>
         </HBox>
     </left>
 
-    <!-- Center: SplitPane [ chart area | right panel ] -->
+    <!-- Center: HBox [ SplitPane (chart | right panel) | slider drawer column ] -->
     <center>
-        <SplitPane fx:id="centerSplit" styleClass="center-split" dividerPositions="0.8">
-            <!-- Left: chart -->
-            <BorderPane fx:id="centerPane" style="-fx-background-color: transparent;">
-                <center>
-                    <StackPane fx:id="chartContainer" style="-fx-background-color: -rdr-panel-bg;">
-                        <padding><Insets top="2" right="2" bottom="2" left="2"/></padding>
-                    </StackPane>
-                </center>
-            </BorderPane>
+        <HBox fx:id="centerHBox" spacing="0">
+            <SplitPane fx:id="centerSplit" styleClass="center-split" dividerPositions="0.8" HBox.hgrow="ALWAYS">
+                <!-- Left: chart -->
+                <BorderPane fx:id="centerPane" style="-fx-background-color: transparent;">
+                    <center>
+                        <Pane fx:id="chartContainer" style="-fx-background-color: -rdr-panel-bg;">
+                            <padding><Insets top="2" right="2" bottom="2" left="2"/></padding>
+                            <StackPane fx:id="sidebarPanelContainer" styleClass="sidebar-panel-container"
+                                       minWidth="0" prefWidth="0" maxWidth="460"/>
+                        </Pane>
+                    </center>
+                </BorderPane>
 
-            <!-- Right: fixed-width panel (Reference → Comments → Values → Sliders) -->
-            <VBox fx:id="rightPanel" styleClass="right-panel"
-                  minWidth="280" prefWidth="280" maxWidth="320" spacing="0">
-
+                <!-- Right: fixed-width panel (Reference, Comments, Values, Pre-heat, Sliders button only) -->
+                <HBox fx:id="rightPanel" styleClass="right-panel"
+                      minWidth="290" prefWidth="290" maxWidth="290" spacing="0">
+                    <VBox HBox.hgrow="ALWAYS" minWidth="200" spacing="0">
                 <!-- Reference block -->
                 <VBox fx:id="referencePanel" styleClass="reference-panel" spacing="2"
                       visible="false" managed="false">
@@ -92,121 +103,116 @@
                                    GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                             <Label fx:id="lblRefDuration" text="--:--" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                            <Label text="Development" styleClass="reference-summary-label"
+                            <Label text="Charge temp" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                            <Label fx:id="lblRefDevTime" text="--:--" styleClass="reference-summary-value"
+                            <Label fx:id="lblRefChargeTemp" text="-- °C" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                            <Label text="Development %" styleClass="reference-summary-label"
-                                   GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                            <Label fx:id="lblRefDevTimeRatio" text="--%" styleClass="reference-summary-value"
-                                   GridPane.columnIndex="1" GridPane.rowIndex="2"/>
                             <Label text="Drop temp" styleClass="reference-summary-label"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <Label fx:id="lblRefDropTemp" text="-- °C" styleClass="reference-summary-value"
+                                   GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <Label text="Development" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                            <Label fx:id="lblRefEndTemp" text="-- °C" styleClass="reference-summary-value"
+                            <Label fx:id="lblRefDevTime" text="--:--" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                            <Label text="Development %" styleClass="reference-summary-label"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                            <Label fx:id="lblRefDevTimeRatio" text="--%" styleClass="reference-summary-value"
+                                   GridPane.columnIndex="1" GridPane.rowIndex="4"/>
                         </GridPane>
                     </VBox>
                 </VBox>
 
-                <VBox fx:id="bbpPanel" styleClass="reference-panel" spacing="3"
+                <VBox fx:id="bbpPanel" styleClass="reference-panel" spacing="2"
                       visible="false" managed="false">
                     <HBox alignment="CENTER_LEFT" spacing="4">
                         <Label text="Between batch" styleClass="right-panel-header"/>
                     </HBox>
-                    <Label fx:id="lblBbpStatus"
-                           text="Recording between batch data"
+                    <Label fx:id="lblBbpStatus" text="Recording between batch data"
                            style="-fx-text-fill: -rdr-text-primary; -fx-font-size: 11px; -fx-font-weight: bold;"/>
-                    <Label fx:id="lblBbpReference"
-                           text="No reference between batch data."
+                    <Label fx:id="lblBbpReference" text="No reference between batch data."
                            style="-fx-text-fill: -rdr-text-hint; -fx-font-size: 10px;"/>
-                    <Label fx:id="lblBbpMinBt"
-                           text="Lowest BT: —"
+                    <Label fx:id="lblBbpMinBt" text="Lowest BT: —"
                            style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 10px;"/>
-                    <Label fx:id="lblBbpMaxBt"
-                           text="Highest BT: —"
+                    <Label fx:id="lblBbpMaxBt" text="Highest BT: —"
                            style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 10px;"/>
-                    <Label fx:id="lblBbpHint"
-                           text="Click the chart to add a comment, gas or airflow."
+                    <Label fx:id="lblBbpHint" text="Click the chart to add a comment, gas or airflow."
                            style="-fx-text-fill: -rdr-text-hint; -fx-font-size: 10px; -fx-wrap-text: true;"/>
                 </VBox>
 
-                <!-- Comments block (grows to fill) -->
-                <VBox fx:id="commentsBlock" styleClass="right-panel-section" spacing="2" VBox.vgrow="ALWAYS">
+                <!-- Comments block (limited height) -->
+                <VBox fx:id="commentsBlock" styleClass="right-panel-section comments-section" spacing="2">
                     <HBox alignment="CENTER_LEFT" spacing="4">
-                        <Label text="Events &amp; comments" styleClass="comments-header"/>
+                        <Label fx:id="lblCommentsHeader" text="Events &amp; comments" styleClass="comments-header"/>
                         <Region HBox.hgrow="ALWAYS"/>
+                        <Button fx:id="btnCommentsCollapse" styleClass="title-bar-btn collapse-btn"
+                                style="-fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20;"/>
                         <Button fx:id="btnCommentsSettings" styleClass="title-bar-btn"
                                 style="-fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20;"/>
                     </HBox>
-                    <GridPane fx:id="commentsGrid" styleClass="comments-grid" VBox.vgrow="ALWAYS">
-                        <columnConstraints>
-                            <ColumnConstraints minWidth="46" prefWidth="46" maxWidth="50"/>
-                            <ColumnConstraints minWidth="58" prefWidth="64" maxWidth="68"/>
-                            <ColumnConstraints hgrow="ALWAYS"/>
-                            <ColumnConstraints minWidth="20" prefWidth="20" maxWidth="20"/>
-                        </columnConstraints>
-                    </GridPane>
+                    <ListView fx:id="commentsListView" styleClass="comments-list" VBox.vgrow="ALWAYS"/>
                 </VBox>
 
                 <!-- Live values block -->
                 <VBox fx:id="valuesPanel" spacing="0" alignment="TOP_LEFT"
                       style="-fx-padding: 6 10; -fx-border-color: -rdr-border; -fx-border-width: 1 0 0 0;">
-                    <!-- Bean temp -->
-                    <HBox alignment="BASELINE_LEFT" spacing="2">
-                        <Label fx:id="lblBTValue" text="--.-" styleClass="readout-value-bt"/>
-                        <Label fx:id="lblBTUnit" text=" °C" styleClass="readout-unit-bt"/>
+                    <!-- BT left | ET right -->
+                    <HBox spacing="16" alignment="TOP_LEFT" fillHeight="false">
+                        <!-- Bean temp (left) -->
+                        <VBox spacing="0" minWidth="85">
+                            <HBox alignment="BASELINE_LEFT" spacing="2">
+                                <Label fx:id="lblBTValue" text="--.-" styleClass="readout-value-bt"/>
+                                <Label fx:id="lblBTUnit" text=" °C" styleClass="readout-unit-bt"/>
+                            </HBox>
+                            <Label text="Bean temp" styleClass="readout-label-bt"/>
+                            <HBox alignment="BASELINE_LEFT" spacing="2">
+                                <Label fx:id="lblRoRBTValue" text="--.-" styleClass="readout-ror-value-bt"/>
+                                <Label fx:id="lblRoRBTUnit" text=" °C/min" styleClass="readout-unit-bt"/>
+                            </HBox>
+                            <Label text="RoR" styleClass="readout-label-bt"/>
+                        </VBox>
+                        <!-- Exhaust (right) -->
+                        <VBox spacing="0" minWidth="85">
+                            <HBox alignment="BASELINE_LEFT" spacing="2">
+                                <Label fx:id="lblETValue" text="--.-" styleClass="readout-value-et"/>
+                                <Label fx:id="lblETUnit" text=" °C" styleClass="readout-unit-et"/>
+                            </HBox>
+                            <Label text="Exhaust temp" styleClass="readout-label-et"/>
+                            <HBox alignment="BASELINE_LEFT" spacing="2">
+                                <Label fx:id="lblRoRETValue" text="--.-" styleClass="readout-ror-value-et"/>
+                                <Label fx:id="lblRoRETUnit" text=" °C/min" styleClass="readout-unit-et"/>
+                            </HBox>
+                            <Label text="RoR" styleClass="readout-label-et"/>
+                        </VBox>
                     </HBox>
-                        <Label text="Bean temp" styleClass="readout-label-bt"/>
-                    <!-- RoR BT -->
-                    <HBox alignment="BASELINE_LEFT" spacing="2">
-                        <Label fx:id="lblRoRBTValue" text="--.-" styleClass="readout-ror-value-bt"/>
-                        <Label fx:id="lblRoRBTUnit" text=" °C/min" styleClass="readout-unit-bt"/>
+                    <Region prefHeight="8"/>
+                    <!-- Timer (centered, prominent) -->
+                    <HBox alignment="CENTER" style="-fx-padding: 10 0 4 0;">
+                        <HBox alignment="CENTER" styleClass="readout-timer-panel" HBox.hgrow="ALWAYS">
+                            <Label fx:id="lblDuration" text="Preheat" styleClass="readout-timer"/>
+                        </HBox>
                     </HBox>
-                    <Label text="RoR" styleClass="readout-label-bt"/>
-                    <Region prefHeight="4"/>
-                    <!-- Exhaust -->
-                    <HBox alignment="BASELINE_LEFT" spacing="2">
-                        <Label fx:id="lblETValue" text="--.-" styleClass="readout-value-et"/>
-                        <Label fx:id="lblETUnit" text=" °C" styleClass="readout-unit-et"/>
-                    </HBox>
-                    <Label text="Exhaust temp" styleClass="readout-label-et"/>
-                    <!-- RoR ET -->
-                    <HBox alignment="BASELINE_LEFT" spacing="2">
-                        <Label fx:id="lblRoRETValue" text="--.-" styleClass="readout-ror-value-et"/>
-                        <Label fx:id="lblRoRETUnit" text=" °C/min" styleClass="readout-unit-et"/>
-                    </HBox>
-                    <Label text="RoR" styleClass="readout-label-et"/>
                 </VBox>
 
-                <!-- Control sliders (hidden if no PID) -->
-                <VBox fx:id="controlPanelContainer" spacing="4" alignment="CENTER"
+                <!-- Custom event buttons (from Settings → Event Buttons) -->
+                <VBox fx:id="customButtonsPanel" spacing="4" alignment="CENTER"
                       visible="false" managed="false"
                       style="-fx-padding: 6; -fx-border-color: -rdr-border; -fx-border-width: 1 0 0 0;">
                 </VBox>
-            </VBox>
-        </SplitPane>
-    </center>
 
-    <!-- Bottom: player bar -->
-    <bottom>
-        <VBox styleClass="player-bar">
-            <HBox spacing="12" alignment="CENTER" style="-fx-padding: 6 12;">
-                <Label fx:id="lblConnectionStatus" text="○ Disconnected"
-                       style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 11px; -fx-min-width: 120;"/>
-                <Label fx:id="lblPlayerBarTitle" text=""
-                       style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 11px;"
-                       visible="false" managed="false"/>
-                <Button fx:id="btnAuth" visible="false" managed="false"
-                        style="-fx-min-width: 32; -fx-min-height: 32; -fx-max-width: 32; -fx-max-height: 32;"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Button fx:id="btnAbort" text="Abort" disable="true"/>
-                <Button fx:id="btnRestartBbp" text="Restart recording" visible="false" managed="false"/>
-                <Button fx:id="btnStopBbp" text="Stop recording" visible="false" managed="false"/>
-                <Button fx:id="btnStart" text="Start roast"/>
-                <Label fx:id="lblDuration" text="Preheat"
-                       style="-fx-text-fill: -rdr-text-primary; -fx-font-size: 22; -fx-font-weight: bold;"/>
-                <Button fx:id="btnStop" text="Stop" disable="true"/>
+                <VBox spacing="6" alignment="CENTER" style="-fx-padding: 6 8 8 8; -fx-border-color: -rdr-border; -fx-border-width: 1 0 0 0;">
+                    <HBox alignment="CENTER" spacing="8">
+                        <Button fx:id="btnRestartBbp" text="Restart recording" visible="false" managed="false"/>
+                        <Button fx:id="btnStopBbp" text="Stop recording" visible="false" managed="false"/>
+                    </HBox>
+                </VBox>
+                </VBox>
             </HBox>
-        </VBox>
-    </bottom>
+        </SplitPane>
+            <!-- Slider drawer column: prefWidth 0 when closed, 220 when open; pushes layout -->
+            <VBox fx:id="sliderDrawerPanel" styleClass="slider-drawer-panel"
+                  minWidth="0" prefWidth="0" maxWidth="220"
+                  visible="false" managed="false"/>
+        </HBox>
+    </center>
 </BorderPane>

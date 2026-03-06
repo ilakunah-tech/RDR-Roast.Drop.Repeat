@@ -2,6 +2,7 @@ package com.rdr.roast.ui.chart
 
 import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.ChartColors
+import com.rdr.roast.app.GridStyle
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.domain.BetweenBatchLog
 import com.rdr.roast.domain.ControlEventType
@@ -100,11 +101,11 @@ class CurveChartFx : CurveModelListener {
         val COLOR_BBP_TEXT_BG = Color(226, 231, 233)
 
         private val CHART_FONT = Font(null, Font.PLAIN, 11)
+        /** Высота одной полосы фазы (в пикселях). */
         private const val PHASE_STRIP_HEIGHT = 10
-        /** Vertical offset from dataArea.maxY to top of live phase strip (strip above background). */
-        private const val LIVE_STRIP_TOP_OFFSET = 22
-        /** Vertical offset from dataArea.maxY to top of background phase strip (bottom row). */
-        private const val BACKGROUND_STRIP_TOP_OFFSET = 10
+        /** Вертикальный зазор между строками полос (в пикселях). */
+        private const val PHASE_STRIP_GAP = 4
+        private const val BACKGROUND_STRIP_ALPHA = 0.55f
         /** RoR window in seconds (Artisan-style). */
         private const val ROR_DELTA_SEC = 30
     }
@@ -146,6 +147,13 @@ class CurveChartFx : CurveModelListener {
     /** Current charge offset (raw ms of Charge). Used when loading reference to align ref Charge with live Charge. */
     fun getChargeOffsetMs(): Long = chargeOffsetMs
 
+    private data class LivePhaseStripState(
+        val endMs: Long,
+        val deMs: Long?,
+        val fcMs: Long?,
+        val dropMs: Long?
+    )
+
     /** Convert display time (chart X) to raw time for profile/callbacks. */
     fun toRawTime(displayMs: Long): Long = displayMs + chargeOffsetMs
 
@@ -153,6 +161,12 @@ class CurveChartFx : CurveModelListener {
     private val phaseStripAnnotations = mutableListOf<XYAnnotation>()
     /** Phase strip for reference/background profile (second row when reference is set). */
     private val backgroundPhaseStripAnnotations = mutableListOf<XYAnnotation>()
+    /** True when a reference phase strip is loaded and should stay logically independent from live strip updates. */
+    private var referencePhaseActive: Boolean = false
+    /** Once rendered for selected reference, prevent accidental rebuilds from other flows. */
+    private var referencePhaseLocked: Boolean = false
+    /** Last live phase-strip state, used to re-layout when reference strip appears/disappears. */
+    private var lastLivePhaseStripState: LivePhaseStripState? = null
 
     /** When true, chart shows BBP curves (time 0..15 min) instead of roast; live pipeline updates ignored. */
     @Volatile
@@ -160,7 +174,7 @@ class CurveChartFx : CurveModelListener {
 
     /** BBP period annotation (shaded band before roast start). Null when not set. */
     private var bbpAnnotation: AbstractXYAnnotation? = null
-    /** Reference BBP used only when the chart is in BBP mode. */
+    /** Reference BBP shown behind the live BBP when a reference roast carries between-batch data. */
     private var referenceBbpLog: BetweenBatchLog? = null
 
     init {
@@ -323,6 +337,7 @@ class CurveChartFx : CurveModelListener {
             isRangeGridlinesVisible = config.showGrid
             insets = RectangleInsets(15.0, 5.0, 5.0, 5.0)
         }
+        applySeriesVisibility(config)
 
         chart = JFreeChart(plot).apply {
             setTextAntiAlias(true)
@@ -548,6 +563,9 @@ class CurveChartFx : CurveModelListener {
             phaseStripAnnotations.clear()
             backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             backgroundPhaseStripAnnotations.clear()
+            referencePhaseActive = false
+            referencePhaseLocked = false
+            lastLivePhaseStripState = null
             plot.clearDomainMarkers()
             refreshReferenceBbpSeries()
             val bbpTimeRangeMs = 15 * 60 * 1000.0
@@ -659,7 +677,8 @@ class CurveChartFx : CurveModelListener {
         private val x2Ms: Double,
         private val color: Color,
         private val label: String? = null,
-        private val stripTopOffset: Int = LIVE_STRIP_TOP_OFFSET
+        /** Номер "строки" полосы: 0 — у оси времени, 1 — строка выше и т.д. */
+        private val rowIndex: Int = 0
     ) : AbstractXYAnnotation() {
         override fun draw(
             g2: Graphics2D,
@@ -673,7 +692,14 @@ class CurveChartFx : CurveModelListener {
             val edge = Plot.resolveDomainAxisLocation(plot.domainAxisLocation, PlotOrientation.VERTICAL)
             val j2dx1 = domainAxis.valueToJava2D(x1Ms, dataArea, edge)
             val j2dx2 = domainAxis.valueToJava2D(x2Ms, dataArea, edge)
-            val y = dataArea.maxY - stripTopOffset - PHASE_STRIP_HEIGHT
+
+            // Две логически независимые полосы:
+            // rowIndex = 0 → reference: у оси времени (внизу, как в Cropster).
+            // rowIndex = 1 → live: в самом верху области данных, чтобы вообще не пересекаться по Y.
+            val y = when (rowIndex) {
+                0 -> dataArea.maxY - PHASE_STRIP_HEIGHT
+                else -> dataArea.minY + 5.0
+            }
             val w = (j2dx2 - j2dx1).coerceAtLeast(1.0)
             val savedComposite = g2.composite
             g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.85f)
@@ -699,6 +725,62 @@ class CurveChartFx : CurveModelListener {
         return "%d:%02d".format(m, secPart)
     }
 
+    /** Возвращает номер строки для live-полосы: 0 — если reference нет, 1 — если reference полоса активна. */
+    private fun currentLiveStripRow(): Int =
+        if (referencePhaseActive) 1 else 0
+
+    private fun clearLivePhaseStripAnnotations() {
+        phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
+        phaseStripAnnotations.clear()
+    }
+
+    private fun redrawLivePhaseStripFromState(state: LivePhaseStripState) {
+        val end = (state.endMs - chargeOffsetMs).toDouble().coerceAtLeast(0.0)
+        val drop = state.dropMs?.let { (it - chargeOffsetMs).toDouble().coerceAtLeast(0.0) }
+        val phaseEnd = drop ?: end
+        val totalSec = phaseEnd / 1000.0
+        val de = state.deMs?.let { (it - chargeOffsetMs).toDouble() }
+        val fc = state.fcMs?.let { (it - chargeOffsetMs).toDouble() }
+        val liveRow = currentLiveStripRow()
+
+        val dryingEnd = de?.coerceAtLeast(0.0) ?: fc?.coerceAtLeast(0.0) ?: phaseEnd
+        if (dryingEnd > 0) {
+            val durSec = dryingEnd / 1000.0
+            val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
+            val label = "Drying ${formatPhaseDuration(durSec)} $pct%"
+            val a = PhaseStripAnnotation(0.0, dryingEnd, COLOR_DRYING, label, liveRow)
+            plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
+            phaseStripAnnotations.add(a)
+        }
+        val maillardStart = de?.coerceAtLeast(0.0) ?: 0.0
+        val maillardEnd = fc?.coerceAtLeast(0.0) ?: phaseEnd
+        if (maillardEnd > maillardStart) {
+            val durSec = (maillardEnd - maillardStart) / 1000.0
+            val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
+            val label = "Maillard ${formatPhaseDuration(durSec)} $pct%"
+            val a = PhaseStripAnnotation(maillardStart, maillardEnd, COLOR_MAILLARD, label, liveRow)
+            plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
+            phaseStripAnnotations.add(a)
+        }
+        // Development: FC .. Drop (or end if no Drop)
+        val devEnd = fc?.let { drop ?: end }
+        if (fc != null && fc >= 0 && devEnd != null && devEnd > fc) {
+            val durSec = (devEnd - fc) / 1000.0
+            val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
+            val label = "Development ${formatPhaseDuration(durSec)} $pct%"
+            val a = PhaseStripAnnotation(fc, devEnd, COLOR_DEVELOPMENT, label, liveRow)
+            plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
+            phaseStripAnnotations.add(a)
+        }
+    }
+
+    private fun relayoutLivePhaseStripForReferencePresence() {
+        val state = lastLivePhaseStripState ?: return
+        if (lastChartConfig?.showPhaseStrips == false || state.endMs <= 0) return
+        clearLivePhaseStripAnnotations()
+        redrawLivePhaseStripFromState(state)
+    }
+
     /**
      * Update the phase strip (Drying / Maillard / Development) from profile events.
      * Boundaries: Drying 0..DE (or FC if no DE), Maillard DE..FC (or end), Development FC..drop (or end if no drop).
@@ -706,90 +788,32 @@ class CurveChartFx : CurveModelListener {
      */
     fun updatePhaseStrip(endMs: Long, deMs: Long?, fcMs: Long?, dropMs: Long? = null) {
         Platform.runLater {
-            phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
-            phaseStripAnnotations.clear()
-            if (endMs <= 0) return@runLater
-            val end = (endMs - chargeOffsetMs).toDouble().coerceAtLeast(0.0)
-            val drop = dropMs?.let { (it - chargeOffsetMs).toDouble().coerceAtLeast(0.0) }
-            val phaseEnd = drop ?: end
-            val totalSec = phaseEnd / 1000.0
-            val de = deMs?.let { (it - chargeOffsetMs).toDouble() }
-            val fc = fcMs?.let { (it - chargeOffsetMs).toDouble() }
-            val dryingEnd = de?.coerceAtLeast(0.0) ?: fc?.coerceAtLeast(0.0) ?: phaseEnd
-            if (dryingEnd > 0) {
-                val durSec = dryingEnd / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Drying ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(0.0, dryingEnd, COLOR_DRYING, label, LIVE_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                phaseStripAnnotations.add(a)
+            clearLivePhaseStripAnnotations()
+            if (lastChartConfig?.showPhaseStrips == false) {
+                lastLivePhaseStripState = null
+                return@runLater
             }
-            val maillardStart = de?.coerceAtLeast(0.0) ?: 0.0
-            val maillardEnd = fc?.coerceAtLeast(0.0) ?: phaseEnd
-            if (maillardEnd > maillardStart) {
-                val durSec = (maillardEnd - maillardStart) / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Maillard ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(maillardStart, maillardEnd, COLOR_MAILLARD, label, LIVE_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                phaseStripAnnotations.add(a)
+            if (endMs <= 0) {
+                lastLivePhaseStripState = null
+                return@runLater
             }
-            // Development: FC .. Drop (or end if no Drop)
-            val devEnd = fc?.let { drop ?: end }
-            if (fc != null && fc >= 0 && devEnd != null && devEnd > fc) {
-                val durSec = (devEnd - fc) / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Development ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(fc, devEnd, COLOR_DEVELOPMENT, label, LIVE_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                phaseStripAnnotations.add(a)
-            }
+            val state = LivePhaseStripState(endMs, deMs, fcMs, dropMs)
+            lastLivePhaseStripState = state
+            redrawLivePhaseStripFromState(state)
         }
     }
 
     /**
-     * Update the background (reference) phase strip. Call when reference profile is set.
-     * [refDropMs] Drop time from ref charge in ms; used as end of Development and for total %. If null, [refEndMs] is used.
+     * Update the background (reference) phase strip.
+     * Disabled by product decision: show only one phase strip (live roast).
      */
-    fun updateBackgroundPhaseStrip(shiftMs: Long, refEndMs: Long, refDeMs: Long?, refFcMs: Long?, refDropMs: Long? = null) {
+    private fun updateBackgroundPhaseStrip(shiftMs: Long, refEndMs: Long, refDeMs: Long?, refFcMs: Long?, refDropMs: Long? = null) {
         Platform.runLater {
             backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             backgroundPhaseStripAnnotations.clear()
-            val end = refEndMs.toDouble().coerceAtLeast(0.0)
-            val drop = refDropMs?.toDouble()?.coerceAtLeast(0.0)
-            val phaseEnd = drop ?: end
-            val totalSec = phaseEnd / 1000.0
-            val shift = shiftMs.toDouble()
-            val de = refDeMs?.toDouble()
-            val fc = refFcMs?.toDouble()
-            val dryingEnd = de?.coerceAtLeast(0.0) ?: fc?.coerceAtLeast(0.0) ?: phaseEnd
-            if (dryingEnd > 0) {
-                val durSec = dryingEnd / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Drying ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(shift, shift + dryingEnd, COLOR_DRYING, label, BACKGROUND_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                backgroundPhaseStripAnnotations.add(a)
-            }
-            val maillardStart = de?.coerceAtLeast(0.0) ?: 0.0
-            val maillardEnd = fc?.coerceAtLeast(0.0) ?: phaseEnd
-            if (maillardEnd > maillardStart) {
-                val durSec = (maillardEnd - maillardStart) / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Maillard ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(shift + maillardStart, shift + maillardEnd, COLOR_MAILLARD, label, BACKGROUND_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                backgroundPhaseStripAnnotations.add(a)
-            }
-            val devEnd = fc?.let { drop ?: end }
-            if (fc != null && fc >= 0 && devEnd != null && devEnd > fc) {
-                val durSec = (devEnd - fc) / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Development ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(shift + fc, shift + devEnd, COLOR_DEVELOPMENT, label, BACKGROUND_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                backgroundPhaseStripAnnotations.add(a)
-            }
+            referencePhaseActive = false
+            referencePhaseLocked = false
+            relayoutLivePhaseStripForReferencePresence()
         }
     }
 
@@ -814,6 +838,7 @@ class CurveChartFx : CurveModelListener {
             refRorEtSeries.clear()
             refBbpBtSeries.clear()
             refBbpEtSeries.clear()
+            referencePhaseLocked = false
             refMarkerOffset = 5.0
             referenceBbpLog = profile?.betweenBatchLog
             val shiftMs = alignAtChargeMs ?: 0L
@@ -838,29 +863,31 @@ class CurveChartFx : CurveModelListener {
                     computeAndFillRorSeries(adjustedTimex, btFiltered, refRorBtSeries, ROR_DELTA_SEC, shiftMs)
                     computeAndFillRorSeries(adjustedTimex, etFiltered, refRorEtSeries, ROR_DELTA_SEC, shiftMs)
                 }
-                profile.events.forEach { event ->
-                    val adjustedSec = event.timeSec - chargeOffsetSec
-                    if (adjustedSec < 0) return@forEach
-                    val timeFromChargeMs = (adjustedSec * 1000).toLong()
-                    val xMs = timeFromChargeMs + shiftMs
-                    val label = refEventLabel(event.type, adjustedSec, event.tempBT, event.tempET)
-                    addReferenceEventMarker(xMs, label)
-                }
-                profile.controlEvents.forEach { ce ->
-                    val adjustedSec = ce.timeSec - chargeOffsetSec
-                    if (adjustedSec < 0) return@forEach
-                    val xMs = (adjustedSec * 1000).toLong() + shiftMs
-                    val label = ce.displayString?.takeIf { it.isNotBlank() }
-                        ?: run {
-                            val tag = when (ce.type) {
-                                ControlEventType.GAS -> "GAS"
-                                ControlEventType.AIR -> "AIR"
-                                ControlEventType.DRUM -> "DRUM"
-                                ControlEventType.DAMPER -> "DAMPER"
+                if (lastChartConfig?.showReferenceEvents != false) {
+                    profile.events.forEach { event ->
+                        val adjustedSec = event.timeSec - chargeOffsetSec
+                        if (adjustedSec < 0) return@forEach
+                        val timeFromChargeMs = (adjustedSec * 1000).toLong()
+                        val xMs = timeFromChargeMs + shiftMs
+                        val label = refEventLabel(event.type, adjustedSec, event.tempBT, event.tempET)
+                        addReferenceEventMarker(xMs, label)
+                    }
+                    profile.controlEvents.forEach { ce ->
+                        val adjustedSec = ce.timeSec - chargeOffsetSec
+                        if (adjustedSec < 0) return@forEach
+                        val xMs = (adjustedSec * 1000).toLong() + shiftMs
+                        val label = ce.displayString?.takeIf { it.isNotBlank() }
+                            ?: run {
+                                val tag = when (ce.type) {
+                                    ControlEventType.GAS -> "GAS"
+                                    ControlEventType.AIR -> "AIR"
+                                    ControlEventType.DRUM -> "DRUM"
+                                    ControlEventType.DAMPER -> "DAMPER"
+                                }
+                                "Ref: $tag ${ce.value.toInt()}"
                             }
-                            "Ref: $tag ${ce.value.toInt()}"
-                        }
-                    addReferenceEventMarker(xMs, label)
+                        addReferenceEventMarker(xMs, label)
+                    }
                 }
                 val refEndSec = (timex.maxOrNull() ?: 0.0) - chargeOffsetSec
                 val refEndMs = (refEndSec * 1000).toLong().coerceAtLeast(0L)
@@ -869,8 +896,14 @@ class CurveChartFx : CurveModelListener {
                 val refDropMs = profile.eventByType(EventType.DROP)?.timeSec?.let { ((it - chargeOffsetSec) * 1000).toLong().takeIf { ms -> ms >= 0 } }
                 updateBackgroundPhaseStrip(shiftMs, refEndMs, refDeMs, refFcMs, refDropMs)
             } else {
+                // When reference is cleared explicitly (setReferenceProfile(null)),
+                // the caller is responsible for removing reference annotations.
+                // Here we only keep live state consistent.
                 backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
                 backgroundPhaseStripAnnotations.clear()
+                referencePhaseActive = false
+                referencePhaseLocked = false
+                relayoutLivePhaseStripForReferencePresence()
             }
             if (profile?.betweenBatchLog != null) {
                 setBetweenBatchAnnotation(profile.betweenBatchLog!!.durationMs)
@@ -972,6 +1005,8 @@ class CurveChartFx : CurveModelListener {
             refEtSeries.clear()
             refRorBtSeries.clear()
             refRorEtSeries.clear()
+            refBbpBtSeries.clear()
+            refBbpEtSeries.clear()
             refMarkers.forEach { plot.removeDomainMarker(it) }
             refMarkers.clear()
             plot.clearDomainMarkers()
@@ -979,6 +1014,10 @@ class CurveChartFx : CurveModelListener {
             phaseStripAnnotations.clear()
             backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             backgroundPhaseStripAnnotations.clear()
+            referencePhaseActive = false
+            referencePhaseLocked = false
+            referenceBbpLog = null
+            lastLivePhaseStripState = null
             markersByType.clear()
             markerOffset = 20.0
             refMarkerOffset = 5.0
@@ -1011,10 +1050,19 @@ class CurveChartFx : CurveModelListener {
     fun applyChartConfig(config: ChartConfig) {
         Platform.runLater {
             lastChartConfig = config
-            val timeRangeMs = config.timeRangeMin * 60 * 1000.0
-            plot.domainAxis.setRange(0.0, timeRangeMs)
+            val (timeMinMs, timeMaxMs) = if (config.timeAxisLock || !config.timeAxisAuto) {
+                config.timeAxisMin * 60.0 * 1000.0 to config.timeAxisMax * 60.0 * 1000.0
+            } else {
+                0.0 to (config.timeRangeMin * 60 * 1000.0)
+            }
+            plot.domainAxis.setRange(timeMinMs, timeMaxMs)
+            if (config.timeAxisStepSec > 0) {
+                (plot.domainAxis as? NumberAxis)?.setTickUnit(NumberTickUnit((config.timeAxisStepSec * 1000).toDouble(), MmSsFormat()))
+            }
             plot.getRangeAxis(0).setRange(config.tempMin, config.tempMax)
-            plot.getRangeAxis(1).setRange(config.rorMin, config.rorMax)
+            (plot.getRangeAxis(0) as? NumberAxis)?.setTickUnit(NumberTickUnit(config.tempAxisStep.coerceIn(1.0, 100.0)))
+            plot.getRangeAxis(1).setRange(config.deltaMin, config.deltaMax)
+            (plot.getRangeAxis(1) as? NumberAxis)?.setTickUnit(NumberTickUnit(config.deltaStep.coerceIn(0.5, 50.0)))
             (plot.getRenderer(0) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.btLineWidth))
             (plot.getRenderer(1) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.etLineWidth))
             (plot.getRenderer(2) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.rorLineWidth))
@@ -1027,10 +1075,21 @@ class CurveChartFx : CurveModelListener {
             (plot.getRenderer(8) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
             (plot.getRenderer(9) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
             plot.setBackgroundPaint(Color.decode(config.backgroundColor))
-            plot.setDomainGridlinePaint(Color.decode(config.gridColor))
-            plot.setRangeGridlinePaint(Color.decode(config.gridColor))
-            plot.isDomainGridlinesVisible = config.showGrid
-            plot.isRangeGridlinesVisible = config.showGrid
+            val gridStroke = gridStrokeFromConfig(config)
+            val gridPaint = gridPaintFromConfig(config)
+            plot.setDomainGridlineStroke(gridStroke)
+            plot.setRangeGridlineStroke(gridStroke)
+            plot.setDomainGridlinePaint(gridPaint)
+            plot.setRangeGridlinePaint(gridPaint)
+            plot.isDomainGridlinesVisible = config.showGrid && config.gridTime
+            plot.isRangeGridlinesVisible = config.showGrid && config.gridTemp
+            applySeriesVisibility(config)
+            if (!config.showPhaseStrips) {
+                phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
+                phaseStripAnnotations.clear()
+                backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
+                backgroundPhaseStripAnnotations.clear()
+            }
             chart.fireChartChanged()
         }
     }
@@ -1041,19 +1100,58 @@ class CurveChartFx : CurveModelListener {
         applyChartConfig(config)
     }
 
-    /** Reset X axis to the default 0..15 min window (or saved ChartConfig). Called by toolbar Reset button. */
+    /** Reset axes to saved ChartConfig or defaults. Called by toolbar Reset button. */
     fun resetAxes() {
         val config = lastChartConfig
         if (config != null) {
-            val timeRangeMs = config.timeRangeMin * 60 * 1000.0
-            plot.domainAxis.setRange(0.0, timeRangeMs)
+            val (timeMinMs, timeMaxMs) = if (config.timeAxisLock || !config.timeAxisAuto) {
+                config.timeAxisMin * 60.0 * 1000.0 to config.timeAxisMax * 60.0 * 1000.0
+            } else {
+                0.0 to (config.timeRangeMin * 60 * 1000.0)
+            }
+            plot.domainAxis.setRange(timeMinMs, timeMaxMs)
             plot.getRangeAxis(0).setRange(config.tempMin, config.tempMax)
-            plot.getRangeAxis(1).setRange(config.rorMin, config.rorMax)
+            plot.getRangeAxis(1).setRange(config.deltaMin, config.deltaMax)
         } else {
             plot.domainAxis.setRange(0.0, TIME_RANGE_MS)
             plot.getRangeAxis(0).setRange(TEMP_MIN, TEMP_MAX)
             plot.getRangeAxis(1).setRange(MIN_ROR, MAX_ROR)
         }
+    }
+
+    private fun gridStrokeFromConfig(config: ChartConfig): BasicStroke {
+        val w = config.gridWidth.toFloat().coerceIn(1f, 5f)
+        return when (config.gridStyle) {
+            GridStyle.DASHED -> BasicStroke(w, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(8f, 4f), 0f)
+            GridStyle.DASHED_DOT -> BasicStroke(w, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(10f, 4f, 2f, 4f), 0f)
+            GridStyle.DOTTED -> BasicStroke(w, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(2f, 2f), 0f)
+            GridStyle.SOLID -> BasicStroke(w)
+        }
+    }
+
+    private fun gridPaintFromConfig(config: ChartConfig): Color {
+        val base = Color.decode(config.gridColor)
+        val alpha = (config.gridOpaqueness.coerceIn(0.1, 1.0) * 255.0).toInt().coerceIn(0, 255)
+        return Color(
+            base.red.coerceIn(0, 255),
+            base.green.coerceIn(0, 255),
+            base.blue.coerceIn(0, 255),
+            alpha
+        )
+    }
+
+    private fun applySeriesVisibility(config: ChartConfig) {
+        (plot.getRenderer(0) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, config.showBt)
+        (plot.getRenderer(1) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, config.showEt)
+        (plot.getRenderer(2) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, config.showRorBt)
+        (plot.getRenderer(3) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, config.showRorEt)
+        val showRef = config.showReferenceCurves
+        (plot.getRenderer(4) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, showRef)
+        (plot.getRenderer(5) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, showRef)
+        (plot.getRenderer(6) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, showRef)
+        (plot.getRenderer(7) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, showRef)
+        (plot.getRenderer(8) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, showRef)
+        (plot.getRenderer(9) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, showRef)
     }
 
     // ── Tick-unit builders ────────────────────────────────────────────────────
