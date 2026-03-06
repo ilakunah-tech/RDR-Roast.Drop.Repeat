@@ -19,7 +19,9 @@ data class BetweenBatchLog(
     /** Time from BBP start to lowest BT, in ms. Null if empty. */
     val lowestTemperatureTimeMs: Long? = null,
     /** Time from BBP start to highest BT, in ms. Null if empty. */
-    val highestTemperatureTimeMs: Long? = null
+    val highestTemperatureTimeMs: Long? = null,
+    /** Cropster-style BBP comments entered from the BBP chart. */
+    val comments: List<ProtocolComment> = emptyList()
 ) {
     val isEmpty: Boolean get() = durationMs <= 0 || timex.isEmpty()
 
@@ -41,6 +43,7 @@ class BetweenBatchSession(
     val timex: MutableList<Double> = mutableListOf()
     val temp1: MutableList<Double> = mutableListOf()
     val temp2: MutableList<Double> = mutableListOf()
+    val comments: MutableList<ProtocolComment> = mutableListOf()
 
     private var _stopped: Boolean = false
 
@@ -61,6 +64,13 @@ class BetweenBatchSession(
         _stopped = value
     }
 
+    @Synchronized
+    fun addComment(comment: ProtocolComment) {
+        if (_stopped) return
+        if (comment.timeSec >= maxDurationSec) return
+        comments.add(comment)
+    }
+
     /** Build immutable log from current data; computes lowest/highest BT times. */
     @Synchronized
     fun toLog(mode: TemperatureUnit = TemperatureUnit.CELSIUS): BetweenBatchLog? {
@@ -78,7 +88,8 @@ class BetweenBatchSession(
             temp2 = temp2.toList(),
             mode = mode,
             lowestTemperatureTimeMs = lowestMs,
-            highestTemperatureTimeMs = highestMs
+            highestTemperatureTimeMs = highestMs,
+            comments = comments.toList()
         )
     }
 
@@ -90,5 +101,6 @@ class BetweenBatchSession(
         timex.clear()
         temp1.clear()
         temp2.clear()
+        comments.clear()
     }
 }

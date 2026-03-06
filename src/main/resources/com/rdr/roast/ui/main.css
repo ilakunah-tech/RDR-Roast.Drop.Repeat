@@ -111,6 +111,25 @@
     -fx-icon-color: -rdr-text-secondary;
 }
 
+.reference-title-btn {
+    -fx-background-color: rgba(0, 0, 0, 0.04);
+    -fx-text-fill: -rdr-text-primary;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 10;
+    -fx-min-width: 86px;
+    -fx-pref-width: 86px;
+    -fx-max-width: 86px;
+    -fx-min-height: 28px;
+    -fx-pref-height: 28px;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.reference-title-btn:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.08);
+}
+
 #btnClose:hover {
     -fx-background-color: rgba(239, 68, 68, 0.12);
 }

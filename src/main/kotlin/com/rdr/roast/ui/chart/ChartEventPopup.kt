@@ -12,32 +12,44 @@ import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javafx.stage.Popup
 
+enum class ChartPopupMode { ROAST, BBP }
+
+sealed interface ChartPopupResult {
+    val timeMs: Long
+}
+
+data class ChartPopupEventResult(
+    override val timeMs: Long,
+    val label: String
+) : ChartPopupResult
+
+data class ChartPopupCommentResult(
+    override val timeMs: Long,
+    val text: String,
+    val tempBT: Double?,
+    val gas: Double? = null,
+    val airflow: Double? = null
+) : ChartPopupResult
+
 /**
- * Context popup when the user clicks on the roast chart (Cropster-style).
- *
- * - Header: "Comment at: MM:SS"
- * - Event buttons: DE (Dry End), FC (First Crack) only
- * - Temperature °C field (optional; pre-filled with BT at click time if available)
- * - Custom comment + Add
- * - Close
- *
- * Charge = hotkey C; Drop = hotkey D; TP is auto-computed.
+ * Context popup when the user clicks on the roast or BBP chart.
  */
 class ChartEventPopup(
+    private val mode: ChartPopupMode,
     private val timeMs: Long,
     private val btAtTime: Double?,
-    private val onAdd: (timeMs: Long, label: String) -> Unit
+    private val onAdd: (ChartPopupResult) -> Unit
 ) : Popup() {
 
     init {
         isAutoHide = true
-        isAutoFix  = true
+        isAutoFix = true
         val mmss = formatTime(timeMs)
 
         val root = VBox(8.0).apply {
             padding = Insets(12.0, 14.0, 12.0, 14.0)
-            minWidth = 240.0
-            maxWidth = 280.0
+            minWidth = 250.0
+            maxWidth = 320.0
             style = """
                 -fx-background-color: white;
                 -fx-border-color: #c0c0c0;
@@ -47,44 +59,48 @@ class ChartEventPopup(
             """.trimIndent()
         }
 
-        val lblAt   = Label("Комментарий в:").apply { style = "-fx-font-size: 11px; -fx-text-fill: #888;" }
+        val lblAt = Label(if (mode == ChartPopupMode.BBP) "BBP comment at:" else "Comment at:").apply {
+            style = "-fx-font-size: 11px; -fx-text-fill: #888;"
+        }
         val lblTime = Label(mmss).apply { style = "-fx-font-size: 14px; -fx-font-weight: bold;" }
         val lblUnit = Label("mm:ss").apply { style = "-fx-font-size: 10px; -fx-text-fill: #bbb;" }
         root.children += HBox(6.0, lblAt, lblTime, lblUnit).apply { alignment = Pos.CENTER_LEFT }
+        btAtTime?.let { bt ->
+            root.children += Label("BT ${"%.1f".format(bt)} °C").apply {
+                style = "-fx-font-size: 11px; -fx-text-fill: #666;"
+            }
+        }
         root.children += Separator()
 
-        // DE (Dry End), FC (First Crack)
+        when (mode) {
+            ChartPopupMode.ROAST -> buildRoastContent(root, mmss)
+            ChartPopupMode.BBP -> buildBbpContent(root)
+        }
+
+        val btnClose = Button("Close").apply {
+            maxWidth = Double.MAX_VALUE
+            style = secondaryButtonStyle()
+            setOnAction { hide() }
+        }
+        root.children += btnClose
+        content.add(root)
+    }
+
+    private fun buildRoastContent(root: VBox, mmss: String) {
         val grid = GridPane().apply { hgap = 6.0; vgap = 5.0 }
-        // Temperature °C (Cropster: event at a specific temperature)
-        val lblTemp = Label("Температура °C:").apply { style = "-fx-font-size: 11px; -fx-text-fill: #888;" }
-        val txtTemp = TextField().apply {
-            promptText = "optional"
-            style = "-fx-font-size: 11px;"
-            if (btAtTime != null) text = "%.1f".format(btAtTime)
-        }
-        root.children += HBox(6.0, lblTemp, txtTemp).also { row ->
-            row.alignment = Pos.CENTER_LEFT
-            HBox.setHgrow(txtTemp, Priority.ALWAYS)
-        }
-
-        fun labelWithTemp(base: String, tempStr: String): String {
-            val t = tempStr.trim().toDoubleOrNull()
-            return if (t != null) "$base · $t °C" else base
-        }
-
-        val btnDE = Button("DE (Dry End)").apply {
+        val btnDE = Button("DE").apply {
             maxWidth = Double.MAX_VALUE
             style = greenButtonStyle()
             setOnAction {
-                onAdd(timeMs, labelWithTemp("DE @ $mmss", txtTemp.text))
+                onAdd(ChartPopupEventResult(timeMs, "DE @ $mmss"))
                 hide()
             }
         }
-        val btnFC = Button("FC (First Crack)").apply {
+        val btnFC = Button("FC").apply {
             maxWidth = Double.MAX_VALUE
             style = greenButtonStyle()
             setOnAction {
-                onAdd(timeMs, labelWithTemp("FC @ $mmss", txtTemp.text))
+                onAdd(ChartPopupEventResult(timeMs, "FC @ $mmss"))
                 hide()
             }
         }
@@ -94,20 +110,15 @@ class ChartEventPopup(
         root.children += Separator()
 
         val txtComment = TextField().apply {
-            promptText = "Свой комментарий…"
+            promptText = "Custom comment..."
             style = "-fx-font-size: 11px;"
         }
-        val btnAdd = Button("Добавить").apply {
-            style = """
-                -fx-background-color: #3498db;
-                -fx-text-fill: white;
-                -fx-font-size: 11px;
-                -fx-background-radius: 3;
-            """.trimIndent()
+        val btnAdd = Button("Add").apply {
+            style = primaryButtonStyle()
             setOnAction {
                 val txt = txtComment.text.trim()
                 if (txt.isNotEmpty()) {
-                    onAdd(timeMs, labelWithTemp(txt, txtTemp.text))
+                    onAdd(ChartPopupCommentResult(timeMs, txt, btAtTime))
                     hide()
                 }
             }
@@ -116,19 +127,43 @@ class ChartEventPopup(
             row.alignment = Pos.CENTER_LEFT
             HBox.setHgrow(txtComment, Priority.ALWAYS)
         }
+    }
 
-        val btnClose = Button("Закрыть").apply {
-            maxWidth = Double.MAX_VALUE
-            style = """
-                -fx-background-color: #ecf0f1;
-                -fx-text-fill: #555;
-                -fx-font-size: 11px;
-                -fx-background-radius: 3;
-            """.trimIndent()
-            setOnAction { hide() }
+    private fun buildBbpContent(root: VBox) {
+        val txtGas = TextField().apply {
+            promptText = "Gas"
+            style = "-fx-font-size: 11px;"
         }
-        root.children += btnClose
-        content.add(root)
+        val txtAirflow = TextField().apply {
+            promptText = "Airflow"
+            style = "-fx-font-size: 11px;"
+        }
+        root.children += HBox(6.0, txtGas, txtAirflow).also { row ->
+            row.alignment = Pos.CENTER_LEFT
+            HBox.setHgrow(txtGas, Priority.ALWAYS)
+            HBox.setHgrow(txtAirflow, Priority.ALWAYS)
+        }
+
+        val txtComment = TextField().apply {
+            promptText = "Note..."
+            style = "-fx-font-size: 11px;"
+        }
+        val btnAdd = Button("Text comment").apply {
+            style = primaryButtonStyle()
+            setOnAction {
+                val gas = txtGas.text.trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()
+                val airflow = txtAirflow.text.trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()
+                val txt = txtComment.text.trim()
+                if (txt.isNotEmpty() || gas != null || airflow != null) {
+                    onAdd(ChartPopupCommentResult(timeMs, txt, btAtTime, gas = gas, airflow = airflow))
+                    hide()
+                }
+            }
+        }
+        root.children += HBox(6.0, txtComment, btnAdd).also { row ->
+            row.alignment = Pos.CENTER_LEFT
+            HBox.setHgrow(txtComment, Priority.ALWAYS)
+        }
     }
 
     private fun greenButtonStyle() = """
@@ -137,6 +172,20 @@ class ChartEventPopup(
         -fx-font-size: 11px;
         -fx-background-radius: 3;
         -fx-cursor: hand;
+    """.trimIndent()
+
+    private fun primaryButtonStyle() = """
+        -fx-background-color: #3498db;
+        -fx-text-fill: white;
+        -fx-font-size: 11px;
+        -fx-background-radius: 3;
+    """.trimIndent()
+
+    private fun secondaryButtonStyle() = """
+        -fx-background-color: #ecf0f1;
+        -fx-text-fill: #555;
+        -fx-font-size: 11px;
+        -fx-background-radius: 3;
     """.trimIndent()
 
     private fun formatTime(ms: Long): String {

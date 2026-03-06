@@ -30,11 +30,11 @@
                 </image>
             </ImageView>
             <Label text="RDR – Roast.Drop.Repeat" styleClass="title-bar-label"/>
+            <Button fx:id="btnReference" text="Reference" styleClass="reference-title-btn"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Button fx:id="btnMinimize" styleClass="title-bar-btn" minWidth="32" maxWidth="32" minHeight="32" maxHeight="32"/>
             <Button fx:id="btnMaximize" styleClass="title-bar-btn" minWidth="32" maxWidth="32" minHeight="32" maxHeight="32"/>
             <Button fx:id="btnClose" styleClass="title-bar-btn" minWidth="32" maxWidth="32" minHeight="32" maxHeight="32"/>
-            <Button fx:id="btnReference" visible="false" managed="false"/>
             <Button fx:id="btnShortcuts" visible="false" managed="false"/>
             <Button fx:id="btnSettings" visible="false" managed="false"/>
             <Button fx:id="btnSync" visible="false" managed="false"/>
@@ -106,6 +106,28 @@
                                    GridPane.columnIndex="1" GridPane.rowIndex="3"/>
                         </GridPane>
                     </VBox>
+                </VBox>
+
+                <VBox fx:id="bbpPanel" styleClass="reference-panel" spacing="3"
+                      visible="false" managed="false">
+                    <HBox alignment="CENTER_LEFT" spacing="4">
+                        <Label text="Between Batch (BBP)" styleClass="right-panel-header"/>
+                    </HBox>
+                    <Label fx:id="lblBbpStatus"
+                           text="Recording"
+                           style="-fx-text-fill: -rdr-text-primary; -fx-font-size: 11px; -fx-font-weight: bold;"/>
+                    <Label fx:id="lblBbpReference"
+                           text="No reference BBP"
+                           style="-fx-text-fill: -rdr-text-hint; -fx-font-size: 10px;"/>
+                    <Label fx:id="lblBbpMinBt"
+                           text="Min BT: —"
+                           style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 10px;"/>
+                    <Label fx:id="lblBbpMaxBt"
+                           text="Max BT: —"
+                           style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 10px;"/>
+                    <Label fx:id="lblBbpHint"
+                           text="Click the chart to add note / gas / airflow."
+                           style="-fx-text-fill: -rdr-text-hint; -fx-font-size: 10px; -fx-wrap-text: true;"/>
                 </VBox>
 
                 <!-- Comments block (grows to fill) -->

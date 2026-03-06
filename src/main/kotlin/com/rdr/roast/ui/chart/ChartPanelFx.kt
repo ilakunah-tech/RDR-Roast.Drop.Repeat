@@ -25,8 +25,7 @@ import org.jfree.chart.ui.RectangleEdge
  *   at the cursor position.  The popup resolves the click X-coordinate to a MM:SS
  *   timestamp and lets the user choose a predefined event type or enter custom text.
  *
- * [onEventAdded] optional callback fired when the popup confirms an annotation,
- *   in addition to the chart marker that is already added internally.
+ * [onPopupResult] optional callback fired when the popup confirms an annotation.
  */
 class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
 
@@ -36,7 +35,9 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
     }
 
     /** Called after the user adds an annotation via the chart popup. */
-    var onEventAdded: ((timeMs: Long, label: String) -> Unit)? = null
+    var onPopupResult: ((ChartPopupResult) -> Unit)? = null
+    /** Determines whether the popup should behave like roast comments or BBP comments. */
+    var popupModeProvider: () -> ChartPopupMode = { ChartPopupMode.ROAST }
 
     /**
      * Time (ms) of the last built data point on the chart.
@@ -119,6 +120,7 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
             // Only show popup if the click landed inside the data area
             if (!dataArea.contains(e.x, e.y)) return@addEventHandler
 
+            val popupMode = popupModeProvider()
             val clickedTimeMs = curveChart.plot.domainAxis
                 .java2DToValue(e.x, dataArea, RectangleEdge.BOTTOM).toLong()
             if (clickedTimeMs < 0) return@addEventHandler
@@ -129,10 +131,13 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
             } ?: clickedTimeMs
 
             val btAtTime = curveChart.getBtAtTime(effectiveTimeMs)
-            val popup = ChartEventPopup(effectiveTimeMs, btAtTime) { displayTimeMs, label ->
-                val rawTimeMs = curveChart.toRawTime(displayTimeMs)
-                curveChart.addEventMarker(rawTimeMs, label)
-                onEventAdded?.invoke(rawTimeMs, label)
+            val popup = ChartEventPopup(popupMode, effectiveTimeMs, btAtTime) { result ->
+                val rawTimeMs = if (popupMode == ChartPopupMode.BBP) result.timeMs else curveChart.toRawTime(result.timeMs)
+                val adjusted = when (result) {
+                    is ChartPopupEventResult -> result.copy(timeMs = rawTimeMs)
+                    is ChartPopupCommentResult -> result.copy(timeMs = rawTimeMs)
+                }
+                onPopupResult?.invoke(adjusted)
             }
 
             val window = chartViewer.scene?.window ?: return@addEventHandler

@@ -3,6 +3,7 @@ package com.rdr.roast.ui.chart
 import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.ChartColors
 import com.rdr.roast.app.SettingsManager
+import com.rdr.roast.domain.BetweenBatchLog
 import com.rdr.roast.domain.ControlEventType
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
@@ -117,6 +118,8 @@ class CurveChartFx : CurveModelListener {
     private val refEtSeries = XYSeries("Ref ET", false, true)
     private val refRorBtSeries = XYSeries("Ref RoR BT", false, true)
     private val refRorEtSeries = XYSeries("Ref RoR ET", false, true)
+    private val refBbpBtSeries = XYSeries("Ref BBP BT", false, true)
+    private val refBbpEtSeries = XYSeries("Ref BBP ET", false, true)
 
     private val seriesMap = mutableMapOf<CurveModel, XYSeries>()
     /** Reference profile markers (Charge, TP, DE, FC, Drop) — removed when reference is cleared. */
@@ -157,6 +160,8 @@ class CurveChartFx : CurveModelListener {
 
     /** BBP period annotation (shaded band before roast start). Null when not set. */
     private var bbpAnnotation: AbstractXYAnnotation? = null
+    /** Reference BBP used only when the chart is in BBP mode. */
+    private var referenceBbpLog: BetweenBatchLog? = null
 
     init {
         val settings = SettingsManager.load()
@@ -249,8 +254,16 @@ class CurveChartFx : CurveModelListener {
             it.setSeriesPaint(0, refRorEtColor)
             it.setSeriesStroke(0, strokeRef)
         }
+        val refBbpBtRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, refBtColor)
+            it.setSeriesStroke(0, strokeRef)
+        }
+        val refBbpEtRenderer = XYLineAndShapeRenderer(true, false).also {
+            it.setSeriesPaint(0, refEtColor)
+            it.setSeriesStroke(0, strokeRef)
+        }
 
-        // ── Single XYPlot with 8 datasets (4 live + 2 ref temp + 2 ref RoR) ──
+        // ── Single XYPlot with 10 datasets (4 live + 2 ref temp + 2 ref RoR + 2 ref BBP) ──
         plot = XYPlot().apply {
             domainAxis     = timeAxis
             setRangeAxis(0, tempAxis)
@@ -293,6 +306,14 @@ class CurveChartFx : CurveModelListener {
             setDataset(7, XYSeriesCollection(refRorEtSeries))
             setRenderer(7, refRorEtRenderer)
             mapDatasetToRangeAxis(7, 1)
+            // dataset 8 → Ref BBP BT → left axis
+            setDataset(8, XYSeriesCollection(refBbpBtSeries))
+            setRenderer(8, refBbpBtRenderer)
+            mapDatasetToRangeAxis(8, 0)
+            // dataset 9 → Ref BBP ET → left axis
+            setDataset(9, XYSeriesCollection(refBbpEtSeries))
+            setRenderer(9, refBbpEtRenderer)
+            mapDatasetToRangeAxis(9, 0)
 
             isOutlineVisible = false
             setBackgroundPaint(bgColor)
@@ -480,6 +501,28 @@ class CurveChartFx : CurveModelListener {
         }
     }
 
+    fun setReferenceBbp(log: BetweenBatchLog?) {
+        referenceBbpLog = log
+        if (bbpMode) {
+            Platform.runLater {
+                refreshReferenceBbpSeries()
+                chart.fireChartChanged()
+            }
+        }
+    }
+
+    private fun refreshReferenceBbpSeries() {
+        refBbpBtSeries.clear()
+        refBbpEtSeries.clear()
+        val log = referenceBbpLog ?: return
+        val n = minOf(log.timex.size, log.temp1.size, log.temp2.size)
+        for (i in 0 until n) {
+            val xMs = log.timex[i] * 1000.0
+            refBbpBtSeries.add(xMs, log.temp1[i])
+            refBbpEtSeries.add(xMs, log.temp2[i])
+        }
+    }
+
     /** Switch chart to BBP live mode (Cropster-style): only BBP BT/ET, no reference, no phase strip, no title. */
     fun showBbpMode() {
         Platform.runLater {
@@ -493,6 +536,8 @@ class CurveChartFx : CurveModelListener {
             refEtSeries.clear()
             refRorBtSeries.clear()
             refRorEtSeries.clear()
+            refBbpBtSeries.clear()
+            refBbpEtSeries.clear()
             refMarkers.forEach { plot.removeDomainMarker(it) }
             refMarkers.clear()
             markersByType.values.forEach { plot.removeDomainMarker(it as Marker) }
@@ -504,6 +549,7 @@ class CurveChartFx : CurveModelListener {
             backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             backgroundPhaseStripAnnotations.clear()
             plot.clearDomainMarkers()
+            refreshReferenceBbpSeries()
             val bbpTimeRangeMs = 15 * 60 * 1000.0
             plot.domainAxis.setRange(0.0, bbpTimeRangeMs)
             chart.title = null
@@ -536,6 +582,8 @@ class CurveChartFx : CurveModelListener {
             etSeries.clear()
             rorBtSeries.clear()
             rorEtSeries.clear()
+            refBbpBtSeries.clear()
+            refBbpEtSeries.clear()
             val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
             plot.domainAxis.setRange(0.0, timeRangeMs)
             chart.fireChartChanged()
@@ -764,7 +812,10 @@ class CurveChartFx : CurveModelListener {
             refEtSeries.clear()
             refRorBtSeries.clear()
             refRorEtSeries.clear()
+            refBbpBtSeries.clear()
+            refBbpEtSeries.clear()
             refMarkerOffset = 5.0
+            referenceBbpLog = profile?.betweenBatchLog
             val shiftMs = alignAtChargeMs ?: 0L
             if (profile != null && profile.timex.isNotEmpty()) {
                 val chargeEvent = profile.eventByType(EventType.CHARGE)
@@ -826,6 +877,7 @@ class CurveChartFx : CurveModelListener {
             } else {
                 removeBetweenBatchAnnotation()
             }
+            if (bbpMode) refreshReferenceBbpSeries()
             chart.isNotify = true
             chart.fireChartChanged()
         }
@@ -950,6 +1002,8 @@ class CurveChartFx : CurveModelListener {
             (plot.getRenderer(5) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decodeRef(colors.refEt))
             (plot.getRenderer(6) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decodeRef(colors.refRorBt))
             (plot.getRenderer(7) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decodeRef(colors.refRorEt))
+            (plot.getRenderer(8) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decodeRef(colors.refBt))
+            (plot.getRenderer(9) as? XYLineAndShapeRenderer)?.setSeriesPaint(0, decodeRef(colors.refEt))
         }
     }
 
@@ -970,6 +1024,8 @@ class CurveChartFx : CurveModelListener {
             (plot.getRenderer(5) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
             (plot.getRenderer(6) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
             (plot.getRenderer(7) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
+            (plot.getRenderer(8) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
+            (plot.getRenderer(9) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
             plot.setBackgroundPaint(Color.decode(config.backgroundColor))
             plot.setDomainGridlinePaint(Color.decode(config.gridColor))
             plot.setRangeGridlinePaint(Color.decode(config.gridColor))

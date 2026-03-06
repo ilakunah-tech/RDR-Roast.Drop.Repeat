@@ -17,6 +17,7 @@ import com.rdr.roast.app.RoastRecorder
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.domain.ControlEventType
 import com.rdr.roast.domain.EventType
+import com.rdr.roast.domain.ProtocolComment
 import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.TemperatureSample
 import com.rdr.roast.domain.curves.MovingAverageCurveModel
@@ -28,6 +29,9 @@ import com.rdr.roast.driver.RoastControl
 import com.rdr.roast.driver.ControlSpec
 import com.rdr.roast.driver.simulator.SimulatorSource
 import com.rdr.roast.ui.chart.ChartPanelFx
+import com.rdr.roast.ui.chart.ChartPopupCommentResult
+import com.rdr.roast.ui.chart.ChartPopupEventResult
+import com.rdr.roast.ui.chart.ChartPopupMode
 import com.rdr.roast.ui.chart.CurveChartFx
 import javafx.application.Platform
 import javafx.fxml.FXML
@@ -127,10 +131,19 @@ class MainController {
     @FXML lateinit var lblRefDevTimeRatio: Label
     @FXML lateinit var lblRefEndTemp: Label
     @FXML lateinit var referencePanel: VBox
-    /** Live roast events shown in the Comments grid (Cropster-style). */
+    /** Unified comments row for roast or BBP. */
     private data class CommentEntry(
-        val timeSec: Double, val tempBt: Double?, val label: String, val confirmed: Boolean = true
+        val timeSec: Double,
+        val tempBt: Double?,
+        val label: String,
+        val confirmed: Boolean = true
     )
+    @FXML lateinit var bbpPanel: VBox
+    @FXML lateinit var lblBbpStatus: Label
+    @FXML lateinit var lblBbpReference: Label
+    @FXML lateinit var lblBbpMinBt: Label
+    @FXML lateinit var lblBbpMaxBt: Label
+    @FXML lateinit var lblBbpHint: Label
     @FXML lateinit var lblPlayerBarTitle: Label
     @FXML lateinit var controlPanelContainer: VBox
     @FXML lateinit var commentsBlock: VBox
@@ -222,6 +235,7 @@ class MainController {
                         val session = recorder.currentBbpSession
                         if (session != null) {
                             curveChart.updateBbpCurves(session.timex.toList(), session.temp1.toList(), session.temp2.toList())
+                            chartPanel.lastDataTimeMs = session.timex.lastOrNull()?.times(1000)?.toLong()
                         }
                     }
                     lblDuration.text = when (state) {
@@ -243,6 +257,8 @@ class MainController {
                             }
                         }
                     }
+                    updateBbpPanel()
+                    updateCommentsGrid()
                 }
             }
         }
@@ -271,22 +287,47 @@ class MainController {
         // Connect to configured roaster on startup (or run discovery if auto-detect enabled)
         connectOrDiscover()
 
-        // When user adds DE/FC from chart popup, store in profile and refresh phase strip
-        chartPanel.onEventAdded = { timeMs, label ->
-            val timeSec = timeMs / 1000.0
-            val profile = recorder.currentProfile.value
-            val btAtTime = profile.temp1.lastOrNull()
-            when {
-                label.startsWith("DE @") -> {
-                    recorder.markEventAt(timeSec, EventType.CC)
-                    addLiveComment(timeSec, btAtTime, "Color change")
+        chartPanel.popupModeProvider = {
+            if (recorder.stateFlow.value == RecorderState.BBP) ChartPopupMode.BBP else ChartPopupMode.ROAST
+        }
+        chartPanel.onPopupResult = { result ->
+            when (result) {
+                is ChartPopupEventResult -> {
+                    val timeSec = result.timeMs / 1000.0
+                    val profile = recorder.currentProfile.value
+                    val idx = profile.timex.indexOfLast { it <= timeSec }.coerceAtLeast(0)
+                    val btAtTime = profile.temp1.getOrNull(idx)
+                    when {
+                        result.label.startsWith("DE @") -> {
+                            recorder.markEventAt(timeSec, EventType.CC)
+                            curveChart.addEventMarker(result.timeMs, formatMarkerLabel(result.label, btAtTime))
+                        }
+                        result.label.startsWith("FC @") -> {
+                            recorder.markEventAt(timeSec, EventType.FC)
+                            curveChart.addEventMarker(result.timeMs, formatMarkerLabel(result.label, btAtTime))
+                        }
+                    }
+                    updatePhaseStrip()
+                    updateCommentsGrid()
                 }
-                label.startsWith("FC @") -> {
-                    recorder.markEventAt(timeSec, EventType.FC)
-                    addLiveComment(timeSec, btAtTime, "First crack")
+                is ChartPopupCommentResult -> {
+                    recorder.addCommentAt(
+                        timeSec = result.timeMs / 1000.0,
+                        text = result.text,
+                        tempBT = result.tempBT,
+                        gas = result.gas,
+                        airflow = result.airflow
+                    )
+                    val displayTimeMs = if (recorder.stateFlow.value == RecorderState.BBP) {
+                        result.timeMs
+                    } else {
+                        result.timeMs - curveChart.getChargeOffsetMs()
+                    }
+                    curveChart.addEventMarker(result.timeMs, buildCommentMarkerLabel(result, displayTimeMs))
+                    updateCommentsGrid()
+                    updateBbpPanel()
                 }
             }
-            updatePhaseStrip()
         }
         if (::btnCommentsSettings.isInitialized) {
             btnCommentsSettings.graphic = FontIcon(FontAwesomeSolid.COG).apply { iconSize = 10 }
@@ -341,13 +382,15 @@ class MainController {
                 tpMarkerPlaced = true
                 val tpSec = profile.timex[tpIdx]
                 val tpBt = profile.temp1[tpIdx]
+                recorder.markEventAt(tpSec, EventType.TP)
                 curveChart.addEventMarker((tpSec * 1000).toLong(), "TP @ %s · %.1f °C".format(formatSec(tpSec), tpBt),
                     com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
-                addLiveComment(tpSec, tpBt, "Turning point")
+                updateCommentsGrid()
             }
         }
 
         updatePhaseStrip()
+        updateBbpPanel()
     }
 
     private fun updatePhaseStrip() {
@@ -365,24 +408,32 @@ class MainController {
     }
 
     private var tpMarkerPlaced = false
-    private val liveComments = mutableListOf<CommentEntry>()
-
-    private fun addLiveComment(timeSec: Double, tempBt: Double?, label: String) {
-        liveComments.add(CommentEntry(timeSec, tempBt, label, true))
-        updateCommentsGrid()
-    }
 
     private fun updateCommentsGrid() {
         if (!::commentsGrid.isInitialized) return
         commentsGrid.children.clear()
         val profile = recorder.currentProfile.value
+        val state = recorder.stateFlow.value
         val chargeTimeSec = profile.eventByType(EventType.CHARGE)?.timeSec ?: 0.0
-        val allComments = mutableListOf<CommentEntry>()
-        allComments.addAll(liveComments)
-        liveComments.sortBy { it.timeSec }
-        val rows = liveComments.takeLast(10)
+        val rows = if (state == RecorderState.BBP) {
+            recorder.currentBbpSession?.comments
+                ?.sortedBy { it.timeSec }
+                ?.takeLast(10)
+                ?.map { comment ->
+                    CommentEntry(
+                        timeSec = comment.timeSec,
+                        tempBt = comment.tempBT,
+                        label = formatCommentEntry(comment),
+                        confirmed = true
+                    )
+                } ?: emptyList()
+        } else {
+            buildRoastCommentEntries(profile)
+                .sortedBy { it.timeSec }
+                .takeLast(10)
+        }
         rows.forEachIndexed { i, entry ->
-            val relTimeSec = (entry.timeSec - chargeTimeSec).coerceAtLeast(0.0)
+            val relTimeSec = if (state == RecorderState.BBP) entry.timeSec else (entry.timeSec - chargeTimeSec).coerceAtLeast(0.0)
             val oddClass = if (i % 2 == 0) "comment-row-odd" else "comment-row-even"
             val timeLabel = Label(formatSec(relTimeSec)).apply {
                 styleClass.addAll("comment-time", oddClass)
@@ -411,13 +462,96 @@ class MainController {
         }
     }
 
+    private fun buildRoastCommentEntries(profile: RoastProfile): List<CommentEntry> {
+        val eventEntries = synchronized(profile.events) {
+            profile.events.mapNotNull { event ->
+                val label = when (event.type) {
+                    EventType.CHARGE -> "Charge"
+                    EventType.TP -> "Turning point"
+                    EventType.CC -> "Color change"
+                    EventType.FC -> "First crack"
+                    EventType.DROP -> "End"
+                }
+                CommentEntry(event.timeSec, event.tempBT, label)
+            }
+        }
+        val commentEntries = synchronized(profile.comments) {
+            profile.comments.map { comment ->
+                CommentEntry(comment.timeSec, comment.tempBT, formatCommentEntry(comment))
+            }
+        }
+        return (eventEntries + commentEntries).sortedBy { it.timeSec }
+    }
+
+    private fun formatCommentEntry(comment: ProtocolComment): String {
+        val parts = mutableListOf<String>()
+        comment.gas?.let { parts += "Gas ${formatNumeric(it)}" }
+        comment.airflow?.let { parts += "Air ${formatNumeric(it)}" }
+        comment.text.takeIf { it.isNotBlank() }?.let { parts += it }
+        return parts.joinToString(" · ").ifBlank { "Comment" }
+    }
+
+    private fun formatNumeric(value: Double): String {
+        val whole = value.toInt().toDouble()
+        return if (kotlin.math.abs(value - whole) < 0.001) whole.toInt().toString() else "%.1f".format(value)
+    }
+
+    private fun formatMarkerLabel(base: String, btAtTime: Double?): String =
+        btAtTime?.let { "$base · %.1f °C".format(it) } ?: base
+
+    private fun buildCommentMarkerLabel(comment: ChartPopupCommentResult, displayTimeMs: Long): String {
+        val parts = mutableListOf<String>()
+        comment.gas?.let { parts += "Gas ${formatNumeric(it)}" }
+        comment.airflow?.let { parts += "Air ${formatNumeric(it)}" }
+        comment.text.takeIf { it.isNotBlank() }?.let { parts += it }
+        val suffix = parts.joinToString(" · ").ifBlank { "Comment" }
+        return "Note @ ${formatSec(displayTimeMs / 1000.0)} · $suffix"
+    }
+
+    private fun updateBbpPanel() {
+        if (!::bbpPanel.isInitialized) return
+        val state = recorder.stateFlow.value
+        val visible = state == RecorderState.BBP
+        bbpPanel.isVisible = visible
+        bbpPanel.isManaged = visible
+        if (!visible) return
+        val session = recorder.currentBbpSession
+        val referenceHasBbp = referenceProfile?.betweenBatchLog != null
+        lblBbpStatus.text = if (session?.isStopped() == true) {
+            "Stopped - waiting for next Start"
+        } else {
+            "Recording"
+        }
+        lblBbpReference.text = if (referenceHasBbp) {
+            "Reference BBP shown in background."
+        } else {
+            "No reference BBP loaded."
+        }
+        if (session != null && session.temp1.isNotEmpty()) {
+            val lowIdx = session.temp1.indices.minByOrNull { session.temp1[it] }
+            val highIdx = session.temp1.indices.maxByOrNull { session.temp1[it] }
+            val lowText = lowIdx?.let { idx ->
+                "Min BT: %.1f °C @ %s".format(session.temp1[idx], formatSec(session.timex.getOrElse(idx) { 0.0 }))
+            } ?: "Min BT: —"
+            val highText = highIdx?.let { idx ->
+                "Max BT: %.1f °C @ %s".format(session.temp1[idx], formatSec(session.timex.getOrElse(idx) { 0.0 }))
+            } ?: "Max BT: —"
+            lblBbpMinBt.text = lowText
+            lblBbpMaxBt.text = highText
+        } else {
+            lblBbpMinBt.text = "Min BT: —"
+            lblBbpMaxBt.text = "Max BT: —"
+        }
+        lblBbpHint.text = "Click the chart to add note / gas / airflow."
+    }
+
     private fun clearChartAndBbpState() {
         curveChart.clearAll()
         bbpAnnotationSetForCurrentRoast = false
         chartPanel.lastDataTimeMs = null
         tpMarkerPlaced = false
-        liveComments.clear()
         updateCommentsGrid()
+        updateBbpPanel()
     }
 
     private companion object {
@@ -675,6 +809,7 @@ class MainController {
                 setBbpButtonsVisible(true)
             }
         }
+        updateBbpPanel()
     }
 
     private fun setBbpButtonsVisible(visible: Boolean) {
@@ -804,7 +939,6 @@ class MainController {
         if (profile.eventByType(EventType.CHARGE) != null) return
         val sample = recorder.currentSample.value ?: return
         recorder.markEvent(EventType.CHARGE)
-        addLiveComment(sample.timeSec, sample.bt, "Charge")
         val chargeTimeMs = (sample.timeSec * 1000).toLong()
         if (referenceProfile != null) {
             curveChart.addEventMarker(chargeTimeMs, "Charge @ %.1f °C".format(sample.bt),
@@ -815,14 +949,15 @@ class MainController {
             curveChart.addEventMarker(chargeTimeMs, "Charge @ %.1f °C".format(sample.bt),
                 com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
         }
+        updateCommentsGrid()
     }
 
     private fun triggerDrop() {
         val sample = recorder.currentSample.value ?: return
         recorder.markEvent(EventType.DROP)
-        addLiveComment(sample.timeSec, sample.bt, "End")
         curveChart.addEventMarker((sample.timeSec * 1000).toLong(), "Drop @ %.1f °C".format(sample.bt),
             com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
+        updateCommentsGrid()
         val profile = recorder.stop()
         showFinishRoastDialog(profile)
     }
@@ -845,9 +980,14 @@ class MainController {
                 ErrorLogBuffer.append(e, "Save profile")
             }
             hideFinishPanel()
-            recorder.reset()
-            resetCurvePipeline()
-            clearChartAndBbpState()
+            if (recorder.stateFlow.value == RecorderState.BBP) {
+                updateBbpPanel()
+                updateCommentsGrid()
+            } else {
+                recorder.reset()
+                resetCurvePipeline()
+                clearChartAndBbpState()
+            }
         }
         controller.onDontSave = { hideFinishPanel() }
         controller.setStage(null) // inline panel, no dialog
@@ -958,6 +1098,7 @@ class MainController {
         fromServer.setOnAction { loadReferenceFromServer() }
         clearRef.setOnAction { clearReference() }
         val menu = ContextMenu(loadFile, fromServer, clearRef)
+        btnReference.tooltip = Tooltip("Load or clear reference roast")
         btnReference.setOnAction {
             val bounds = btnReference.localToScreen(btnReference.layoutBounds)
             menu.show(btnReference, bounds.minX, bounds.minY + bounds.height)
@@ -1079,6 +1220,7 @@ class MainController {
         }
         curveChart.setReferenceProfile(null)
         updatePlayerBarTitle()
+        updateBbpPanel()
     }
 
     private fun setReference(profile: RoastProfile, label: String) {
@@ -1095,6 +1237,7 @@ class MainController {
         // If live was already rebased (Charge pressed without ref), 0 = Charge so align ref at 0; else ref at 0 until user presses C
         val alignMs = if (curveChart.getChargeOffsetMs() > 0) 0L else null
         curveChart.setReferenceProfile(profile, alignMs)
+        updateBbpPanel()
     }
 
     private fun formatRefMmSs(sec: Double): String {

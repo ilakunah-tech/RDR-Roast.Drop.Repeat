@@ -4,6 +4,7 @@ import com.rdr.roast.domain.BetweenBatchLog
 import com.rdr.roast.domain.ControlEvent
 import com.rdr.roast.domain.ControlEventType
 import com.rdr.roast.domain.EventType
+import com.rdr.roast.domain.ProtocolComment
 import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.RoastEvent
 import com.rdr.roast.domain.TemperatureUnit
@@ -54,11 +55,13 @@ object ProfileStorage {
 
         val bbp = parseBbp(content, mode)
         val controlEvents = parseControlEvents(content, timexList)
+        val comments = parseComments(content, "rdr_comment")
         return RoastProfile(
             timex = timexList,
             temp1 = btList,
             temp2 = etList,
             events = events,
+            comments = comments.toMutableList(),
             controlEvents = controlEvents,
             mode = mode,
             betweenBatchLog = bbp
@@ -141,6 +144,46 @@ object ProfileStorage {
         return result
     }
 
+    private fun parseOptionalDoubleList(content: String, key: String): List<Double?> {
+        val start = indexOfKey(content, key)
+        if (start < 0) return emptyList()
+        val bracket = content.indexOf('[', start)
+        if (bracket < 0) return emptyList()
+        val end = findMatchingBracket(content, bracket)
+        if (end < 0) return emptyList()
+        val inner = content.substring(bracket + 1, end)
+        return inner.split(',').map { token ->
+            val trimmed = token.trim()
+            when {
+                trimmed.isEmpty() -> null
+                trimmed == "None" || trimmed == "null" -> null
+                else -> trimmed.toDoubleOrNull()
+            }
+        }
+    }
+
+    private fun parseComments(content: String, prefix: String): List<ProtocolComment> {
+        val times = parseDoubleList(content, "${prefix}_times")
+        val texts = parseStringList(content, "${prefix}_texts")
+        val temps = parseOptionalDoubleList(content, "${prefix}_temps")
+        val gas = parseOptionalDoubleList(content, "${prefix}_gas")
+        val airflow = parseOptionalDoubleList(content, "${prefix}_airflow")
+        val count = listOf(times.size, texts.size, temps.size, gas.size, airflow.size)
+            .filter { it > 0 }
+            .minOrNull() ?: 0
+        if (count == 0) return emptyList()
+        return (0 until count).map { i ->
+            ProtocolComment(
+                timeSec = times[i],
+                text = texts.getOrElse(i) { "" },
+                tempBT = temps.getOrNull(i),
+                gas = gas.getOrNull(i),
+                airflow = airflow.getOrNull(i)
+            )
+        }.filter { it.text.isNotBlank() || it.gas != null || it.airflow != null }
+            .sortedBy { it.timeSec }
+    }
+
     private fun parseBbp(content: String, mode: TemperatureUnit): BetweenBatchLog? {
         val startMs = parseLong(content, "bbp_start_epoch_ms") ?: return null
         val durationMs = parseLong(content, "bbp_duration_ms") ?: return null
@@ -150,6 +193,7 @@ object ProfileStorage {
         if (timex.isEmpty() || temp1.size != timex.size || temp2.size != timex.size) return null
         val lowestMs = parseLong(content, "bbp_lowest_temp_time_ms")
         val highestMs = parseLong(content, "bbp_highest_temp_time_ms")
+        val comments = parseComments(content, "bbp_comment")
         return BetweenBatchLog(
             startEpochMs = startMs,
             durationMs = durationMs,
@@ -158,7 +202,8 @@ object ProfileStorage {
             temp2 = temp2,
             mode = mode,
             lowestTemperatureTimeMs = lowestMs,
-            highestTemperatureTimeMs = highestMs
+            highestTemperatureTimeMs = highestMs,
+            comments = comments
         )
     }
 
@@ -392,10 +437,14 @@ object ProfileStorage {
                 bbp.lowestTemperatureTimeMs?.let { "'bbp_lowest_temp_time_ms': $it" },
                 bbp.highestTemperatureTimeMs?.let { "'bbp_highest_temp_time_ms': $it" }
             ).joinToString(", ")
+            val comments = formatComments("bbp_comment", bbp.comments)
+            val optSuffix = if (opt.isNotEmpty()) ", $opt" else ""
             ", 'bbp_start_epoch_ms': ${bbp.startEpochMs}, 'bbp_duration_ms': ${bbp.durationMs}, " +
-            "'bbp_timex': $bbpTimex, 'bbp_temp1': $bbpTemp1, 'bbp_temp2': $bbpTemp2" +
-            if (opt.isNotEmpty()) ", $opt" else ""
+                "'bbp_timex': $bbpTimex, 'bbp_temp1': $bbpTemp1, 'bbp_temp2': $bbpTemp2" +
+                optSuffix +
+                comments
         } ?: ""
+        val commentsSuffix = formatComments("rdr_comment", profile.comments)
 
         val specialEventsStr: String
         val specialEventstypeStr: String
@@ -429,6 +478,7 @@ object ProfileStorage {
             "'roastisodate': '$roastisodate', 'roasttime': '$roasttime', " +
             "'specialevents': $specialEventsStr, 'specialeventstype': $specialEventstypeStr, 'specialeventsvalue': $specialEventsvalueStr, 'specialeventsStrings': $specialEventsStringsStr, " +
             "'extratimex': [], 'extratemp1': [], 'extratemp2': []" +
+            commentsSuffix +
             bbpSuffix + "}"
         )
     }
@@ -443,4 +493,22 @@ object ProfileStorage {
 
     private fun formatIntList(list: List<Int>): String =
         "[" + list.joinToString(", ") { it.toString() } + "]"
+
+    private fun formatOptionalDoubleList(list: List<Double?>): String =
+        "[" + list.joinToString(", ") { value ->
+            value?.let { String.format(Locale.US, "%.6f", it) } ?: "None"
+        } + "]"
+
+    private fun formatStringList(list: List<String>): String =
+        "[" + list.joinToString(", ") { value -> "'${value.replace("'", "\\'")}'" } + "]"
+
+    private fun formatComments(prefix: String, comments: List<ProtocolComment>): String {
+        if (comments.isEmpty()) return ""
+        val times = formatTimexList(comments.map { it.timeSec })
+        val texts = formatStringList(comments.map { it.text })
+        val temps = formatOptionalDoubleList(comments.map { it.tempBT })
+        val gas = formatOptionalDoubleList(comments.map { it.gas })
+        val airflow = formatOptionalDoubleList(comments.map { it.airflow })
+        return ", '${prefix}_times': $times, '${prefix}_texts': $texts, '${prefix}_temps': $temps, '${prefix}_gas': $gas, '${prefix}_airflow': $airflow"
+    }
 }

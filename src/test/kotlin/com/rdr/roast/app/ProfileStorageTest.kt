@@ -1,6 +1,8 @@
 package com.rdr.roast.app
 
+import com.rdr.roast.domain.BetweenBatchLog
 import com.rdr.roast.domain.EventType
+import com.rdr.roast.domain.ProtocolComment
 import com.rdr.roast.domain.RoastProfile
 import com.rdr.roast.domain.TemperatureUnit
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -65,6 +67,45 @@ class ProfileStorageTest {
             profile.temp1.zip(reloaded.temp1).forEach { (a, b) -> assertEquals(a, b, 0.01) }
             profile.temp2.zip(reloaded.temp2).forEach { (a, b) -> assertEquals(a, b, 0.01) }
             assertEquals(profile.mode, reloaded.mode)
+        } finally {
+            Files.deleteIfExists(tmp)
+        }
+    }
+
+    @Test
+    fun saveAndReload_roundTrip_preservesBbpComments() {
+        val profile = RoastProfile(
+            timex = mutableListOf(0.0, 10.0, 20.0),
+            temp1 = mutableListOf(180.0, 170.0, 160.0),
+            temp2 = mutableListOf(250.0, 245.0, 240.0),
+            betweenBatchLog = BetweenBatchLog(
+                startEpochMs = 1000L,
+                durationMs = 20_000L,
+                timex = listOf(0.0, 10.0, 20.0),
+                temp1 = listOf(200.0, 180.0, 170.0),
+                temp2 = listOf(300.0, 290.0, 280.0),
+                mode = TemperatureUnit.CELSIUS,
+                lowestTemperatureTimeMs = 20_000L,
+                highestTemperatureTimeMs = 0L,
+                comments = listOf(
+                    ProtocolComment(timeSec = 10.0, text = "BBP note", tempBT = 180.0, gas = 5.0, airflow = 3.0)
+                )
+            )
+        )
+        val tmp = Files.createTempFile("rdr_bbp_", ".alog")
+        try {
+            ProfileStorage.saveProfile(profile, tmp)
+            val content = Files.readString(tmp)
+            assertTrue(content.contains("'bbp_comment_texts': ['BBP note']"))
+            assertTrue(content.contains("'bbp_comment_gas': [5.000000]"))
+            assertTrue(content.contains("'bbp_comment_airflow': [3.000000]"))
+            val reloaded = ProfileStorage.parseAlogContent(content)
+            val bbp = reloaded.betweenBatchLog
+            assertTrue(bbp != null)
+            assertEquals(1, bbp!!.comments.size)
+            assertEquals("BBP note", bbp.comments.first().text)
+            assertEquals(5.0, bbp.comments.first().gas)
+            assertEquals(3.0, bbp.comments.first().airflow)
         } finally {
             Files.deleteIfExists(tmp)
         }
