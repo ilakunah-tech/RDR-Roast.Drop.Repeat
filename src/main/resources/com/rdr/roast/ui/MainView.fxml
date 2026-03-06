@@ -30,7 +30,7 @@
                 </image>
             </ImageView>
             <Label text="RDR – Roast.Drop.Repeat" styleClass="title-bar-label"/>
-            <Button fx:id="btnReference" text="Reference" styleClass="reference-title-btn"/>
+            <Button fx:id="btnReference" text="Reference roast" styleClass="reference-title-btn"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Button fx:id="btnMinimize" styleClass="title-bar-btn" minWidth="32" maxWidth="32" minHeight="32" maxHeight="32"/>
             <Button fx:id="btnMaximize" styleClass="title-bar-btn" minWidth="32" maxWidth="32" minHeight="32" maxHeight="32"/>
@@ -72,35 +72,35 @@
 
             <!-- Right: fixed-width panel (Reference → Comments → Values → Sliders) -->
             <VBox fx:id="rightPanel" styleClass="right-panel"
-                  minWidth="260" prefWidth="260" maxWidth="300" spacing="0">
+                  minWidth="280" prefWidth="280" maxWidth="320" spacing="0">
 
                 <!-- Reference block -->
                 <VBox fx:id="referencePanel" styleClass="reference-panel" spacing="2"
                       visible="false" managed="false">
                     <HBox alignment="CENTER_LEFT" spacing="4">
-                        <Label text="Reference" styleClass="right-panel-header"/>
+                        <Label text="Reference roast" styleClass="right-panel-header"/>
                     </HBox>
-                    <Label fx:id="lblReferenceLabel" text="No reference loaded."
+                    <Label fx:id="lblReferenceLabel" text="No reference roast selected."
                            style="-fx-text-fill: -rdr-text-hint; -fx-font-size: 10px;"/>
                     <VBox fx:id="referenceSummaryBox" spacing="1" visible="false" managed="false">
                         <GridPane hgap="6" vgap="1">
                             <columnConstraints>
-                                <ColumnConstraints minWidth="80" prefWidth="85"/>
+                                <ColumnConstraints minWidth="96" prefWidth="96"/>
                                 <ColumnConstraints hgrow="ALWAYS"/>
                             </columnConstraints>
-                            <Label text="Duration" styleClass="reference-summary-label"
+                            <Label text="Total time" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                             <Label fx:id="lblRefDuration" text="--:--" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                            <Label text="Dev. time" styleClass="reference-summary-label"
+                            <Label text="Development" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                             <Label fx:id="lblRefDevTime" text="--:--" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                            <Label text="Dev. time ratio" styleClass="reference-summary-label"
+                            <Label text="Development %" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                             <Label fx:id="lblRefDevTimeRatio" text="--%" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                            <Label text="End temp" styleClass="reference-summary-label"
+                            <Label text="Drop temp" styleClass="reference-summary-label"
                                    GridPane.columnIndex="0" GridPane.rowIndex="3"/>
                             <Label fx:id="lblRefEndTemp" text="-- °C" styleClass="reference-summary-value"
                                    GridPane.columnIndex="1" GridPane.rowIndex="3"/>
@@ -111,37 +111,37 @@
                 <VBox fx:id="bbpPanel" styleClass="reference-panel" spacing="3"
                       visible="false" managed="false">
                     <HBox alignment="CENTER_LEFT" spacing="4">
-                        <Label text="Between Batch (BBP)" styleClass="right-panel-header"/>
+                        <Label text="Between batch" styleClass="right-panel-header"/>
                     </HBox>
                     <Label fx:id="lblBbpStatus"
-                           text="Recording"
+                           text="Recording between batch data"
                            style="-fx-text-fill: -rdr-text-primary; -fx-font-size: 11px; -fx-font-weight: bold;"/>
                     <Label fx:id="lblBbpReference"
-                           text="No reference BBP"
+                           text="No reference between batch data."
                            style="-fx-text-fill: -rdr-text-hint; -fx-font-size: 10px;"/>
                     <Label fx:id="lblBbpMinBt"
-                           text="Min BT: —"
+                           text="Lowest BT: —"
                            style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 10px;"/>
                     <Label fx:id="lblBbpMaxBt"
-                           text="Max BT: —"
+                           text="Highest BT: —"
                            style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 10px;"/>
                     <Label fx:id="lblBbpHint"
-                           text="Click the chart to add note / gas / airflow."
+                           text="Click the chart to add a comment, gas or airflow."
                            style="-fx-text-fill: -rdr-text-hint; -fx-font-size: 10px; -fx-wrap-text: true;"/>
                 </VBox>
 
                 <!-- Comments block (grows to fill) -->
                 <VBox fx:id="commentsBlock" styleClass="right-panel-section" spacing="2" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="4">
-                        <Label text="Comments" styleClass="comments-header"/>
+                        <Label text="Events &amp; comments" styleClass="comments-header"/>
                         <Region HBox.hgrow="ALWAYS"/>
                         <Button fx:id="btnCommentsSettings" styleClass="title-bar-btn"
                                 style="-fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20;"/>
                     </HBox>
                     <GridPane fx:id="commentsGrid" styleClass="comments-grid" VBox.vgrow="ALWAYS">
                         <columnConstraints>
-                            <ColumnConstraints minWidth="42" prefWidth="42" maxWidth="48"/>
-                            <ColumnConstraints minWidth="50" prefWidth="55" maxWidth="60"/>
+                            <ColumnConstraints minWidth="46" prefWidth="46" maxWidth="50"/>
+                            <ColumnConstraints minWidth="58" prefWidth="64" maxWidth="68"/>
                             <ColumnConstraints hgrow="ALWAYS"/>
                             <ColumnConstraints minWidth="20" prefWidth="20" maxWidth="20"/>
                         </columnConstraints>
@@ -156,7 +156,7 @@
                         <Label fx:id="lblBTValue" text="--.-" styleClass="readout-value-bt"/>
                         <Label fx:id="lblBTUnit" text=" °C" styleClass="readout-unit-bt"/>
                     </HBox>
-                    <Label text="Bean temp." styleClass="readout-label-bt"/>
+                        <Label text="Bean temp" styleClass="readout-label-bt"/>
                     <!-- RoR BT -->
                     <HBox alignment="BASELINE_LEFT" spacing="2">
                         <Label fx:id="lblRoRBTValue" text="--.-" styleClass="readout-ror-value-bt"/>
@@ -169,7 +169,7 @@
                         <Label fx:id="lblETValue" text="--.-" styleClass="readout-value-et"/>
                         <Label fx:id="lblETUnit" text=" °C" styleClass="readout-unit-et"/>
                     </HBox>
-                    <Label text="Exhaust" styleClass="readout-label-et"/>
+                    <Label text="Exhaust temp" styleClass="readout-label-et"/>
                     <!-- RoR ET -->
                     <HBox alignment="BASELINE_LEFT" spacing="2">
                         <Label fx:id="lblRoRETValue" text="--.-" styleClass="readout-ror-value-et"/>
@@ -190,9 +190,9 @@
     <!-- Bottom: player bar -->
     <bottom>
         <VBox styleClass="player-bar">
-            <HBox spacing="16" alignment="CENTER" style="-fx-padding: 6 12;">
+            <HBox spacing="12" alignment="CENTER" style="-fx-padding: 6 12;">
                 <Label fx:id="lblConnectionStatus" text="○ Disconnected"
-                       style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 11px; -fx-min-width: 140;"/>
+                       style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 11px; -fx-min-width: 120;"/>
                 <Label fx:id="lblPlayerBarTitle" text=""
                        style="-fx-text-fill: -rdr-text-secondary; -fx-font-size: 11px;"
                        visible="false" managed="false"/>
@@ -200,10 +200,10 @@
                         style="-fx-min-width: 32; -fx-min-height: 32; -fx-max-width: 32; -fx-max-height: 32;"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Button fx:id="btnAbort" text="Abort" disable="true"/>
-                <Button fx:id="btnRestartBbp" text="Restart" visible="false" managed="false"/>
-                <Button fx:id="btnStopBbp" text="Stop BBP" visible="false" managed="false"/>
-                <Button fx:id="btnStart" text="Start"/>
-                <Label fx:id="lblDuration" text="Pre-heat"
+                <Button fx:id="btnRestartBbp" text="Restart recording" visible="false" managed="false"/>
+                <Button fx:id="btnStopBbp" text="Stop recording" visible="false" managed="false"/>
+                <Button fx:id="btnStart" text="Start roast"/>
+                <Label fx:id="lblDuration" text="Preheat"
                        style="-fx-text-fill: -rdr-text-primary; -fx-font-size: 22; -fx-font-weight: bold;"/>
                 <Button fx:id="btnStop" text="Stop" disable="true"/>
             </HBox>

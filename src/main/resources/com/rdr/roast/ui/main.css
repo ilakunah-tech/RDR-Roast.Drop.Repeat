@@ -12,7 +12,7 @@
     -rdr-text-hint:      #9CA3AF;
     -rdr-border:         #E5E7EB;
     -rdr-title-bar:      -rdr-bg;
-    -rdr-radius:         12px;
+    -rdr-radius:         8px;
     -rdr-panel-bg:       #F7F8FA;
     -rdr-sidebar-bg:     #1A1A2E;
     -rdr-sidebar-icon:   rgba(255,255,255,0.7);
@@ -41,7 +41,7 @@
     -fx-min-width: 52px;
     -fx-pref-width: 52px;
     -fx-background-color: -rdr-sidebar-bg;
-    -fx-background-radius: 0 16 16 0;
+    -fx-background-radius: 0 10 10 0;
     -fx-spacing: 4;
 }
 
@@ -100,7 +100,7 @@
     -fx-max-width: 32px;
     -fx-min-height: 32px;
     -fx-max-height: 32px;
-    -fx-background-radius: 8;
+    -fx-background-radius: 4;
 }
 
 .title-bar-btn:hover {
@@ -117,12 +117,12 @@
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-padding: 4 10;
-    -fx-min-width: 86px;
-    -fx-pref-width: 86px;
-    -fx-max-width: 86px;
+    -fx-min-width: 118px;
+    -fx-pref-width: 118px;
+    -fx-max-width: 118px;
     -fx-min-height: 28px;
     -fx-pref-height: 28px;
-    -fx-background-radius: 8;
+    -fx-background-radius: 6;
     -fx-cursor: hand;
 }
 
@@ -158,7 +158,7 @@
 }
 
 .right-panel-section {
-    -fx-padding: 8 10;
+    -fx-padding: 6 10;
     -fx-border-color: -rdr-border;
     -fx-border-width: 0 0 1 0;
 }
@@ -173,7 +173,7 @@
 /* Reference panel */
 .reference-panel {
     -fx-background-color: transparent;
-    -fx-padding: 8 10;
+    -fx-padding: 6 10;
     -fx-border-color: -rdr-border;
     -fx-border-width: 0 0 1 0;
 }
@@ -373,7 +373,7 @@
 
 .player-bar .button {
     -fx-border-width: 0;
-    -fx-padding: 6px 16px;
+    -fx-padding: 6px 12px;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
@@ -384,7 +384,7 @@
 
 .button {
     -fx-cursor: hand;
-    -fx-padding: 8px 16px;
+    -fx-padding: 6px 12px;
     -fx-font-size: 13px;
     -fx-background-radius: -rdr-radius;
     -fx-border-radius: -rdr-radius;
@@ -399,8 +399,8 @@
 .text-field, .combo-box {
     -fx-background-color: -rdr-bg;
     -fx-border-color: -rdr-border;
-    -fx-background-radius: 8;
-    -fx-border-radius: 8;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
 }
 
 .text-field:focused, .combo-box:focused {

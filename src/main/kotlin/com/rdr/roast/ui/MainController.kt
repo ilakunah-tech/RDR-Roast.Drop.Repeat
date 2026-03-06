@@ -223,7 +223,7 @@ class MainController {
             }
         }
 
-        // Elapsed-time label: from Charge (00:00) after C, or "Pre-heat" before; in BBP show BBP timer
+        // Elapsed-time label: from Charge (00:00) after C, or "Preheat" before; in BBP show BBP timer
         scope.launch {
             kotlinx.coroutines.flow.combine(
                 recorder.stateFlow,
@@ -253,7 +253,7 @@ class MainController {
                                 val s = (fromCharge % 60).toInt()
                                 "%02d:%02d".format(m, s)
                             } else {
-                                "Pre-heat"
+                                "Preheat"
                             }
                         }
                     }
@@ -468,9 +468,9 @@ class MainController {
                 val label = when (event.type) {
                     EventType.CHARGE -> "Charge"
                     EventType.TP -> "Turning point"
-                    EventType.CC -> "Color change"
+                    EventType.CC -> "Dry end"
                     EventType.FC -> "First crack"
-                    EventType.DROP -> "End"
+                    EventType.DROP -> "Drop"
                 }
                 CommentEntry(event.timeSec, event.tempBT, label)
             }
@@ -486,7 +486,7 @@ class MainController {
     private fun formatCommentEntry(comment: ProtocolComment): String {
         val parts = mutableListOf<String>()
         comment.gas?.let { parts += "Gas ${formatNumeric(it)}" }
-        comment.airflow?.let { parts += "Air ${formatNumeric(it)}" }
+        comment.airflow?.let { parts += "Airflow ${formatNumeric(it)}" }
         comment.text.takeIf { it.isNotBlank() }?.let { parts += it }
         return parts.joinToString(" · ").ifBlank { "Comment" }
     }
@@ -502,10 +502,10 @@ class MainController {
     private fun buildCommentMarkerLabel(comment: ChartPopupCommentResult, displayTimeMs: Long): String {
         val parts = mutableListOf<String>()
         comment.gas?.let { parts += "Gas ${formatNumeric(it)}" }
-        comment.airflow?.let { parts += "Air ${formatNumeric(it)}" }
+        comment.airflow?.let { parts += "Airflow ${formatNumeric(it)}" }
         comment.text.takeIf { it.isNotBlank() }?.let { parts += it }
         val suffix = parts.joinToString(" · ").ifBlank { "Comment" }
-        return "Note @ ${formatSec(displayTimeMs / 1000.0)} · $suffix"
+        return "Comment @ ${formatSec(displayTimeMs / 1000.0)} · $suffix"
     }
 
     private fun updateBbpPanel() {
@@ -518,31 +518,31 @@ class MainController {
         val session = recorder.currentBbpSession
         val referenceHasBbp = referenceProfile?.betweenBatchLog != null
         lblBbpStatus.text = if (session?.isStopped() == true) {
-            "Stopped - waiting for next Start"
+            "Stopped. Click Start roast to continue."
         } else {
-            "Recording"
+            "Recording between batch data"
         }
         lblBbpReference.text = if (referenceHasBbp) {
-            "Reference BBP shown in background."
+            "Reference between batch shown."
         } else {
-            "No reference BBP loaded."
+            "No reference between batch data."
         }
         if (session != null && session.temp1.isNotEmpty()) {
             val lowIdx = session.temp1.indices.minByOrNull { session.temp1[it] }
             val highIdx = session.temp1.indices.maxByOrNull { session.temp1[it] }
             val lowText = lowIdx?.let { idx ->
-                "Min BT: %.1f °C @ %s".format(session.temp1[idx], formatSec(session.timex.getOrElse(idx) { 0.0 }))
-            } ?: "Min BT: —"
+                "Lowest BT: %.1f °C @ %s".format(session.temp1[idx], formatSec(session.timex.getOrElse(idx) { 0.0 }))
+            } ?: "Lowest BT: —"
             val highText = highIdx?.let { idx ->
-                "Max BT: %.1f °C @ %s".format(session.temp1[idx], formatSec(session.timex.getOrElse(idx) { 0.0 }))
-            } ?: "Max BT: —"
+                "Highest BT: %.1f °C @ %s".format(session.temp1[idx], formatSec(session.timex.getOrElse(idx) { 0.0 }))
+            } ?: "Highest BT: —"
             lblBbpMinBt.text = lowText
             lblBbpMaxBt.text = highText
         } else {
-            lblBbpMinBt.text = "Min BT: —"
-            lblBbpMaxBt.text = "Max BT: —"
+            lblBbpMinBt.text = "Lowest BT: —"
+            lblBbpMaxBt.text = "Highest BT: —"
         }
-        lblBbpHint.text = "Click the chart to add note / gas / airflow."
+        lblBbpHint.text = "Click the chart to add a comment, gas or airflow."
     }
 
     private fun clearChartAndBbpState() {
@@ -659,10 +659,10 @@ class MainController {
     private fun updateConnectionStatus(state: ConnectionState) {
         if (!::lblConnectionStatus.isInitialized) return
         val (text, style) = when (state) {
-            is ConnectionState.Disconnected -> "○ Отключено" to "-fx-text-fill: #888888; -fx-font-size: 12px; -fx-min-width: 160;"
-            is ConnectionState.Connecting -> "⟳ Подключение…" to "-fx-text-fill: #e67e22; -fx-font-size: 12px; -fx-min-width: 160;"
-            is ConnectionState.Connected -> "● ${state.deviceName}" to "-fx-text-fill: #27ae60; -fx-font-size: 12px; -fx-min-width: 160;"
-            is ConnectionState.Error -> "⚠ ${state.message.take(40)}${if (state.message.length > 40) "…" else ""}" to "-fx-text-fill: #c0392b; -fx-font-size: 12px; -fx-min-width: 160;"
+            is ConnectionState.Disconnected -> "○ Disconnected" to "-fx-text-fill: #888888; -fx-font-size: 12px; -fx-min-width: 140;"
+            is ConnectionState.Connecting -> "⟳ Connecting..." to "-fx-text-fill: #e67e22; -fx-font-size: 12px; -fx-min-width: 140;"
+            is ConnectionState.Connected -> "● ${state.deviceName}" to "-fx-text-fill: #27ae60; -fx-font-size: 12px; -fx-min-width: 140;"
+            is ConnectionState.Error -> "⚠ ${state.message.take(40)}${if (state.message.length > 40) "..." else ""}" to "-fx-text-fill: #c0392b; -fx-font-size: 12px; -fx-min-width: 140;"
         }
         lblConnectionStatus.text = text
         lblConnectionStatus.style = style
@@ -781,7 +781,7 @@ class MainController {
                     shouldAutoStartAfterConnect = false
                     recorder.startRecording()
                 }
-                btnStart.text = "Start"
+                btnStart.text = "Start roast"
                 btnStart.isDisable = false
                 btnStop.isDisable = true
                 btnAbort.isDisable = true
@@ -794,7 +794,7 @@ class MainController {
                 setBbpButtonsVisible(false)
             }
             RecorderState.STOPPED -> {
-                btnStart.text = "New Roast"
+                btnStart.text = "Start new roast"
                 btnStart.isDisable = false
                 btnStop.isDisable = true
                 btnAbort.isDisable = true
@@ -802,7 +802,7 @@ class MainController {
             }
             RecorderState.BBP -> {
                 curveChart.showBbpMode()
-                btnStart.text = "Start"
+                btnStart.text = "Start roast"
                 btnStart.isDisable = false
                 btnStop.isDisable = true
                 btnAbort.isDisable = true
@@ -850,11 +850,11 @@ class MainController {
 
         if (::btnRestartBbp.isInitialized) {
             btnRestartBbp.setOnAction { recorder.restartBbp() }
-            btnRestartBbp.tooltip = Tooltip("Restart BBP recording (15 min limit)")
+            btnRestartBbp.tooltip = Tooltip("Restart recording. Only the last 15 minutes are kept.")
         }
         if (::btnStopBbp.isInitialized) {
             btnStopBbp.setOnAction { recorder.stopBbpRecording() }
-            btnStopBbp.tooltip = Tooltip("Stop BBP recording (data kept until Start)")
+            btnStopBbp.tooltip = Tooltip("Stop recording. Data is kept until the next roast starts.")
         }
 
         btnStop.setOnAction {
@@ -1091,14 +1091,14 @@ class MainController {
     }
 
     private fun setupReferenceButton() {
-        val loadFile = MenuItem("Load from file...")
-        val fromServer = MenuItem("From server...")
-        val clearRef = MenuItem("Clear reference")
+        val loadFile = MenuItem("Load reference file...")
+        val fromServer = MenuItem("Load from server...")
+        val clearRef = MenuItem("Clear reference roast")
         loadFile.setOnAction { loadReferenceFromFile() }
         fromServer.setOnAction { loadReferenceFromServer() }
         clearRef.setOnAction { clearReference() }
         val menu = ContextMenu(loadFile, fromServer, clearRef)
-        btnReference.tooltip = Tooltip("Load or clear reference roast")
+        btnReference.tooltip = Tooltip("Load, change or clear reference roast")
         btnReference.setOnAction {
             val bounds = btnReference.localToScreen(btnReference.layoutBounds)
             menu.show(btnReference, bounds.minX, bounds.minY + bounds.height)
@@ -1107,7 +1107,7 @@ class MainController {
 
     private fun loadReferenceFromFile() {
         val chooser = FileChooser().apply {
-            title = "Load reference profile"
+            title = "Load reference roast"
             extensionFilters.add(FileChooser.ExtensionFilter("Artisan profile", "*.alog"))
         }
         val file = chooser.showOpenDialog(btnReference.scene?.window)
@@ -1151,7 +1151,7 @@ class MainController {
                 if (items.isEmpty()) {
                     Alert(Alert.AlertType.INFORMATION).apply {
                         title = "No references"
-                        headerText = "No reference profiles found"
+                        headerText = "No reference roasts found"
                         contentText = "Upload reference roasts on the server or check the URL and token."
                     }.showAndWait()
                     return@runLater
@@ -1164,7 +1164,7 @@ class MainController {
                     prefWidth = 360.0
                 }
                 val stage = Stage().apply {
-                    title = "Select reference"
+                    title = "Select reference roast"
                     scene = Scene(listView, 360.0, 280.0)
                     initModality(Modality.APPLICATION_MODAL)
                     initOwner(btnReference.scene?.window)
@@ -1194,7 +1194,7 @@ class MainController {
             }
             Platform.runLater {
                 if (profile != null) {
-                    setReference(profile, "Server: $roastId")
+                    setReference(profile, "Server reference: $roastId")
                 } else {
                     Alert(Alert.AlertType.ERROR).apply {
                         title = "Load failed"
@@ -1209,7 +1209,7 @@ class MainController {
     private fun clearReference() {
         referenceProfile = null
         referenceLabel = null
-        if (::lblReferenceLabel.isInitialized) lblReferenceLabel.text = "No reference loaded."
+        if (::lblReferenceLabel.isInitialized) lblReferenceLabel.text = "No reference roast selected."
         if (::referencePanel.isInitialized) {
             referencePanel.isVisible = false
             referencePanel.isManaged = false

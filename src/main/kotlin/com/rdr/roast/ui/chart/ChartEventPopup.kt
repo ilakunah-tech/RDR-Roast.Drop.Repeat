@@ -6,7 +6,6 @@ import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.control.Separator
 import javafx.scene.control.TextField
-import javafx.scene.layout.GridPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
@@ -47,9 +46,9 @@ class ChartEventPopup(
         val mmss = formatTime(timeMs)
 
         val root = VBox(8.0).apply {
-            padding = Insets(12.0, 14.0, 12.0, 14.0)
-            minWidth = 250.0
-            maxWidth = 320.0
+            padding = Insets(10.0, 12.0, 10.0, 12.0)
+            minWidth = 220.0
+            maxWidth = 300.0
             style = """
                 -fx-background-color: white;
                 -fx-border-color: #c0c0c0;
@@ -59,7 +58,7 @@ class ChartEventPopup(
             """.trimIndent()
         }
 
-        val lblAt = Label(if (mode == ChartPopupMode.BBP) "BBP comment at:" else "Comment at:").apply {
+        val lblAt = Label(if (mode == ChartPopupMode.BBP) "Between batch comment at" else "Comment at").apply {
             style = "-fx-font-size: 11px; -fx-text-fill: #888;"
         }
         val lblTime = Label(mmss).apply { style = "-fx-font-size: 14px; -fx-font-weight: bold;" }
@@ -77,7 +76,7 @@ class ChartEventPopup(
             ChartPopupMode.BBP -> buildBbpContent(root)
         }
 
-        val btnClose = Button("Close").apply {
+        val btnClose = Button("Cancel").apply {
             maxWidth = Double.MAX_VALUE
             style = secondaryButtonStyle()
             setOnAction { hide() }
@@ -87,8 +86,8 @@ class ChartEventPopup(
     }
 
     private fun buildRoastContent(root: VBox, mmss: String) {
-        val grid = GridPane().apply { hgap = 6.0; vgap = 5.0 }
-        val btnDE = Button("DE").apply {
+        val actions = VBox(6.0)
+        val btnDE = Button("Dry end").apply {
             maxWidth = Double.MAX_VALUE
             style = greenButtonStyle()
             setOnAction {
@@ -96,7 +95,7 @@ class ChartEventPopup(
                 hide()
             }
         }
-        val btnFC = Button("FC").apply {
+        val btnFC = Button("First crack").apply {
             maxWidth = Double.MAX_VALUE
             style = greenButtonStyle()
             setOnAction {
@@ -104,16 +103,15 @@ class ChartEventPopup(
                 hide()
             }
         }
-        grid.add(btnDE, 0, 0)
-        grid.add(btnFC, 1, 0)
-        root.children += grid
+        actions.children.addAll(btnDE, btnFC)
+        root.children += actions
         root.children += Separator()
 
         val txtComment = TextField().apply {
-            promptText = "Custom comment..."
+            promptText = "Comment"
             style = "-fx-font-size: 11px;"
         }
-        val btnAdd = Button("Add").apply {
+        val btnAdd = Button("Add comment").apply {
             style = primaryButtonStyle()
             setOnAction {
                 val txt = txtComment.text.trim()
@@ -145,10 +143,10 @@ class ChartEventPopup(
         }
 
         val txtComment = TextField().apply {
-            promptText = "Note..."
+            promptText = "Comment"
             style = "-fx-font-size: 11px;"
         }
-        val btnAdd = Button("Text comment").apply {
+        val btnAdd = Button("Add comment").apply {
             style = primaryButtonStyle()
             setOnAction {
                 val gas = txtGas.text.trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()
