@@ -1,0 +1,46 @@
+---
+description: Multi-agent orchestration workflow — Planner → Reference Researcher → Implementer → Reviewer → Tester. Trigger with /orchestrate or @orchestration.
+alwaysApply: false
+---
+
+# Orchestration Workflow
+
+Use this rule when the user says **orchestrate**, **/orchestrate**, or asks to run the full multi-agent workflow.
+
+## Workflow order (strict)
+
+1. **Planner** — restate task, break into 3–7 steps, list files, risks, acceptance criteria.
+2. **Reference Researcher** — inspect `C:\Users\ilaku\Downloads\1_extracted` and `D:\project\Projects\artisantest-master`; follow `.cursor/rules/reference-cropster.mdc`; return paths and mirror/adapt/do-not-copy guidance.
+3. **Implementer** — implement only after Planner and Reference Researcher outputs; keep changes scoped; follow project rules.
+4. **Reviewer** — check plan compliance, reference alignment, correctness, edge cases, consistency.
+5. **Tester** — run `./gradlew build -x test` and `./gradlew test`; report Compile/Build/Tests status factually.
+
+## Orchestrator coordination
+
+- No implementation before planning and reference research are complete.
+- If Reviewer fails → back to Implementer once.
+- If Tester fails → back to Implementer with exact failure details.
+- Produce final status: `done` | `blocked` | `needs review`.
+
+## Final summary (required)
+
+After all steps, produce:
+
+- **Summary**: One-paragraph description.
+- **Files changed**: List of paths.
+- **Review issues**: Critical/warning items or "none".
+- **Test status**: Pass/Fail with details.
+- **Remaining risks**: Known limitations or follow-ups.
+
+## Dependencies
+
+- **Reference Researcher** must use `.cursor/rules/reference-cropster.mdc` as a hard rule.
+- **Implementer** must use Planner and Reference Researcher output; follow project-stack, kotlin-java, javafx-ui, hardware-drivers, tests rules.
+- **Reviewer** checks against plan and reference guidance.
+- **Tester** reports facts only; no production code changes unless asked.
+
+## How to trigger
+
+- Type `/orchestrate` (if your Cursor setup supports custom slash commands)
+- Or reference this rule: `@orchestration` / `@orchestration.mdc`
+- Or say: "Run the orchestration workflow for [task]"

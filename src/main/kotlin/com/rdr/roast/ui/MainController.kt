@@ -17,6 +17,7 @@ import com.rdr.roast.app.CustomButtonConfig
 import com.rdr.roast.app.RoastRecorder
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.app.EventQuantifiersConfig
+import com.rdr.roast.app.SliderPanelLayoutMode
 import com.rdr.roast.domain.ControlEventType
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
@@ -33,6 +34,8 @@ import com.rdr.roast.driver.ControlSpec
 import com.rdr.roast.driver.simulator.SimulatorSource
 import com.rdr.roast.ui.chart.ChartPanelFx
 import com.rdr.roast.ui.chart.CurveChartFx
+import com.rdr.roast.ui.control.ControlSliderPanel
+import com.rdr.roast.ui.control.DetachableSliderWindow
 import javafx.application.Platform
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
@@ -61,10 +64,13 @@ import javafx.scene.control.ToggleButton
 import javafx.scene.control.ToggleGroup
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
+import javafx.animation.FadeTransition
+import javafx.animation.ParallelTransition
 import javafx.animation.TranslateTransition
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
+import javafx.scene.layout.Region
 import javafx.scene.layout.StackPane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
@@ -72,9 +78,9 @@ import javafx.scene.shape.Rectangle
 import javafx.stage.FileChooser
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid
 import org.kordamp.ikonli.javafx.FontIcon
-import javafx.util.Duration
 import javafx.stage.Modality
 import javafx.stage.Stage
+import javafx.util.Duration
 import javafx.stage.WindowEvent
 import javafx.scene.input.Clipboard
 import javafx.scene.input.ClipboardContent
@@ -118,9 +124,8 @@ class MainController {
     @FXML lateinit var btnShortcuts: Button
     @FXML lateinit var btnSettings: Button
     @FXML lateinit var centerSplit: SplitPane
-    @FXML lateinit var rightPanel: VBox
+    @FXML lateinit var rightPanel: HBox
     @FXML lateinit var sidebarPanelContainer: StackPane
-    @FXML lateinit var btnSidebarSystem: ToggleButton
     @FXML lateinit var btnSidebarPlan: ToggleButton
     @FXML lateinit var btnSidebarProduction: ToggleButton
     @FXML lateinit var btnSidebarSupport: ToggleButton
@@ -140,10 +145,13 @@ class MainController {
         val bt: Double?,
         val value: String?
     )
-    @FXML lateinit var controlPanelContainer: VBox
+    @FXML lateinit var centerHBox: HBox
+    @FXML lateinit var sliderDrawerPanel: VBox
+    @FXML lateinit var btnShowSliders: Button
     @FXML lateinit var customButtonsPanel: VBox
     @FXML lateinit var commentsBlock: VBox
-    @FXML lateinit var commentsGrid: javafx.scene.layout.GridPane
+    @FXML lateinit var commentsListView: ListView<*>
+    @FXML lateinit var btnCommentsCollapse: Button
     @FXML lateinit var btnCommentsSettings: Button
     @FXML lateinit var titleBar: HBox
     @FXML lateinit var btnMinimize: Button
@@ -166,6 +174,7 @@ class MainController {
     private var refCommentsSortMode: RefCommentsSortMode = RefCommentsSortMode.TIME
     private var showRefCommentTime: Boolean = true
     private var showRefCommentValue: Boolean = true
+    private var referenceCommentsCollapsed: Boolean = false
 
     /** Current reference/background profile (from file or server). Null = none. */
     private var referenceProfile: RoastProfile? = null
@@ -194,6 +203,10 @@ class MainController {
     private var shouldAutoStartAfterConnect = false
     private var connectionStateJob: Job? = null
     private val controlDebounceJobs = mutableMapOf<String, Job>()
+    private var sliderPanelVisible: Boolean = true
+    private var detachableSliderWindow: DetachableSliderWindow? = null
+    private var currentSliderPanel: ControlSliderPanel? = null
+    private var lastConnectionState: ConnectionState? = null
 
     @FXML
     fun initialize() {
@@ -268,6 +281,10 @@ class MainController {
         setupButtonHandlers()
         setupSettingsButton()
         setupReferenceButton()
+        if (::btnShowSliders.isInitialized) {
+            btnShowSliders.setOnAction { toggleSliderPanelVisibility() }
+            btnShowSliders.tooltip = Tooltip("Show/hide control sliders")
+        }
         updateAuthUi()
         btnShortcuts.setOnAction { showShortcutsHelp() }
         setupSpaceHotkey()
@@ -305,6 +322,93 @@ class MainController {
         if (::btnCommentsSettings.isInitialized) {
             btnCommentsSettings.graphic = FontIcon(FontAwesomeSolid.COG).apply { iconSize = 10 }
             btnCommentsSettings.setOnAction { openReferenceCommentsMenu() }
+        }
+        if (::btnCommentsCollapse.isInitialized && ::commentsListView.isInitialized) {
+            referenceCommentsCollapsed = SettingsManager.load().referenceCommentsCollapsed
+            updateCommentsCollapseState()
+            btnCommentsCollapse.graphic = iconForCommentsCollapse()
+            btnCommentsCollapse.tooltip = Tooltip(if (referenceCommentsCollapsed) "Expand" else "Collapse")
+            btnCommentsCollapse.setOnAction {
+                referenceCommentsCollapsed = !referenceCommentsCollapsed
+                updateCommentsCollapseState()
+                btnCommentsCollapse.graphic = iconForCommentsCollapse()
+                btnCommentsCollapse.tooltip = Tooltip(if (referenceCommentsCollapsed) "Expand" else "Collapse")
+                val s = SettingsManager.load()
+                SettingsManager.save(s.copy(referenceCommentsCollapsed = referenceCommentsCollapsed))
+            }
+            setupCommentsListView()
+        }
+    }
+
+    private fun iconForCommentsCollapse() = FontIcon(
+        if (referenceCommentsCollapsed) FontAwesomeSolid.CHEVRON_DOWN else FontAwesomeSolid.CHEVRON_UP
+    ).apply { iconSize = 10 }
+
+    private fun updateCommentsCollapseState() {
+        if (::commentsListView.isInitialized) {
+            commentsListView.isVisible = !referenceCommentsCollapsed
+            commentsListView.isManaged = !referenceCommentsCollapsed
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun commentsList(): ListView<RefCommentEntry> = commentsListView as ListView<RefCommentEntry>
+
+    private fun setupCommentsListView() {
+        val list = commentsList()
+        list.placeholder = Label("No reference loaded.").apply {
+            styleClass.add("comments-placeholder")
+        }
+        list.setCellFactory {
+            object : javafx.scene.control.ListCell<RefCommentEntry>() {
+                override fun updateItem(item: RefCommentEntry?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    if (item == null || empty) {
+                        graphic = null
+                        text = null
+                        styleClass.removeAll("ref-comment-card", "selected")
+                    } else {
+                        graphic = buildRefCommentCard(item)
+                        text = null
+                        setOnMouseClicked { _ ->
+                            list.selectionModel.select(item)
+                        }
+                    }
+                }
+            }
+        }
+        list.selectionModel.selectionMode = SelectionMode.SINGLE
+    }
+
+    private fun buildRefCommentCard(row: RefCommentEntry): HBox {
+        val timeText = when {
+            !showRefCommentTime -> ""
+            refCommentsSortMode == RefCommentsSortMode.BT -> row.bt?.let { "%.1f °C".format(it) } ?: "--"
+            else -> row.timeSec?.let { formatSec(it) } ?: "--:--"
+        }
+        val btText = row.bt?.let { "%.1f °C".format(it) } ?: ""
+        val valueText = if (showRefCommentValue) (row.value?.let { "$it%" } ?: "") else ""
+        val kindLabel = when (row.kind) {
+            "TP" -> "Turnin.."
+            "DE" -> "Color ch.."
+            "FC" -> "First cr.."
+            else -> row.kind.take(10) + if (row.kind.length > 10) ".." else ""
+        }
+        val icon = when (row.kind) {
+            "GAS" -> FontIcon(FontAwesomeSolid.FIRE)
+            "AIR" -> FontIcon(FontAwesomeSolid.FAN)
+            "DRUM" -> FontIcon(FontAwesomeSolid.COG)
+            "DAMPER" -> FontIcon(FontAwesomeSolid.SLIDERS_H)
+            else -> FontIcon(FontAwesomeSolid.COFFEE)
+        }.apply { iconSize = 12; styleClass.add("ref-comment-icon") }
+        val timeLabel = Label(timeText).apply { styleClass.add("ref-comment-time") }
+        val tempLabel = Label(btText).apply { styleClass.add("ref-comment-temp") }
+        val valueLabel = Label(valueText).apply { styleClass.add("ref-comment-value") }
+        val kindLabelNode = Label(kindLabel).apply { styleClass.add("ref-comment-kind") }
+        return HBox(4.0, icon, timeLabel, tempLabel, valueLabel, kindLabelNode).apply {
+            alignment = Pos.CENTER_LEFT
+            styleClass.add("ref-comment-card")
+            padding = Insets(4.0, 6.0, 4.0, 6.0)
         }
     }
 
@@ -367,6 +471,8 @@ class MainController {
     private fun updatePhaseStrip() {
         val profile = recorder.currentProfile.value
         if (profile.timex.isEmpty()) return
+        // Не строим live phase strip, пока нет события CHARGE — до этого показывается только reference-полоса.
+        if (profile.eventByType(EventType.CHARGE) == null) return
         if (recorder.stateFlow.value == RecorderState.RECORDING && profile.betweenBatchLog != null && !bbpAnnotationSetForCurrentRoast) {
             curveChart.setBetweenBatchAnnotation(profile.betweenBatchLog!!.durationMs)
             bbpAnnotationSetForCurrentRoast = true
@@ -450,126 +556,190 @@ class MainController {
     }
 
     private fun updateConnectionStatus(state: ConnectionState) {
+        lastConnectionState = state
         updateControlPanel(state, recorder.dataSource)
     }
 
+    private val sliderDrawerWidth = 220.0
+
+    /** Slider drawer is shown/hidden by width and visibility only (no overlay or TranslateTransition). */
+    private fun showDrawer() {
+        if (!::sliderDrawerPanel.isInitialized) return
+        sliderDrawerPanel.prefWidth = sliderDrawerWidth
+        sliderDrawerPanel.minWidth = sliderDrawerWidth
+        sliderDrawerPanel.isVisible = true
+        sliderDrawerPanel.isManaged = true
+    }
+
+    private fun hideDrawer() {
+        if (!::sliderDrawerPanel.isInitialized) return
+        sliderDrawerPanel.prefWidth = 0.0
+        sliderDrawerPanel.minWidth = 0.0
+        sliderDrawerPanel.isVisible = false
+        sliderDrawerPanel.isManaged = false
+    }
+
     private fun updateControlPanel(state: ConnectionState, source: com.rdr.roast.driver.RoastDataSource) {
-        if (!::controlPanelContainer.isInitialized) return
+        if (!::sliderDrawerPanel.isInitialized) return
         controlDebounceJobs.values.forEach { it.cancel() }
         controlDebounceJobs.clear()
-        controlPanelContainer.children.clear()
+        sliderDrawerPanel.children.clear()
+        currentSliderPanel = null
         val showControls = state is ConnectionState.Connected &&
             source is RoastControl &&
             source.supportsControl()
-        controlPanelContainer.isVisible = showControls
-        controlPanelContainer.isManaged = showControls
-        if (!showControls) return
+        if (!showControls) {
+            detachableSliderWindow?.hideWindow()
+            hideDrawer()
+            if (::btnShowSliders.isInitialized) btnShowSliders.isVisible = false
+            return
+        }
+        if (::btnShowSliders.isInitialized) {
+            btnShowSliders.isVisible = true
+            btnShowSliders.isManaged = true
+        }
         val control = source as RoastControl
         val sliderSpecs = control.controlSpecs().filter { it.type == ControlSpec.ControlType.SLIDER }
-        if (sliderSpecs.isEmpty()) return
-        val stepConfig = SettingsManager.load().sliderStepConfig
-        val eventQuantifiers: EventQuantifiersConfig = SettingsManager.load().eventQuantifiers
-        fun specToEventType(spec: ControlSpec): ControlEventType = when {
-            spec.id.contains("gas", ignoreCase = true) || spec.displayName.contains("gas", ignoreCase = true) -> ControlEventType.GAS
-            spec.id.contains("air", ignoreCase = true) || spec.displayName.contains("air", ignoreCase = true) -> ControlEventType.AIR
-            spec.id.contains("drum", ignoreCase = true) || spec.displayName.contains("drum", ignoreCase = true) -> ControlEventType.DRUM
-            spec.id.contains("damper", ignoreCase = true) || spec.displayName.contains("damper", ignoreCase = true) -> ControlEventType.DAMPER
-            else -> ControlEventType.GAS
+        if (sliderSpecs.isEmpty()) {
+            hideDrawer()
+            return
         }
-        val slidersRow = HBox(8.0).apply {
-            alignment = Pos.TOP_CENTER
-            HBox.setHgrow(this, Priority.ALWAYS)
-        }
-        for (spec in sliderSpecs) {
-            val eventType = specToEventType(spec)
-            val q = eventQuantifiers.get(eventType)
-            val rangeMin = q.min.toDouble().coerceIn(spec.min, spec.max)
-            val rangeMax = q.max.toDouble().coerceIn(spec.min, spec.max)
-            val effectiveMin = minOf(rangeMin, rangeMax)
-            val effectiveMax = maxOf(rangeMin, rangeMax)
-            val step = q.step.coerceIn(0.1, (effectiveMax - effectiveMin).coerceAtLeast(1.0))
-            val sliderKind = when (eventType) {
-                ControlEventType.GAS -> "gas"
-                ControlEventType.AIR -> "air"
-                ControlEventType.DRUM -> "drum"
-                ControlEventType.DAMPER -> "generic"
-            }
-            val slider = Slider(effectiveMin, effectiveMax, effectiveMin).apply {
-                orientation = Orientation.VERTICAL
-                prefHeight = 120.0
-                minHeight = 80.0
-                blockIncrement = step
-                isShowTickLabels = false
-                styleClass.add("slider-vertical")
-                styleClass.add("slider-vertical-$sliderKind")
-            }
-            val rangeHint = when (q.source.name) {
-                "ET" -> " (source: ET)"
-                "BT" -> " (source: BT)"
-                else -> ""
-            }
-            val valueField = TextField().apply {
-                text = formatControlValue(slider.value)
-                alignment = Pos.CENTER
-                styleClass.add("control-value-field")
-                tooltip = Tooltip("${effectiveMin.toInt()} – ${effectiveMax.toInt()} ${spec.unit}$rangeHint")
-            }
-            fun applyFieldValue() {
-                val parsed = valueField.text.replace(',', '.').toDoubleOrNull() ?: return
-                val clamped = parsed.coerceIn(effectiveMin, effectiveMax)
-                slider.value = clamped
-                valueField.text = formatControlValue(clamped)
-            }
-            valueField.setOnAction { applyFieldValue() }
-            valueField.focusedProperty().addListener { _, _, f -> if (!f) applyFieldValue() }
-            slider.valueProperty().addListener { _, _, newVal ->
-                if (!valueField.isFocused) valueField.text = formatControlValue(newVal.toDouble())
-                controlDebounceJobs[spec.id]?.cancel()
-                controlDebounceJobs[spec.id] = scope.launch {
-                    delay(1000L)
-                    controlDebounceJobs.remove(spec.id)
-                    control.setControl(spec.id, newVal.toDouble())
+        val settings = SettingsManager.load()
+        val eventQuantifiers = settings.eventQuantifiers
+        val layoutMode = settings.sliderPanelLayoutMode
+        val sliderStepConfig = settings.sliderStepConfig
+        val panel = ControlSliderPanel(
+            control = control,
+            eventQuantifiers = eventQuantifiers,
+            layoutMode = layoutMode,
+            sliderStepConfig = sliderStepConfig,
+            onValueChanged = { specId, value, eventType, displayString ->
+                val timeAtAction = when (recorder.stateFlow.value) {
+                    RecorderState.BBP -> recorder.bbpElapsedSec.value
+                    else -> recorder.elapsedSec.value
+                }
+                controlDebounceJobs[specId]?.cancel()
+                controlDebounceJobs[specId] = scope.launch {
+                    delay(300L)
+                    controlDebounceJobs.remove(specId)
+                    (recorder.dataSource as? RoastControl)?.let { rc ->
+                        scope.launch(Dispatchers.IO) {
+                            try { rc.setControl(specId, value) } catch (_: Exception) { }
+                        }
+                    }
+                    if (recorder.stateFlow.value == RecorderState.RECORDING || recorder.stateFlow.value == RecorderState.BBP) {
+                        recorder.addControlEvent(timeAtAction, eventType, value, displayString)
+                    }
                 }
             }
-            val leftStepCol = VBox(1.0).apply { alignment = Pos.TOP_CENTER }
-            val rightStepCol = VBox(1.0).apply { alignment = Pos.TOP_CENTER }
-            for (v in stepConfig.leftSteps.sortedDescending()) {
-                leftStepCol.children.add(Button(v.toString()).apply {
-                    styleClass.add("control-step-button")
-                    styleClass.add("control-step-button-$sliderKind")
-                    isFocusTraversable = false
-                    setOnAction { slider.value = v.toDouble().coerceIn(effectiveMin, effectiveMax) }
-                })
-            }
-            for (v in stepConfig.rightSteps.sortedDescending()) {
-                rightStepCol.children.add(Button(v.toString()).apply {
-                    styleClass.add("control-step-button")
-                    styleClass.add("control-step-button-$sliderKind")
-                    isFocusTraversable = false
-                    setOnAction { slider.value = v.toDouble().coerceIn(effectiveMin, effectiveMax) }
-                })
-            }
-            val zeroBtn = Button("0").apply {
-                styleClass.add("control-step-button")
-                styleClass.add("control-step-button-$sliderKind")
-                isFocusTraversable = false
-                setOnAction { slider.value = effectiveMin }
-            }
-            val sliderWithSteps = HBox(2.0).apply {
-                alignment = Pos.TOP_CENTER
-                children.addAll(leftStepCol, slider, rightStepCol)
-            }
-            val column = VBox(2.0).apply {
-                alignment = Pos.TOP_CENTER
-                children.add(Label(spec.displayName).apply { styleClass.add("control-label") })
-                children.add(sliderWithSteps)
-                children.add(zeroBtn)
-                children.add(valueField)
-                HBox.setHgrow(this, Priority.ALWAYS)
-            }
-            slidersRow.children.add(column)
+        )
+        currentSliderPanel = panel
+        if (detachableSliderWindow == null) {
+            detachableSliderWindow = DetachableSliderWindow(
+                panelProvider = { currentSliderPanel ?: panel },
+                onAttachRequest = {
+                    SettingsManager.save(SettingsManager.load().copy(sliderPanelDetached = false))
+                    lastConnectionState?.let { updateControlPanel(it, recorder.dataSource) }
+                },
+                onHidden = { sliderPanelVisible = false }
+            )
         }
-        controlPanelContainer.children.add(slidersRow)
+        val detached = settings.sliderPanelDetached
+        if (detached) {
+            hideDrawer()
+            if (sliderPanelVisible) {
+                detachableSliderWindow!!.showDetached(chartContainer.scene?.window)
+                detachableSliderWindow!!.updateContent(panel)
+                chartContainer.scene?.stylesheets?.let { detachableSliderWindow!!.applyStylesheets(it) }
+            }
+        } else {
+            val header = HBox(8.0).apply {
+                alignment = javafx.geometry.Pos.CENTER_LEFT
+                padding = Insets(4.0, 0.0, 4.0, 0.0)
+                children.add(javafx.scene.control.Label("Sliders").apply { styleClass.add("control-label") })
+                val layoutCombo = ComboBox<SliderPanelLayoutMode>().apply {
+                    items.setAll(SliderPanelLayoutMode.SINGLE_COLUMN_TOGGLE, SliderPanelLayoutMode.GRID_ALL)
+                    value = settings.sliderPanelLayoutMode
+                    converter = object : javafx.util.StringConverter<SliderPanelLayoutMode>() {
+                        override fun toString(mode: SliderPanelLayoutMode?) = when (mode) {
+                            SliderPanelLayoutMode.SINGLE_COLUMN_TOGGLE -> "One at a time"
+                            SliderPanelLayoutMode.GRID_ALL -> "All visible"
+                            null -> ""
+                        }
+                        override fun fromString(s: String?) = when (s) {
+                            "All visible" -> SliderPanelLayoutMode.GRID_ALL
+                            else -> SliderPanelLayoutMode.SINGLE_COLUMN_TOGGLE
+                        }
+                    }
+                    tooltip = Tooltip("Slider layout: one at a time or all three visible")
+                    setOnAction {
+                        val v = value ?: return@setOnAction
+                        SettingsManager.save(SettingsManager.load().copy(sliderPanelLayoutMode = v))
+                        lastConnectionState?.let { updateControlPanel(it, recorder.dataSource) }
+                    }
+                }
+                children.add(layoutCombo)
+                val region = Region()
+                HBox.setHgrow(region, Priority.ALWAYS)
+                children.add(region)
+                val btnCloseDrawer = Button().apply {
+                    graphic = FontIcon(FontAwesomeSolid.TIMES).apply { iconSize = 10 }
+                    tooltip = Tooltip("Close")
+                    styleClass.add("detach-attach-btn")
+                    setOnAction {
+                        sliderPanelVisible = false
+                        hideDrawer()
+                    }
+                }
+                children.add(btnCloseDrawer)
+                val btnDetach = Button().apply {
+                    graphic = FontIcon(FontAwesomeSolid.EXTERNAL_LINK_ALT).apply { iconSize = 10 }
+                    tooltip = Tooltip("Detach to separate window")
+                    styleClass.add("detach-attach-btn")
+                    setOnAction {
+                        SettingsManager.save(SettingsManager.load().copy(sliderPanelDetached = true))
+                        hideDrawer()
+                        detachableSliderWindow!!.showDetached(chartContainer.scene?.window)
+                        detachableSliderWindow!!.updateContent(panel)
+                        chartContainer.scene?.stylesheets?.let { detachableSliderWindow!!.applyStylesheets(it) }
+                    }
+                }
+                children.add(btnDetach)
+            }
+            sliderDrawerPanel.children.setAll(header, panel)
+            VBox.setVgrow(panel, Priority.ALWAYS)
+            if (sliderPanelVisible) {
+                showDrawer()
+            } else {
+                hideDrawer()
+            }
+        }
+    }
+
+    private fun toggleSliderPanelVisibility() {
+        if (!::sliderDrawerPanel.isInitialized) return
+        sliderPanelVisible = !sliderPanelVisible
+        val settings = SettingsManager.load()
+        if (settings.sliderPanelDetached) {
+            if (sliderPanelVisible) {
+                // Always refresh so detached window gets current panel content.
+                lastConnectionState?.let { updateControlPanel(it, recorder.dataSource) }
+                detachableSliderWindow?.showDetached(chartContainer.scene?.window)
+                chartContainer.scene?.stylesheets?.let { detachableSliderWindow?.applyStylesheets(it) }
+            } else {
+                detachableSliderWindow?.hideWindow()
+            }
+        } else {
+            if (sliderPanelVisible) {
+                if (sliderDrawerPanel.children.isEmpty()) {
+                    lastConnectionState?.let { updateControlPanel(it, recorder.dataSource) }
+                } else {
+                    showDrawer()
+                }
+            } else {
+                hideDrawer()
+            }
+        }
     }
 
     /** Build custom event buttons from settings (visibility = true). On click run command via ModbusCommandExecutor on background thread. */
@@ -623,10 +793,12 @@ class MainController {
         }
     }
 
+    private fun formatControlValueInt(value: Double): String = value.toInt().toString()
+
     private fun updateButtonStates(state: RecorderState) {
         when (state) {
             RecorderState.DISCONNECTED -> {
-                btnStart.text = "Connect"
+                btnStart.tooltip = Tooltip("Connect")
                 btnStart.isDisable = false
                 btnStop.isDisable = true
                 btnAbort.isDisable = true
@@ -637,7 +809,7 @@ class MainController {
                     shouldAutoStartAfterConnect = false
                     recorder.startRecording()
                 }
-                btnStart.text = "Start"
+                btnStart.tooltip = Tooltip("Start")
                 btnStart.isDisable = false
                 btnStop.isDisable = true
                 btnAbort.isDisable = true
@@ -650,7 +822,7 @@ class MainController {
                 setBbpButtonsVisible(false)
             }
             RecorderState.STOPPED -> {
-                btnStart.text = "New Roast"
+                btnStart.tooltip = Tooltip("New Roast")
                 btnStart.isDisable = false
                 btnStop.isDisable = true
                 btnAbort.isDisable = true
@@ -658,7 +830,7 @@ class MainController {
             }
             RecorderState.BBP -> {
                 curveChart.showBbpMode()
-                btnStart.text = "Start"
+                btnStart.tooltip = Tooltip("Start")
                 btnStart.isDisable = false
                 btnStop.isDisable = true
                 btnAbort.isDisable = true
@@ -705,11 +877,11 @@ class MainController {
 
         if (::btnRestartBbp.isInitialized) {
             btnRestartBbp.setOnAction { recorder.restartBbp() }
-            btnRestartBbp.tooltip = Tooltip("Restart BBP recording (15 min limit)")
+            btnRestartBbp.tooltip = Tooltip("Restart recording — resets BBP timer to 00:00 and erases BBP data. Only up to 15 minutes of between-batch data can be saved.")
         }
         if (::btnStopBbp.isInitialized) {
             btnStopBbp.setOnAction { recorder.stopBbpRecording() }
-            btnStopBbp.tooltip = Tooltip("Stop BBP recording (data kept until Start)")
+            btnStopBbp.tooltip = Tooltip("Stop recording — stops BBP data collection; data is kept until you start the next roast.")
         }
 
         btnStop.setOnAction {
@@ -810,15 +982,11 @@ class MainController {
         runEventCommand("CHARGE")
         recorder.markEvent(EventType.CHARGE)
         val chargeTimeMs = (sample.timeSec * 1000).toLong()
-        if (referenceProfile != null) {
-            curveChart.addEventMarker(chargeTimeMs, "Charge @ %.1f °C".format(sample.bt),
-                com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
-            curveChart.setReferenceProfile(referenceProfile, chargeTimeMs)
-        } else {
-            curveChart.rebaseAllSeries(chargeTimeMs)
-            curveChart.addEventMarker(chargeTimeMs, "Charge @ %.1f °C".format(sample.bt),
-                com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
-        }
+        // Always rebase live at Charge so live Charge aligns to reference Charge (00:00).
+        // Reference phase strip stays frozen because it is locked after reference selection.
+        curveChart.rebaseAllSeries(chargeTimeMs)
+        curveChart.addEventMarker(chargeTimeMs, "Charge @ %.1f °C".format(sample.bt),
+            com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
     }
 
     private fun triggerDrop() {
@@ -1090,6 +1258,17 @@ class MainController {
         if (::referencePanel.isInitialized) {
             referencePanel.isVisible = true
             referencePanel.isManaged = true
+            referencePanel.opacity = 0.0
+            referencePanel.translateY = 12.0
+            val fade = FadeTransition(Duration.millis(280.0), referencePanel).apply {
+                fromValue = 0.0
+                toValue = 1.0
+            }
+            val slide = TranslateTransition(Duration.millis(280.0), referencePanel).apply {
+                fromY = 12.0
+                toY = 0.0
+            }
+            ParallelTransition(fade, slide).play()
         }
         updateReferenceSummary(profile)
         updateReferenceComments(profile)
@@ -1130,6 +1309,17 @@ class MainController {
         lblRefDevTimeRatio.text = "%.1f%%".format(devTimeRatio)
         referenceSummaryBox.isVisible = true
         referenceSummaryBox.isManaged = true
+        referenceSummaryBox.opacity = 0.0
+        referenceSummaryBox.translateY = 8.0
+        val fade = FadeTransition(Duration.millis(220.0), referenceSummaryBox).apply {
+            fromValue = 0.0
+            toValue = 1.0
+        }
+        val slide = TranslateTransition(Duration.millis(220.0), referenceSummaryBox).apply {
+            fromY = 8.0
+            toY = 0.0
+        }
+        ParallelTransition(fade, slide).play()
     }
 
     private fun openReferenceCommentsMenu() {
@@ -1199,45 +1389,20 @@ class MainController {
     }
 
     private fun updateReferenceComments(profile: RoastProfile?) {
-        if (!::commentsGrid.isInitialized) return
-        commentsGrid.children.clear()
-        if (profile == null) return
-        val rows = buildReferenceComments(profile).take(24)
-        rows.forEachIndexed { i, row ->
-            val oddClass = if (i % 2 == 0) "comment-row-odd" else "comment-row-even"
-            val timeText = when {
-                !showRefCommentTime -> ""
-                refCommentsSortMode == RefCommentsSortMode.BT -> row.bt?.let { "%.1f °C".format(it) } ?: "--"
-                else -> row.timeSec?.let { formatSec(it) } ?: "--:--"
-            }
-            val btText = row.bt?.let { "%.1f °C".format(it) } ?: ""
-            val valueText = if (showRefCommentValue) (row.value ?: "") else ""
-            val timeLabel = Label(timeText).apply {
-                styleClass.addAll("comment-time", oddClass)
-                maxWidth = Double.MAX_VALUE
-            }
-            val btLabel = Label(btText).apply {
-                styleClass.addAll("comment-temp", oddClass)
-                maxWidth = Double.MAX_VALUE
-            }
-            val kindLabel = Label(row.kind).apply {
-                styleClass.addAll("comment-event", oddClass)
-                maxWidth = Double.MAX_VALUE
-            }
-            val valueLabel = Label(valueText).apply {
-                styleClass.addAll("comment-check", oddClass)
-                maxWidth = Double.MAX_VALUE
-            }
-            javafx.scene.layout.GridPane.setRowIndex(timeLabel, i)
-            javafx.scene.layout.GridPane.setColumnIndex(timeLabel, 0)
-            javafx.scene.layout.GridPane.setRowIndex(btLabel, i)
-            javafx.scene.layout.GridPane.setColumnIndex(btLabel, 1)
-            javafx.scene.layout.GridPane.setRowIndex(kindLabel, i)
-            javafx.scene.layout.GridPane.setColumnIndex(kindLabel, 2)
-            javafx.scene.layout.GridPane.setRowIndex(valueLabel, i)
-            javafx.scene.layout.GridPane.setColumnIndex(valueLabel, 3)
-            commentsGrid.children.addAll(timeLabel, btLabel, kindLabel, valueLabel)
+        if (!::commentsListView.isInitialized) return
+        val list = commentsList()
+        if (profile == null) {
+            list.items = FXCollections.observableArrayList()
+            return
         }
+        val rows = buildReferenceComments(profile)
+        list.items = FXCollections.observableArrayList(rows)
+        list.opacity = 0.0
+        val fade = FadeTransition(Duration.millis(250.0), list).apply {
+            fromValue = 0.0
+            toValue = 1.0
+        }
+        fade.play()
     }
 
     private fun updateAuthUi() {
@@ -1278,10 +1443,37 @@ class MainController {
     }
 
     private fun setupSettingsButton() {
-        // Settings open as drawer from sidebar; no modal window
-        btnSettings.setOnAction {
-            btnSidebarSystem.isSelected = true
+        btnSettings.setOnAction { openSettingsDialog() }
+    }
+
+    private fun openSettingsDialog() {
+        val loader = FXMLLoader(javaClass.getResource("/com/rdr/roast/ui/SettingsView.fxml"))
+        val root = loader.load<Parent>()
+        val settingsController = loader.getController<SettingsController>()
+        val stage = Stage().apply {
+            title = "Настройки"
+            scene = javafx.scene.Scene(root, 460.0, 520.0)
+            initModality(Modality.APPLICATION_MODAL)
+            initOwner(btnSettings.scene?.window)
         }
+        chartContainer.scene?.stylesheets?.let { stage.scene.stylesheets.addAll(it) }
+        settingsController.onCloseDrawer = { sc ->
+            (sc.btnSave.scene?.window as? Stage)?.close()
+            if (sc.savedSettings != null) {
+                recorder.disconnect()
+                val applied = SettingsManager.load()
+                recorder.dataSource = DataSourceFactory.create(applied.machineConfig)
+                recorder.betweenBatchProtocolEnabled = applied.betweenBatchProtocolEnabled
+                recorder.connect()
+                startConnectionStateCollector()
+                chartContainer.scene?.let { com.rdr.roast.app.AppearanceSupport.applyToScene(it) }
+            }
+            val updated = SettingsManager.load()
+            curveChart.applySettings(updated.chartColors, updated.chartConfig)
+            updateReadoutUnits()
+            refreshCustomButtonsPanel()
+        }
+        stage.showAndWait()
     }
 
     private var dragStartX = 0.0
@@ -1329,23 +1521,29 @@ class MainController {
     private fun setupSidebarIcons() {
         val size = 18
         btnSidebarAccount.graphic = FontIcon(FontAwesomeSolid.USER).apply { iconSize = size }
-        btnSidebarSystem.graphic = FontIcon(FontAwesomeSolid.COG).apply { iconSize = size }
         btnSidebarPlan.graphic = FontIcon(FontAwesomeSolid.TASKS).apply { iconSize = size }
         btnSidebarProduction.graphic = FontIcon(FontAwesomeSolid.CHART_LINE).apply { iconSize = size }
         btnSidebarSupport.graphic = FontIcon(FontAwesomeSolid.QUESTION_CIRCLE).apply { iconSize = size }
     }
 
     private fun setupPlayerBarIcons() {
-        val size = 18
+        val size = 20
+        btnStart.text = ""
         btnStart.graphic = FontIcon(FontAwesomeSolid.PLAY).apply { iconSize = size }
+        btnStart.tooltip = Tooltip("Start")
+        btnStop.text = ""
         btnStop.graphic = FontIcon(FontAwesomeSolid.STOP).apply { iconSize = size }
+        btnStop.tooltip = Tooltip("Stop")
+        btnAbort.text = ""
         btnAbort.graphic = FontIcon(FontAwesomeSolid.TIMES).apply { iconSize = size }
+        btnAbort.tooltip = Tooltip("Abort")
     }
 
     private fun setupTitleBarIcons() {
         val size = 12
         btnClose.graphic = FontIcon(FontAwesomeSolid.TIMES).apply { iconSize = size }
         btnMinimize.graphic = FontIcon(FontAwesomeSolid.MINUS).apply { iconSize = size }
+        btnSettings.graphic = FontIcon(FontAwesomeSolid.COG).apply { iconSize = size }
         updateMaximizeButtonIcon()
     }
 
@@ -1383,15 +1581,10 @@ class MainController {
 
     private fun setupSidebarPanels() {
         val authDrawerWidth = 380.0
-        val settingsDrawerWidth = 440.0
         val planDrawerWidth = 320.0
         val productionDrawerWidth = 360.0
         val supportDrawerWidth = 320.0
-        val drawerWidths = listOf(authDrawerWidth, settingsDrawerWidth, planDrawerWidth, productionDrawerWidth, supportDrawerWidth)
-        val authLabel = Label("").apply {
-            style = "-fx-font-size: 10; -fx-text-fill: #666666; -fx-wrap-text: true;"
-            maxWidth = settingsDrawerWidth - 24
-        }
+        val drawerWidths = listOf(authDrawerWidth, planDrawerWidth, productionDrawerWidth, supportDrawerWidth)
         val accountAuthLabel = Label("").apply {
             style = "-fx-font-size: 11; -fx-text-fill: #333; -fx-wrap-text: true;"
             maxWidth = authDrawerWidth - 24
@@ -1442,46 +1635,6 @@ class MainController {
             VBox.setVgrow(loginScroll, Priority.ALWAYS)
             children.add(logoutButton)
         }
-        val settingsLoader = FXMLLoader(javaClass.getResource("/com/rdr/roast/ui/SettingsView.fxml"))
-        val settingsRoot = settingsLoader.load<Parent>()
-        val settingsController = settingsLoader.getController<SettingsController>()
-        settingsController.onCloseDrawer = { sc ->
-            closeDrawer()
-            btnSidebarSystem.isSelected = false
-            if (sc.savedSettings != null) {
-                recorder.disconnect()
-                val applied = SettingsManager.load()
-                recorder.dataSource = DataSourceFactory.create(applied.machineConfig)
-                recorder.betweenBatchProtocolEnabled = applied.betweenBatchProtocolEnabled
-                recorder.connect()
-                startConnectionStateCollector()
-                chartContainer.scene?.let { com.rdr.roast.app.AppearanceSupport.applyToScene(it) }
-            }
-            val updated = SettingsManager.load()
-            curveChart.applySettings(updated.chartColors, updated.chartConfig)
-            updateReadoutUnits()
-            refreshCustomButtonsPanel()
-        }
-        val systemPanel = VBox().apply {
-            minWidth = settingsDrawerWidth
-            prefWidth = settingsDrawerWidth
-            maxWidth = settingsDrawerWidth
-            maxHeight = Double.MAX_VALUE
-            padding = Insets(8.0)
-            children.add(VBox(4.0).apply {
-                children.add(Label("Вход").apply { style = "-fx-font-weight: bold; -fx-font-size: 11;" })
-                children.add(authLabel)
-            })
-            val scroll = ScrollPane(settingsRoot).apply {
-                isFitToWidth = true
-                isPannable = false
-                minHeight = 0.0
-                VBox.setMargin(this, Insets(8.0, 0.0, 0.0, 0.0))
-            }
-            children.add(scroll)
-            VBox.setVgrow(scroll, Priority.ALWAYS)
-        }
-        systemPanel.maxHeightProperty().bind(sidebarPanelContainer.heightProperty())
         // Production drawer: Roast Properties form (no separate Reference button)
         val roastPropsLoader = FXMLLoader(javaClass.getResource("/com/rdr/roast/ui/RoastPropertiesView.fxml"))
         val roastPropsRoot = roastPropsLoader.load<Parent>()
@@ -1626,11 +1779,11 @@ class MainController {
                 })
             })
         }
-        val panels = listOf(authPanel, systemPanel, planPanel, productionPanel, supportPanel)
-        listOf(systemPanel, planPanel, supportPanel).forEach { vbox ->
+        val panels = listOf(authPanel, planPanel, productionPanel, supportPanel)
+        listOf(planPanel, supportPanel).forEach { vbox ->
             vbox.children.filterIsInstance<Button>().forEach { it.maxWidth = Double.MAX_VALUE }
         }
-        val toggles = listOf(btnSidebarAccount, btnSidebarSystem, btnSidebarPlan, btnSidebarProduction, btnSidebarSupport)
+        val toggles = listOf(btnSidebarAccount, btnSidebarPlan, btnSidebarProduction, btnSidebarSupport)
         sidebarPanelContainer.clip = Rectangle().apply {
             widthProperty().bind(sidebarPanelContainer.widthProperty())
             heightProperty().bind(sidebarPanelContainer.heightProperty())
@@ -1642,8 +1795,8 @@ class MainController {
                     val w = drawerWidths[idx]
                     openDrawer(panels[idx], w)
                     when (idx) {
-                        2 -> refreshScheduleList?.invoke()
-                        3 -> {
+                        1 -> refreshScheduleList?.invoke()
+                        2 -> {
                             roastPropertiesController?.loadFromSettings()
                             roastPropertiesController?.loadReferencesAndSelect()
                             roastPropertiesController?.loadStockAndBlends()

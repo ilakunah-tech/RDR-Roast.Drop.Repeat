@@ -181,7 +181,7 @@
                                        style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
                         </GridPane>
                         <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 8 0 0 0;">
-                            <Button fx:id="btnPortsConfig" text="Ports Configuration…"
+                            <Button fx:id="btnPortsConfig" text="Device Assignment…"
                                     style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
                             <Button fx:id="btnEventButtons" text="Event Buttons…"
                                     style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
@@ -194,7 +194,7 @@
 
                     <Label text="Между партиями (BBP)"
                            style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <CheckBox fx:id="chkBetweenBatchProtocol" text="Включить Between Batch Protocol (запись BT/ET после Stop до 15 мин)"
+                    <CheckBox fx:id="chkBetweenBatchProtocol" text="Display &quot;Between Batch&quot; curves and timer during pre- and post-roast"
                               style="-fx-text-fill: #555555;"/>
 
                     <Label text="Автоопределение ростера"
@@ -268,78 +268,18 @@
 
                     <Label text="Axes (оси графика)"
                            style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #555555;"/>
-                    <GridPane fx:id="axesGrid" hgap="12" vgap="6" style="-fx-background-color: transparent;">
-                        <columnConstraints>
-                            <ColumnConstraints minWidth="90" prefWidth="110"/>
-                            <ColumnConstraints minWidth="60" prefWidth="70"/>
-                            <ColumnConstraints minWidth="90" prefWidth="110"/>
-                            <ColumnConstraints minWidth="60" prefWidth="70"/>
-                        </columnConstraints>
-                        <Label text="Time Axis" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <CheckBox fx:id="chkTimeAxisAuto" text="Auto" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-text-fill: #333333;"/>
-                        <CheckBox fx:id="chkTimeAxisLock" text="Lock" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-text-fill: #333333;"/>
-                        <Label text="Min" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtTimeAxisMin" prefWidth="55" GridPane.columnIndex="1" GridPane.rowIndex="1"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="Max" GridPane.columnIndex="2" GridPane.rowIndex="1" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtTimeAxisMax" prefWidth="55" GridPane.columnIndex="3" GridPane.rowIndex="1"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="Step (sec)" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtTimeAxisStep" prefWidth="55" GridPane.columnIndex="1" GridPane.rowIndex="2"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="RECORD Min" GridPane.columnIndex="2" GridPane.rowIndex="2" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtRecordMinSec" prefWidth="55" GridPane.columnIndex="3" GridPane.rowIndex="2"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="RECORD Max" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtRecordMaxSec" prefWidth="55" GridPane.columnIndex="1" GridPane.rowIndex="3"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <CheckBox fx:id="chkTimeAxisExpand" text="Expand" GridPane.columnIndex="2" GridPane.rowIndex="3" style="-fx-text-fill: #333333;"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Button fx:id="btnAxesConfig" text="Axes..."
+                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
+                        <Label text="Time / Temperature / Legend / Grid / Delta"
+                               style="-fx-text-fill: #777777; -fx-font-size: 11px;"/>
+                    </HBox>
 
-                        <Label text="Temperature Axis" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <Label text="Min" GridPane.columnIndex="0" GridPane.rowIndex="5" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartTempMin" prefWidth="55" GridPane.columnIndex="1" GridPane.rowIndex="5"
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Длительность (мин)" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
+                        <TextField fx:id="txtChartTimeRange" prefWidth="50"
                                    style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="Max" GridPane.columnIndex="2" GridPane.rowIndex="5" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartTempMax" prefWidth="55" GridPane.columnIndex="3" GridPane.rowIndex="5"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="Step" GridPane.columnIndex="0" GridPane.rowIndex="6" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtTempAxisStep" prefWidth="55" GridPane.columnIndex="1" GridPane.rowIndex="6"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-
-                        <Label text="Legend" GridPane.columnIndex="0" GridPane.rowIndex="7" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <ComboBox fx:id="cmbLegendLocation" prefWidth="140" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="7"
-                                  style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-
-                        <Label text="Grid" GridPane.columnIndex="0" GridPane.rowIndex="8" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <Label text="Style" GridPane.columnIndex="0" GridPane.rowIndex="9" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <ComboBox fx:id="cmbGridStyle" prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="9"
-                                  style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="Width" GridPane.columnIndex="2" GridPane.rowIndex="9" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtGridWidth" prefWidth="40" GridPane.columnIndex="3" GridPane.rowIndex="9"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <CheckBox fx:id="chkGridTime" text="Time" GridPane.columnIndex="0" GridPane.rowIndex="10" style="-fx-text-fill: #333333;"/>
-                        <CheckBox fx:id="chkGridTemp" text="Temp" GridPane.columnIndex="1" GridPane.rowIndex="10" style="-fx-text-fill: #333333;"/>
-                        <Label text="Opaqueness" GridPane.columnIndex="2" GridPane.rowIndex="10" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtGridOpaqueness" prefWidth="45" GridPane.columnIndex="3" GridPane.rowIndex="10"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-
-                        <Label text="Δ Axis (RoR)" GridPane.columnIndex="0" GridPane.rowIndex="11" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <CheckBox fx:id="chkDeltaAxisAuto" text="Auto" GridPane.columnIndex="1" GridPane.rowIndex="11" style="-fx-text-fill: #333333;"/>
-                        <CheckBox fx:id="chkDeltaET" text="Δ ET" GridPane.columnIndex="2" GridPane.rowIndex="11" style="-fx-text-fill: #333333;"/>
-                        <CheckBox fx:id="chkDeltaBT" text="Δ BT" GridPane.columnIndex="3" GridPane.rowIndex="11" style="-fx-text-fill: #333333;"/>
-                        <Label text="Min" GridPane.columnIndex="0" GridPane.rowIndex="12" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartRorMin" prefWidth="55" GridPane.columnIndex="1" GridPane.rowIndex="12"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="Max" GridPane.columnIndex="2" GridPane.rowIndex="12" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartRorMax" prefWidth="55" GridPane.columnIndex="3" GridPane.rowIndex="12"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="Step" GridPane.columnIndex="0" GridPane.rowIndex="13" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtDeltaStep" prefWidth="55" GridPane.columnIndex="1" GridPane.rowIndex="13"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                        <Label text="Длительность (мин)" GridPane.columnIndex="2" GridPane.rowIndex="13" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartTimeRange" prefWidth="50" GridPane.columnIndex="3" GridPane.rowIndex="13"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                    </GridPane>
+                    </HBox>
 
                     <CheckBox fx:id="chkChartShowGrid" text="Показать сетку"
                               style="-fx-text-fill: #333333;"/>

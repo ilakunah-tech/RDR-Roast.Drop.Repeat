@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.AxesConfigController"
+      spacing="10"
+      style="-fx-padding: 14; -fx-background-color: #ffffff;">
+    <padding>
+        <Insets top="12" right="12" bottom="12" left="12"/>
+    </padding>
+
+    <Label text="Time Axis" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
+    <GridPane hgap="10" vgap="8">
+        <Label text="Auto" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <CheckBox fx:id="chkTimeAxisAuto" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        <Label text="Roast/Record mode" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+        <ComboBox fx:id="cmbTimeAxisMode" prefWidth="150" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+        <Label text="Lock" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+        <CheckBox fx:id="chkTimeAxisLock" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+
+        <Label text="Min (min)" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <TextField fx:id="txtTimeAxisMin" prefWidth="70" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        <Label text="Max (min)" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+        <TextField fx:id="txtTimeAxisMax" prefWidth="70" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+        <Label text="Step (sec)" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+        <TextField fx:id="txtTimeAxisStep" prefWidth="70" GridPane.columnIndex="5" GridPane.rowIndex="1"/>
+
+        <Label text="RECORD Min (sec)" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+        <TextField fx:id="txtRecordMinSec" prefWidth="70" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+        <Label text="RECORD Max (sec)" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+        <TextField fx:id="txtRecordMaxSec" prefWidth="70" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+        <Label text="Expand" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+        <CheckBox fx:id="chkTimeAxisExpand" GridPane.columnIndex="5" GridPane.rowIndex="2"/>
+    </GridPane>
+
+    <Separator/>
+
+    <Label text="Temperature Axis" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
+    <GridPane hgap="10" vgap="8">
+        <Label text="Min" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <TextField fx:id="txtTempMin" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        <Label text="Max" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+        <TextField fx:id="txtTempMax" prefWidth="80" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+        <Label text="Step" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+        <TextField fx:id="txtTempStep" prefWidth="80" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+        <Label text="100% Event Step" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <TextField fx:id="txtStep100Event" prefWidth="80" promptText="optional" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+    </GridPane>
+
+    <Separator/>
+
+    <Label text="Legend Location" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
+    <ComboBox fx:id="cmbLegendLocation" prefWidth="180"/>
+
+    <Separator/>
+
+    <Label text="Grid" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
+    <GridPane hgap="10" vgap="8">
+        <Label text="Style" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <ComboBox fx:id="cmbGridStyle" prefWidth="130" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        <Label text="Width" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+        <TextField fx:id="txtGridWidth" prefWidth="70" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+        <Label text="Opaqueness" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+        <TextField fx:id="txtGridOpaqueness" prefWidth="70" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+        <CheckBox fx:id="chkGridTime" text="Time" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <CheckBox fx:id="chkGridTemp" text="Temp" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+    </GridPane>
+
+    <Separator/>
+
+    <Label text="Delta Axis" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
+    <GridPane hgap="10" vgap="8">
+        <Label text="Auto" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <CheckBox fx:id="chkDeltaAxisAuto" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        <CheckBox fx:id="chkDeltaET" text="Delta ET" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+        <CheckBox fx:id="chkDeltaBT" text="Delta BT" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+        <Label text="Min" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <TextField fx:id="txtDeltaMin" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        <Label text="Max" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+        <TextField fx:id="txtDeltaMax" prefWidth="80" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+        <Label text="Step" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+        <TextField fx:id="txtDeltaStep" prefWidth="80" GridPane.columnIndex="5" GridPane.rowIndex="1"/>
+    </GridPane>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT">
+        <HBox HBox.hgrow="ALWAYS"/>
+        <Button fx:id="btnCancel" text="Cancel"/>
+        <Button fx:id="btnSave" text="OK"/>
+    </HBox>
+</VBox>

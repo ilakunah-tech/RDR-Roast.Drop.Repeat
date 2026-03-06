@@ -109,6 +109,75 @@ data class MachineConfig(
     val eventCommands: Map<String, String> = emptyMap()
 )
 
+/** ET/BT section of Device Assignment dialog. */
+data class DeviceAssignmentEtBtConfig(
+    val etCurve: Boolean = true,
+    val btCurve: Boolean = true,
+    val etLcd: Boolean = true,
+    val btLcd: Boolean = true,
+    val swapEtBt: Boolean = false,
+    val logging: Boolean = true,
+    val control: Boolean = false
+)
+
+/** Symbolic ET/BT formula strings from Device Assignment dialog. */
+data class DeviceAssignmentSymbolicConfig(
+    val etExpression: String = "",
+    val btExpression: String = ""
+)
+
+/** Phidgets section from Device Assignment dialog. */
+data class DeviceAssignmentPhidgetsConfig(
+    val remoteFlag: Boolean = false,
+    val serverId: String = "",
+    val port: Int = 5661,
+    val password: String = "",
+    val remoteOnly: Boolean = false,
+    val etChannel: Int = 1,
+    val btChannel: Int = 2
+)
+
+/** Yoctopuce section from Device Assignment dialog. */
+data class DeviceAssignmentYoctopuceConfig(
+    val remoteFlag: Boolean = false,
+    val virtualHub: String = "",
+    val emissivity: Double = 1.0
+)
+
+/** Ambient section from Device Assignment dialog. */
+data class DeviceAssignmentAmbientConfig(
+    val temperatureDeviceIndex: Int = 0,
+    val humidityDeviceIndex: Int = 0,
+    val pressureDeviceIndex: Int = 0,
+    val temperatureSourceIndex: Int = 0,
+    val humiditySourceIndex: Int = 0,
+    val pressureSourceIndex: Int = 0,
+    val elevationMeters: Int = 0
+)
+
+/** Networks section from Device Assignment dialog. */
+data class DeviceAssignmentNetworksConfig(
+    val s7Host: String = "127.0.0.1",
+    val s7Port: Int = 102,
+    val santokerHost: String = "",
+    val santokerPort: Int = 20001,
+    val kaleidoHost: String = "",
+    val kaleidoPort: Int = 20002,
+    val websocketHost: String = "127.0.0.1",
+    val websocketPort: Int = 80
+)
+
+/** Saved snapshot of Device Assignment dialog sections aligned with Artisan tabs. */
+data class DeviceAssignmentConfig(
+    val etBt: DeviceAssignmentEtBtConfig = DeviceAssignmentEtBtConfig(),
+    val extraDevices: List<String> = emptyList(),
+    val symbolic: DeviceAssignmentSymbolicConfig = DeviceAssignmentSymbolicConfig(),
+    val phidgets: DeviceAssignmentPhidgetsConfig = DeviceAssignmentPhidgetsConfig(),
+    val yoctopuce: DeviceAssignmentYoctopuceConfig = DeviceAssignmentYoctopuceConfig(),
+    val ambient: DeviceAssignmentAmbientConfig = DeviceAssignmentAmbientConfig(),
+    val networks: DeviceAssignmentNetworksConfig = DeviceAssignmentNetworksConfig()
+)
+
 /** Source for event quantifier: ET (environment temp), BT (bean temp), or none. Aligns with Artisan quantifier source. */
 enum class QuantifierSource { NONE, ET, BT }
 
@@ -148,6 +217,9 @@ data class SliderChannelConfig(
     val step: Double = 1.0
 )
 
+/** Slider panel layout: single column with Gas/Air/Drum toggle, or grid showing all. */
+enum class SliderPanelLayoutMode { SINGLE_COLUMN_TOGGLE, GRID_ALL }
+
 /** Configuration for control sliders (Gas/Air/Drum) step buttons and per-channel register/factor/offset. */
 data class SliderStepConfig(
     val leftSteps: List<Int> = listOf(100, 90, 80, 70, 60, 50, 40, 30, 20, 10),
@@ -167,13 +239,68 @@ data class SliderStepConfig(
 data class CustomButtonConfig(
     val label: String = "",
     val description: String = "",
+    /** Event type recorded by this button (Air/Drum/Damper/Burner/blank). */
+    val eventType: String = "",
+    /** Event value (1-100 in Artisan style). */
+    val eventValue: Int = 0,
     /** Display type/action name, e.g. "Modbus Command". */
     val actionType: String = "Modbus Command",
     /** Command string for Modbus (write/wcoil/sleep). */
     val commandString: String = "",
+    /** Optional documentation text shown in Events->Buttons table. */
+    val documentation: String = "",
     val visibility: Boolean = true,
     val backgroundColor: String = "#e8e8e8",
     val textColor: String = "#333333"
+)
+
+enum class ButtonSize { TINY, SMALL, LARGE }
+
+/** Extra UI options from Events -> Buttons dialog (Artisan-style, kept minimal). */
+data class EventButtonsDialogConfig(
+    val eventType1Label: String = "Air",
+    val eventType2Label: String = "Drum",
+    val eventType3Label: String = "Damper",
+    val eventType4Label: String = "Burner",
+    val eventButtonEnabled: Boolean = true,
+    val showOnBt: Boolean = true,
+    val annotations: Boolean = true,
+    val phaseLines: Boolean = true,
+    val timeGuide: Boolean = false,
+    val defaultButtonAction: String = "Modbus Command",
+    val defaultButtonCommand: String = "",
+    val autoMarkCharge: Boolean = false,
+    val autoMarkDryEnd: Boolean = false,
+    val autoMarkFirstCrack: Boolean = false,
+    val autoMarkDrop: Boolean = false,
+    val maxButtonsPerRow: Int = 8,
+    val buttonSize: ButtonSize = ButtonSize.SMALL,
+    val colorPattern: Int = 0,
+    val markLastPressed: Boolean = false,
+    val tooltips: Boolean = true,
+    val alternativeSliderLayout: Boolean = false,
+    val keyboardControl: Boolean = false,
+    val quantifiersCluster: Boolean = false
+)
+
+/** Per event slider row as shown in Events -> Buttons -> Sliders. */
+data class EventSliderRowConfig(
+    val command: String = "",
+    val min: Double = 0.0,
+    val max: Double = 100.0,
+    val factor: Double = 1.0,
+    val offset: Double = 0.0,
+    val bernoulli: Boolean = false,
+    val step: Double = 1.0,
+    val temp: Boolean = false,
+    val unit: String = ""
+)
+
+data class EventSlidersConfig(
+    val air: EventSliderRowConfig = EventSliderRowConfig(),
+    val drum: EventSliderRowConfig = EventSliderRowConfig(),
+    val damper: EventSliderRowConfig = EventSliderRowConfig(),
+    val burner: EventSliderRowConfig = EventSliderRowConfig()
 )
 
 /** Configuration for which events appear in the Comments panel. */
@@ -234,6 +361,8 @@ data class ChartConfig(
     val timeRangeMin: Int = 15,
     // Time Axis (Artisan)
     val timeAxisAuto: Boolean = true,
+    /** Auto mode: 0 = Roast, 1 = Roast/Record. Kept for Artisan Axes compatibility. */
+    val timeAxisAutoMode: Int = 0,
     val timeAxisLock: Boolean = false,
     val timeAxisMin: Double = 0.0,
     val timeAxisMax: Double = 15.0,
@@ -243,6 +372,8 @@ data class ChartConfig(
     val timeAxisExpand: Boolean = true,
     // Temperature Axis
     val tempAxisStep: Double = 25.0,
+    /** Optional 100% Event Step anchor value from Artisan Axes dialog. */
+    val step100EventTemp: Double? = null,
     // Legend
     val legendLocation: LegendLocation = LegendLocation.NONE,
     // Grid
@@ -295,6 +426,8 @@ data class AppSettings(
     val layoutDividerCenterRight: Double? = null,
     /** Saved divider position for values|reference SplitPane (0..1). */
     val layoutDividerReferenceChannels: Double? = null,
+    /** When true, Reference Comments block is collapsed (Cropster-style). */
+    val referenceCommentsCollapsed: Boolean = false,
     /** When true, after Stop enter BBP phase and record BT/ET until next Start or Stop BBP (Cropster-style). */
     val betweenBatchProtocolEnabled: Boolean = true,
     /** When true, run roaster discovery on Connect and use detected config if found. */
@@ -318,7 +451,20 @@ data class AppSettings(
     /** Per-event quantifiers (Source, SV, Min, Max, Step, Action) for Air, Drum, Damper, Burner. Used in slider/event logic. */
     val eventQuantifiers: EventQuantifiersConfig = EventQuantifiersConfig(),
     /** Custom buttons (label, Modbus command, visibility, color). Shown in main window; on click run command via ModbusCommandExecutor. */
-    val customButtons: List<CustomButtonConfig> = emptyList()
+    val customButtons: List<CustomButtonConfig> = emptyList(),
+    /** Events -> Buttons dialog options and labels. */
+    val eventButtonsConfig: EventButtonsDialogConfig = EventButtonsDialogConfig(),
+    /** Events -> Buttons slider rows (includes Damper and extra UI columns). */
+    val eventSliders: EventSlidersConfig = EventSlidersConfig(),
+    /** Device Assignment dialog state (ET/BT, Extra, Symb ET/BT, Phidgets, Yoctopuce, Ambient, Networks). */
+    val deviceAssignment: DeviceAssignmentConfig = DeviceAssignmentConfig(),
+    /** Control slider panel layout: single-column toggle (one at a time) or grid (all visible). */
+    val sliderPanelLayoutMode: SliderPanelLayoutMode = SliderPanelLayoutMode.SINGLE_COLUMN_TOGGLE,
+    /** When true, slider panel is shown in a detachable window instead of inline. */
+    val sliderPanelDetached: Boolean = false,
+    /** Last position of detached slider window (x, y). Null = use default. */
+    val sliderPanelDetachedX: Double? = null,
+    val sliderPanelDetachedY: Double? = null
 )
 
 object SettingsManager {

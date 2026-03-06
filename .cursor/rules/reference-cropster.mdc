@@ -1,5 +1,5 @@
 ---
-description: Where to look for Cropster / Artisan reference when implementing RDR features; workflow: reference first, then RDR
+description: Where to look for Cropster / Artisan reference when implementing RDR features; workflow: reference first, then RDR; Cropster help→source mapping for "repeat as in Cropster"
 alwaysApply: true
 ---
 
@@ -12,7 +12,7 @@ alwaysApply: true
    - **Artisan** → `D:\project\Projects\artisantest-master`
 2. **Затем** применять обновления в RDR (`D:\project\Projects\RDR-roast.drop.repeat`): переписывать логику на Kotlin в структуре RDR, не копировать код дословно.
 
-Когда пользователь просит реализовать что-то «как в Cropster» или «как в Artisan» — искать в указанных путях, понять реализацию, потом писать/менять код в RDR.
+Когда пользователь просит реализовать что-то **«как в Cropster»**, **«повтори как в Cropster»**, **«скопировать/перенести из Cropster»** — искать в указанных путях, понять реализацию, потом писать/менять код в RDR. Использовать маппинг **Cropster Help → 1_extracted** ниже.
 
 ---
 
@@ -87,6 +87,245 @@ When implementing or refining RDR features (RoR, chart, phases, drivers), use th
   - `com/cropster/roastingintelligence/ui/layout/ReferenceChartPanel.java` — панель с графиком референсного обжара (ChartViewer), метками idTag и имени профиля, кнопкой "Open in browser". Отдельный график, не оверлей на основном.
   - `com/cropster/roastingintelligence/ui/components/ReferenceInfoPanel.java` — блок с информацией о референсе и ссылкой на мануал (Setting a reference curve).
 - **Отличие от Artisan**: в Cropster референс привязан к профилю и тянется с API; в Artisan background — локальный файл .alog, загружаемый пользователем, с гибким выравниванием и overlay на том же графике.
+
+---
+
+## Cropster Help → 1_extracted Mapping (repeat as in Cropster)
+
+При запросе «повтори как в Cropster», «перенеси из Cropster» — использовать этот маппинг, чтобы понять, где искать реализацию в `C:\Users\ilaku\Downloads\1_extracted\src`.
+
+### Help sources
+
+- **Using Roasting Intelligence**: https://help.cropster.com/en_US/using-roasting-intelligence  
+- **Customization and Preferences**: https://help.cropster.com/en_US/customization-and-preferences  
+
+**Using RI child articles**: Drum/Airflow/Gas Control & Replay Assist, Roasting with Control & Replay, comments, keyboard shortcuts, zoom, roast weights, Reference Profiles, Smart Alerts, BBP, label printer, temp sensors, temperature interpolation, auto-start/end, weight loss, blends.
+
+**Customization child articles**: Roast chart axes, RoR settings, customize labels, Replay Assist preferences, measurement size, Customizing RI, Roasting Intelligence Preferences.
+
+### Control & Replay Assist (Drum, Airflow, Gas)
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Drum speed control | `roastingintelligence-5.10\org\cropster\roastingintelligence\util\Measures.java` | `DRUM_SPEED_CONTROL`, `DRUM_SPEED` |
+| Airflow control | same Measures.java | `AIRFLOW_CONTROL`, `AIRFLOW`, `DRUM_PRESSURE_CONTROL` (Giesen) |
+| Gas control | same Measures.java | `GAS_CONTROL`, `GAS` |
+| Control slider UI | `com\cropster\roastingintelligence\ui\components\ControlSlider.java` | Value input, +/−, drag, direct input |
+| Replay logic | `com\cropster\roastingintelligence\task\RoastReplayer.java` | `beanTemperature` triggers, `controlMeasurement`, `WriteCommand` |
+| Slider handlers | `com\cropster\roastingintelligence\ui\handler\measurement\ControlHandlerManual.java`, `ControlHandlerManualMeasurement.java`, `AbstractControlHandler.java` | Manual/auto mode, `controlMeasurement` |
+| Machine control sidebar | `com\cropster\roastingintelligence\ui\layout\MachineControlSidebar.java`, `DetachableSidebar.java` | Slider layout, detach/attach |
+| Slider setup (Preferences) | `com\cropster\roastingintelligence\ui\layout\preferences\ControlSliderPreferencesPage.java` | Machine > Controls: add, configure, reorder |
+| Hardware (Toper, RCE, Probat, Giesen, simulator) | `measurement\impl\ToperV2Source.java`, `ToperSourceFactory.java`, `RceMitsubishiSource.java`, `ProbatPlcSource.java`, `DeviceSimulatorSource.java`, etc. | `drumSpeed`, `airflowControl`, `gasControl` read/write |
+
+### Chart axes & RoR (Customization)
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Y-axis min/max temperature | `Preferences.java`, `PreferencesStore.java`, `Defaults.java` | `minTemp` (45), `maxTemp` (275), `PREF_MIN_TEMP`, `PREF_MAX_TEMP` |
+| RoR Y-axis min/max | same | `minRiseRate`, `maxRiseRate` (56.4 default) |
+| X-axis time / roast duration | same | `time` (1020s default), `PREF_TIME`, `MAX_TIME` |
+| Chart axes UI | `com\cropster\roastingintelligence\ui\layout\preferences\ChartPreferencesPage.java` | `chartXAxisField`, `chartYAxisMinField`, `chartYAxisMaxField`, `chartRorMinField`, `chartRorMaxField`, `resetChartAxes()` |
+| Chart rendering | `org\cropster\roastingintelligence\ui\chart\CurveChart.java`, `com\cropster\roastingintelligence\ui\JavaFxController.java` | `setValueRange`, `setSecondaryValueRange`, `setTimeRange` |
+| RoR smoothing (Recommended/Sensitive/Noise) | `org\cropster\roastingintelligence\util\Smoothing.java`, `RorPreferencesPage.java` | LOW (5,10), STANDARD (10,18), HIGH (10,30) |
+| RoR calculation | `cropster-util-3.6\com\cropster\util\RorUtil.java`, `RorPolyFitCalculator.java` | Moving average, polynomial RoR |
+| RoR per channel | `org\cropster\roastingintelligence\model\Channel.java`, `ChannelConfigurationPanel.java` | `_rorEnabled`, per-measurement RoR checkbox |
+
+### Zoom & Chart interaction
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Zoom (Ctrl+wheel) | `com\cropster\roastingintelligence\ui\util\ChartUtils.java`, `jfreechart-fx-1.0.1-cropster\org\jfree\chart\fx\interaction\ScrollHandlerFX.java` | `replaceZoomHandler()` — zoom only when `isShortcutDown()` |
+| Reset axes | `ChartUtils.restoreZoom()`, `ChartWrapper.java` | CMD+R / Ctrl+R, context menu "Reset axes" |
+| Chart wrapper | `com\cropster\roastingintelligence\ui\chart\ChartWrapper.java` | Applies `replaceZoomHandler`, reset menu item |
+
+### Preferences structure (tabs → pages)
+
+| Help tab | 1_extracted page |
+|----------|------------------|
+| System → General | `GeneralPreferencesPage.java` (locale, hints) |
+| System → Units | `UnitPreferencesPage.java` (weight, temp, pressure) |
+| Roasting → Interface | `InterfacePreferencesPage.java` (timers, measurement position Top/Bottom, condensed readouts) |
+| Roasting → RoR | `RorPreferencesPage.java` |
+| Roasting → Smart Predictions | `SmartPreferencesPage.java` (curve, first crack, flick) |
+| Roasting → Charts and comments | `ChartPreferencesPage.java` |
+| Roasting → Customize roast labels | `PrintPreferencesPage.java` |
+| Machine → Configuration | `ConfigurationPreferencesPage.java` (connectors) |
+| Machine → Measurements | `MeasurementPreferencesPage.java`, `ChannelConfigurationPanel.java` (size Small/Large, RoR checkbox, order) |
+| Machine → Slider controls | `ControlSliderPreferencesPage.java` |
+| Machine → Switch controls | `ControlSwitchPreferencesPage.java` |
+
+### Measurement names (Measures.java)
+
+| Help term | Internal name |
+|-----------|---------------|
+| Bean temperature | `beanTemperature` |
+| Drum speed control | `drumSpeedControl` |
+| Drum speed (read) | `drumSpeed` |
+| Airflow control | `airflowControl` |
+| Airflow (read) | `airflow` |
+| Drum pressure (Giesen) | `drumPressureControl` |
+| Gas control | `gasControl` |
+| Fan speed control | `fanSpeedControl` |
+
+### Comments
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Comment popup / comment box | `ui\components\CommentPopupContent.java`, `CommentPopupHeader.java` | TimeEditor, MeasureEditor, gas/air editors, colorChange/firstCrack/secondCrack buttons |
+| Comments sidebar | `ui\layout\CommentsSidebar.java` | ListView of RoastingComment, detachable |
+| RoastingComment model | `model\RoastingComment.java` | `time`, `event`, `text`; events: gas, airflow, colorChange, firstCrack, secondCrack |
+| Auto-mark development events | `ChartPreferencesPage.java` | `eventAutoMarkingCheckbox` |
+| Mark events by Bean Temperature or Time | `ChartPreferencesPage.java` | `markEventsByTempRadio`, `markEventsByTimeRadio` |
+| Gas/Airflow pre-fill from reference | `CommentsCustomizationTable.java`, `Preferences.java` | `isPreFillEnabled("gas"\|"airflow")` |
+| Customize comment fields | `ui\layout\CommentsCustomizationTable.java` | Per-event customization |
+| Gas curve as comments | `ChartPreferencesPage.java` | `gasCurveAsCommentsCheckbox` |
+
+### Keyboard shortcuts
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Shortcut enum | `ui\util\KeyboardShortcut.java` | ADD, ARROW_UP/DOWN, ESC, F1, CTRL_R, CTRL_1..5, SHIFT_CTRL_COMMA, etc. |
+| Key handling | `JavaFxController.java` | KEY_PRESSED filter; Ctrl+1..5 (comments), gas +/- (when visible) |
+| Shortcuts window | `JavaFxController.java` | `keyboardShortcutsWindow`, `shortcutList` VBox |
+| Shortcut descriptions | `org\cropster\roastingintelligence\util\Messages.java` | `alias(KeyboardShortcut.X).m_("description")` |
+| Ctrl+1=first crack, Ctrl+2=second crack, Ctrl+3=color change, Ctrl+4=gas, Ctrl+5=airflow | Messages, JavaFxController L1126–1135 | Comment shortcuts |
+| Shift+Ctrl+, = Open shortcuts | Messages L402 | |
+| Ctrl+R = Reset axes | ChartWrapper, KeyboardShortcut | |
+
+### Roast weights & weight loss
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Start weight (pre-roast) | `ui\layout\PreparationPanel.java` | `totalWeightField`, `getStartWeight()`, `setStartWeight()` |
+| Start/End weight (post-roast) | `ui\layout\FinishPanel.java` | `startWeightEditor`, `endWeightEditor`, `weightLossLabel` |
+| Edit roast weights | `ui\components\ProductionEditor.java` | `endWeightEditor`, Save button |
+| Roast model | `model\Roast.java` | `_startWeight`, `_endWeight`, `getWeightChange()` |
+| Max start weight (capacity) | `RoastingModel.java`, `PreparationPanel.java` | `getMaxStartWeight()`, validator |
+| Profile batch size | `model\Profile.java` | `_batchSize`, `_weightChange`, `_calculatedWeightChange` |
+| Expected weight loss pre-fill | `RoastingManager.java` L183–187 | `profile.getWeightChange()` when stopping |
+| End weight sync to C-sar | `remote\CsarConnectionImpl.java` | `processing/{lotId}/endWeight` API |
+
+### Reference Profiles (switch during roasting)
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Switch profile during roast | `JavaFxController.java` L2279–2292 | `switchProfile(Profile profile)` |
+| Profile label / popup | `MainPanelController.java`, `JavaFxController.java` | `switchProfilePanel`, `profilePopup`, `profileView` |
+| Profile/Reference model | `model\Profile.java`, `model\Reference.java` | `getReference()`, `getReferenceId()` |
+| Reference chart | `ui\layout\ReferenceChartPanel.java` | Shows reference roast |
+
+### Smart Customizable Alerts
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Alerts sidebar | `ui\layout\AlarmsSidebar.java` | Log tab, Manage tab, detach |
+| Alarm model | `model\alarms\Alarm.java` | Events: turningPoint, colorChange, firstCrack, secondCrack, end, gas; Measures: beanTemperature |
+| Alarm types | `model\alarms\AlarmType.java`, `AlarmTriggeringPhase.java`, `AlarmTargetDirection.java` | EVENT_BASED, MEASURE_BASED; ALWAYS, ROASTING, BETWEEN_BATCHES |
+| Alarm editor | `ui\components\AlarmEditor.java` | Add/Edit |
+| Alarm service | `service\AlarmService.java`, `service\impl\AlarmServiceImpl.java` | Trigger logic |
+| Preferences enable | `SmartPreferencesPage.java` | Smart features tab |
+
+### BBP (Between Batch Protocol)
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| BBP model | `BetweenBatchModel.java`, `model\BetweenBatchLog.java`, `model\UnsavedBetweenBatchLog.java` | Timer, recording, curves |
+| BBP panel | `ui\layout\BetweenBatchPanel.java` | Stop/Restart, chart placeholder |
+| BBP chart | `ui\chart\BetweenBatchChartWrapper.java`, `ui\chart\BetweenBatchAnnotation.java` | Display in CurveChart |
+| BBP preference | `PreferencesStore.java` (`PREF_BETWEEN_BATCH_PROTOCOL`), `InterfacePreferencesPage.java` | Display during pre/post-roast |
+| BBP persistence/upload | `tasks\RoastUploader.java`, `DataLoader.java`, `CsarConnection*.java` | load/store between batch log |
+| BBP post-roast (Roast Compare) | C-sar web; RI has Messages for "Roast Compare report" | Post-roast BBP analysis in C-sar |
+
+### Print labels & Label printer
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Print flow | `JavaFxController.java` | `printRoasts()`, `printRoastsCustom()`, PrinterJob |
+| Print window | `ui\layout\PrintWindowController.java` | `printerComboBox`, orientation (PORTRAIT, REVERSE_LANDSCAPE) |
+| Label component | `ui\components\RoastLabel.java` | Layout, toData() |
+| QR code | `ui\components\QrCodeRenderer.java` | TOP, BOTTOM, HIDDEN |
+| Print preferences | `preferences\PrintPreferencesPage.java`, `Preferences.java` | `printLabelStyle`, `printQrCodePosition`, `printLabelMapping` |
+| Label editor | `ui\components\DragAndDropLabelEditor.java` | Template editor |
+| Orientation/page format | `PreferencesStore.java` | `PREF_PRINTERJOB_ORIENTATION`, `PREF_PAGEFORMAT_WIDTH/HEIGHT` |
+
+### Device discovery (macOS network)
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Yoctopuce network hub | `measurement\impl\YoctopuceSource.java` | `YAPI.RegisterHub("localhost:4444")`, DeviceArrival/Removal callbacks |
+| Yoctopuce discovery | `yoctolib\YAPI.java`, `YSSDP.java`, `YAPIContext.java` | `TriggerHubDiscovery()`, `RegisterHubDiscoveryCallback`, SSDP |
+| Network interfaces | `YSSDP.java` | `getNetworkInterfaces()` |
+
+### Temperature sensors & Data Bridge
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Phidget 1048 (thermocouple) | `sensor\impl\ThermocoupleTemperatureSensorPhidget22.java`, Messages | |
+| Phidget 1046 (RTD) | `sensor\impl\RtdSensorPhidget22.java` | Pt100/Pt1000, `VoltageRatioToTemperatureConverter` |
+| Data Bridge (1046) | `measurement\impl\BridgePhidgetSourceFactory.java`, `RtdSensorPhidget22` | `setBridgeEnabled`, `setBridgeGain`, bridge output→temp |
+| TMP1101 (VINT thermocouple) | `measurement\impl\PhidgetTmp1101SourceFactory.java` | Beta |
+| TMP1200 (VINT RTD) | `sensor\impl\Tmp1200SensorPhidget22.java`, `PhidgetTmp1200SourceFactory.java` | Beta |
+| Yoctopuce temp | `measurement\impl\YoctopuceSource.java` | YTemperature.FirstTemperature() |
+
+### Auto-start/end detection
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Temperature-based auto-start | `model\RoastingAnalyzer.java` | `searchTrendStartKey(..., 30000L, _startThreshold, ...)`, `fireStartDetected()` |
+| Temperature-based auto-end | `RoastingAnalyzer.java` | `searchTrendStartKey(..., 5000L, _endThreshold, false)` |
+| Thresholds | `Defaults.java` (TEMPERATURE_DROP_START -7, TEMPERATURE_DROP_END -3), `Preferences.java`, `PreferencesStore.java` | 30s window start, 5s window end |
+| Enable checkbox | `PreferencesStore.java` (PREF_AUTO_DETECTION), `AppModel.java` | `AutoStartMode.AUTO_DETECTION` |
+| Machine event-based (hopper/door) | `measurement\AutoStartSource.java`, `measurement\impl\AtillaV2Source.java`, `LoringPlcSource.java` | Implements AutoStartSource; hopper open→start, emission door→end |
+| MeasurementHub | Wiring AutoStartSource to AutoStartListener | L97–103 |
+
+### Temperature interpolation (Staircase) Beta
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Linear interpolation (curve gaps) | `model\impl\LinearInterpolationCurveModel.java` | `fillCurve()` for prediction; not raw display filter |
+| Machine config / storage format | `Messages.java`, `PreferencesStore.java` | "Integer (32-bit)", "Integer (16-bit)" — connector-specific; "Allow interpolation" may be in connector code |
+
+### Track Airflow/Gas & Blends
+
+| Help topic | 1_extracted path | Notes |
+|------------|------------------|-------|
+| Manual Gas/Airflow comments | `CommentPopupContent.java`, `CurveChart.java` | Add gas/airflow comment, red line on chart |
+| Diedrich Gas+Airflow | `measurement\impl\DiedrichGasAirflowSourceFactory.java`, `DiedrichGasAirflowPhidget22Source.java` | Phidgets |
+| Phidget 1132 (4–20 mA) | `Phidget1132SourceFactory.java`, `Phidget1132ValueConverter.java` | Retrofit |
+| Blend models | `model\BlendComponent.java`, `BlendProfile.java`, `BlendProfileComponent.java` | |
+| Create blend (manual/with profile) | `remote\CsarConnectionImpl.java` | `createManualBlend()`, `createBlendWithProfile()` |
+| Blend loading | `SyncService.java`, `DataLoader.java` | `loadBlendsAsync()`, `loadBlendProfiles()` |
+| Production sidebar | `ui\layout\ProductionSidebar.java` | Blends tab |
+
+### Key child help articles → paths (complete)
+
+| Help article | Primary paths |
+|--------------|---------------|
+| Drum Speed Control & Replay Assist | Measures.java, ControlSlider.java, RoastReplayer.java, ToperV2Source.java |
+| Airflow Control & Replay Assist | same + drumPressureControl (Giesen) |
+| Gas Control & Replay Assist | same + ControlHandlerGiesenGas*.java |
+| How to set comments | CommentPopupContent.java, CommentsSidebar.java, RoastingComment.java, ChartPreferencesPage.java |
+| How to use keyboard shortcuts | KeyboardShortcut.java, JavaFxController.java, Messages.java |
+| How to adjust roast weights | PreparationPanel.java, FinishPanel.java, ProductionEditor.java, Roast.java, RoastingManager.java |
+| How to switch Reference Profiles | JavaFxController.java switchProfile(), MainPanelController.java, Profile.java |
+| Using Smart Customizable Alerts | AlarmsSidebar.java, Alarm.java, AlarmEditor.java, AlarmService.java |
+| What is BBP | BetweenBatchModel.java, BetweenBatchLog.java, BetweenBatchPanel.java |
+| Viewing BBP during roasting | BetweenBatchPanel.java, BetweenBatchChartWrapper.java, InterfacePreferencesPage |
+| Viewing BBP post-roast | C-sar; RI Messages for Roast Compare |
+| Roasting with Control & Replay | RoastReplayer.java, ControlSlider*.java, ControlHandler*.java |
+| How to print roast labels | JavaFxController.java, PrintWindowController.java, RoastLabel.java, QrCodeRenderer.java |
+| How to allow RI to find devices (macOS) | YoctopuceSource.java, yoctolib YAPI/YSSDP |
+| Temperature sensors and Data Bridge | ThermocoupleTemperatureSensorPhidget22, RtdSensorPhidget22, BridgePhidgetSourceFactory |
+| How to set up label printer | PrintWindowController.java, PrintPreferencesPage.java, PreferencesStore |
+| Temperature interpolation (Staircase) Beta | LinearInterpolationCurveModel.java; connector-level filter not in extraction |
+| Temperature-based auto-start/end | RoastingAnalyzer.java, Defaults.java, PreferencesStore.java |
+| How to track weight loss | RoastingManager.java, FinishPanel.java, CsarConnectionImpl.java |
+| About Rate of Rise (RoR) | RorCurveModel.java, Smoothing.java, RorPreferencesPage.java, RorUtil.java |
+| Machine event-based auto-start (Beta) | AutoStartSource.java, AtillaV2Source.java, LoringPlcSource.java |
+| How to track Airflow/Gas | DiedrichGasAirflow*.java, Phidget1132*, CommentPopupContent.java |
+| How to create blends | BlendComponent/BlendProfile, CsarConnectionImpl, SyncService, DataLoader |
+
+---
 
 ## Library versions (in `1_extracted\lib`)
 

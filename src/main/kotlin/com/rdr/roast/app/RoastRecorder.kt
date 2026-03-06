@@ -1,6 +1,7 @@
 package com.rdr.roast.app
 
 import com.rdr.roast.domain.BetweenBatchSession
+import com.rdr.roast.domain.ControlEventType
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastEvent
 import com.rdr.roast.domain.RoastProfile
@@ -146,6 +147,12 @@ class RoastRecorder(
         profile.addEvent(event)
     }
 
+    /** Add a control event (gas/air/drum) at the given time. When RECORDING uses roast elapsed time; when BBP uses BBP elapsed time. */
+    fun addControlEvent(timeSec: Double, type: ControlEventType, value: Double, displayString: String? = null) {
+        if (_stateFlow.value != RecorderState.RECORDING && _stateFlow.value != RecorderState.BBP) return
+        _currentProfile.value.addControlEvent(timeSec, type, value, displayString)
+    }
+
     fun stop(): RoastProfile {
         if (_stateFlow.value != RecorderState.RECORDING) {
             log.warn("stop ignored: state is {}", _stateFlow.value)
@@ -159,6 +166,7 @@ class RoastRecorder(
                 temp1 = ArrayList(live.temp1),
                 temp2 = ArrayList(live.temp2),
                 events = ArrayList(live.events),
+                controlEvents = ArrayList(live.controlEvents),
                 mode = live.mode,
                 betweenBatchLog = live.betweenBatchLog
             )
@@ -192,6 +200,7 @@ class RoastRecorder(
         profile.temp1.clear()
         profile.temp2.clear()
         profile.events.clear()
+        profile.controlEvents.clear()
         _currentSample.value = null
         _elapsedSec.value = 0.0
         _stateFlow.value = RecorderState.MONITORING

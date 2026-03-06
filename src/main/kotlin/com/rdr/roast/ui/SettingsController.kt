@@ -3,14 +3,12 @@ package com.rdr.roast.ui
 import com.rdr.roast.app.AppSettings
 import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.ChartColors
-import com.rdr.roast.app.GridStyle
-import com.rdr.roast.app.LegendLocation
 import com.rdr.roast.app.ConnectionPreset
-import com.rdr.roast.app.CustomButtonConfig
 import com.rdr.roast.app.EventQuantifierConfig
 import com.rdr.roast.app.EventQuantifiersConfig
 import com.rdr.roast.app.QuantifierSource
 import com.rdr.roast.app.ConnectionTester
+import com.rdr.roast.app.DeviceAssignmentConfig
 import com.rdr.roast.app.MachineConfig
 import com.rdr.roast.app.MachineType
 import com.rdr.roast.app.ModbusInputConfig
@@ -38,7 +36,6 @@ import javafx.scene.control.TextField
 import javafx.scene.control.TextInputDialog
 import javafx.scene.control.ToggleGroup
 import javafx.scene.control.Tooltip
-import javafx.scene.layout.GridPane
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
 import javafx.stage.DirectoryChooser
@@ -71,8 +68,11 @@ class SettingsController {
     /** Set when user clicks OK in Ports Configuration (Artisan pattern: caller applies). */
     private var portsModbusInputs: List<ModbusInputConfig>? = null
     private var portsModbusPid: ModbusPidConfig? = null
-    /** Set when user clicks OK in Event Buttons dialog (caller applies on Save). */
-    private var eventButtonsFromDialog: List<CustomButtonConfig>? = null
+    private var deviceAssignmentConfig: DeviceAssignmentConfig? = null
+    /** Set when user clicks OK/Apply in Event Buttons dialog (caller applies on Save). */
+    private var eventButtonsDialogResult: EventButtonsDialogResult? = null
+    /** Separate Axes dialog state; merged into ChartConfig on Save. */
+    private var axesConfigDraft: ChartConfig? = null
 
     @FXML
     lateinit var cmbSource: ComboBox<String>
@@ -240,18 +240,6 @@ class SettingsController {
     lateinit var btnResetColors: Button
 
     @FXML
-    lateinit var txtChartTempMin: TextField
-
-    @FXML
-    lateinit var txtChartTempMax: TextField
-
-    @FXML
-    lateinit var txtChartRorMin: TextField
-
-    @FXML
-    lateinit var txtChartRorMax: TextField
-
-    @FXML
     lateinit var txtChartTimeRange: TextField
 
     @FXML
@@ -290,64 +278,7 @@ class SettingsController {
     lateinit var txtChartGridColor: TextField
 
     @FXML
-    lateinit var axesGrid: GridPane
-
-    @FXML
-    lateinit var chkTimeAxisAuto: CheckBox
-
-    @FXML
-    lateinit var chkTimeAxisLock: CheckBox
-
-    @FXML
-    lateinit var txtTimeAxisMin: TextField
-
-    @FXML
-    lateinit var txtTimeAxisMax: TextField
-
-    @FXML
-    lateinit var txtTimeAxisStep: TextField
-
-    @FXML
-    lateinit var txtRecordMinSec: TextField
-
-    @FXML
-    lateinit var txtRecordMaxSec: TextField
-
-    @FXML
-    lateinit var chkTimeAxisExpand: CheckBox
-
-    @FXML
-    lateinit var txtTempAxisStep: TextField
-
-    @FXML
-    lateinit var cmbLegendLocation: ComboBox<String>
-
-    @FXML
-    lateinit var cmbGridStyle: ComboBox<String>
-
-    @FXML
-    lateinit var txtGridWidth: TextField
-
-    @FXML
-    lateinit var chkGridTime: CheckBox
-
-    @FXML
-    lateinit var chkGridTemp: CheckBox
-
-    @FXML
-    lateinit var txtGridOpaqueness: TextField
-
-    @FXML
-    lateinit var chkDeltaAxisAuto: CheckBox
-
-    @FXML
-    lateinit var chkDeltaET: CheckBox
-
-    @FXML
-    lateinit var chkDeltaBT: CheckBox
-
-    @FXML
-    lateinit var txtDeltaStep: TextField
+    lateinit var btnAxesConfig: Button
 
     @FXML
     lateinit var settingsTabPane: TabPane
@@ -573,6 +504,7 @@ class SettingsController {
         btnRestoreAppearance.setOnAction { restoreAppearanceDefaults() }
 
         val settings = SettingsManager.load()
+        deviceAssignmentConfig = settings.deviceAssignment
         portsAdvanced = PortsAdvanced(
             modbusType = settings.machineConfig.modbusTransportType,
             byteSize = settings.machineConfig.byteSize,
@@ -649,56 +581,8 @@ class SettingsController {
             s.toIntOrNull()?.coerceIn(0, 255)?.let { sldRefAlpha.value = it.toDouble() }
         }
         val config = settings.chartConfig
-        txtChartTempMin.text = config.tempMin.toString()
-        txtChartTempMax.text = config.tempMax.toString()
-        txtChartRorMin.text = config.rorMin.toString()
-        txtChartRorMax.text = config.rorMax.toString()
+        axesConfigDraft = config
         txtChartTimeRange.text = config.timeRangeMin.toString()
-        chkTimeAxisAuto.isSelected = config.timeAxisAuto
-        chkTimeAxisLock.isSelected = config.timeAxisLock
-        txtTimeAxisMin.text = config.timeAxisMin.toString()
-        txtTimeAxisMax.text = config.timeAxisMax.toString()
-        txtTimeAxisStep.text = config.timeAxisStepSec.toString()
-        txtRecordMinSec.text = config.recordMinSec.toString()
-        txtRecordMaxSec.text = config.recordMaxSec.toString()
-        chkTimeAxisExpand.isSelected = config.timeAxisExpand
-        txtTempAxisStep.text = config.tempAxisStep.toString()
-        if (cmbLegendLocation.items.isEmpty()) {
-            cmbLegendLocation.items.setAll(
-                "None", "Upper right", "Upper left", "Lower left", "Lower right",
-                "Right", "Center left", "Center right", "Lower center", "Upper center", "Center"
-            )
-        }
-        cmbLegendLocation.value = when (config.legendLocation) {
-            LegendLocation.NONE -> "None"
-            LegendLocation.UPPER_RIGHT -> "Upper right"
-            LegendLocation.UPPER_LEFT -> "Upper left"
-            LegendLocation.LOWER_LEFT -> "Lower left"
-            LegendLocation.LOWER_RIGHT -> "Lower right"
-            LegendLocation.RIGHT -> "Right"
-            LegendLocation.CENTER_LEFT -> "Center left"
-            LegendLocation.CENTER_RIGHT -> "Center right"
-            LegendLocation.LOWER_CENTER -> "Lower center"
-            LegendLocation.UPPER_CENTER -> "Upper center"
-            LegendLocation.CENTER -> "Center"
-        }
-        if (cmbGridStyle.items.isEmpty()) {
-            cmbGridStyle.items.setAll("Solid", "Dashed", "Dashed-dot", "Dotted")
-        }
-        cmbGridStyle.value = when (config.gridStyle) {
-            GridStyle.SOLID -> "Solid"
-            GridStyle.DASHED -> "Dashed"
-            GridStyle.DASHED_DOT -> "Dashed-dot"
-            GridStyle.DOTTED -> "Dotted"
-        }
-        txtGridWidth.text = config.gridWidth.toString()
-        chkGridTime.isSelected = config.gridTime
-        chkGridTemp.isSelected = config.gridTemp
-        txtGridOpaqueness.text = config.gridOpaqueness.toString()
-        chkDeltaAxisAuto.isSelected = config.deltaAxisAuto
-        chkDeltaET.isSelected = config.deltaET
-        chkDeltaBT.isSelected = config.deltaBT
-        txtDeltaStep.text = config.deltaStep.toString()
         chkChartShowGrid.isSelected = config.showGrid
         chkChartShowBt.isSelected = config.showBt
         chkChartShowEt.isSelected = config.showEt
@@ -761,6 +645,7 @@ class SettingsController {
 
         btnRefreshPorts.setOnAction { refreshSerialPorts() }
         btnPortsConfig.setOnAction { openPortsConfigDialog() }
+        btnAxesConfig.setOnAction { openAxesConfigDialog() }
         btnEventButtons.setOnAction { openEventButtonsDialog() }
         btnTestConnection.setOnAction { runTestConnection() }
         updatePortFieldsVisibility()
@@ -902,6 +787,7 @@ class SettingsController {
     }
 
     private fun buildEventCommandsFromFields(): Map<String, String> {
+        eventButtonsDialogResult?.let { return it.eventCommands }
         val map = mutableMapOf<String, String>()
         listOf(
             "CHARGE" to (txtEventCharge.text?.trim() ?: ""),
@@ -951,53 +837,10 @@ class SettingsController {
                 refAlpha = sldRefAlpha.value.toInt().coerceIn(0, 255)
             )
             val defC = ChartConfig()
-            val legendLoc = when (cmbLegendLocation.value) {
-                "Upper right" -> LegendLocation.UPPER_RIGHT
-                "Upper left" -> LegendLocation.UPPER_LEFT
-                "Lower left" -> LegendLocation.LOWER_LEFT
-                "Lower right" -> LegendLocation.LOWER_RIGHT
-                "Right" -> LegendLocation.RIGHT
-                "Center left" -> LegendLocation.CENTER_LEFT
-                "Center right" -> LegendLocation.CENTER_RIGHT
-                "Lower center" -> LegendLocation.LOWER_CENTER
-                "Upper center" -> LegendLocation.UPPER_CENTER
-                "Center" -> LegendLocation.CENTER
-                else -> LegendLocation.NONE
-            }
-            val gridSty = when (cmbGridStyle.value) {
-                "Dashed" -> GridStyle.DASHED
-                "Dashed-dot" -> GridStyle.DASHED_DOT
-                "Dotted" -> GridStyle.DOTTED
-                else -> GridStyle.SOLID
-            }
-            val chartConfig = ChartConfig(
-                tempMin = txtChartTempMin.text.toDoubleOrNull() ?: defC.tempMin,
-                tempMax = txtChartTempMax.text.toDoubleOrNull() ?: defC.tempMax,
-                rorMin = txtChartRorMin.text.toDoubleOrNull() ?: defC.rorMin,
-                rorMax = txtChartRorMax.text.toDoubleOrNull() ?: defC.rorMax,
+            val baseAxes = axesConfigDraft ?: settings.chartConfig
+            val chartConfig = baseAxes.copy(
                 timeRangeMin = txtChartTimeRange.text.toIntOrNull()?.coerceIn(1, 60) ?: defC.timeRangeMin,
-                timeAxisAuto = chkTimeAxisAuto.isSelected,
-                timeAxisLock = chkTimeAxisLock.isSelected,
-                timeAxisMin = txtTimeAxisMin.text.toDoubleOrNull() ?: defC.timeAxisMin,
-                timeAxisMax = txtTimeAxisMax.text.toDoubleOrNull() ?: defC.timeAxisMax,
-                timeAxisStepSec = txtTimeAxisStep.text.toIntOrNull()?.coerceIn(0, 86400) ?: defC.timeAxisStepSec,
-                recordMinSec = txtRecordMinSec.text.toIntOrNull() ?: defC.recordMinSec,
-                recordMaxSec = txtRecordMaxSec.text.toIntOrNull()?.coerceIn(1, 86400) ?: defC.recordMaxSec,
-                timeAxisExpand = chkTimeAxisExpand.isSelected,
-                tempAxisStep = txtTempAxisStep.text.toDoubleOrNull()?.coerceIn(1.0, 100.0) ?: defC.tempAxisStep,
-                legendLocation = legendLoc,
                 showGrid = chkChartShowGrid.isSelected,
-                gridStyle = gridSty,
-                gridWidth = txtGridWidth.text.toIntOrNull()?.coerceIn(1, 5) ?: defC.gridWidth,
-                gridTime = chkGridTime.isSelected,
-                gridTemp = chkGridTemp.isSelected,
-                gridOpaqueness = txtGridOpaqueness.text.toDoubleOrNull()?.coerceIn(0.1, 1.0) ?: defC.gridOpaqueness,
-                deltaAxisAuto = chkDeltaAxisAuto.isSelected,
-                deltaET = chkDeltaET.isSelected,
-                deltaBT = chkDeltaBT.isSelected,
-                deltaMin = txtChartRorMin.text.toDoubleOrNull() ?: defC.deltaMin,
-                deltaMax = txtChartRorMax.text.toDoubleOrNull() ?: defC.deltaMax,
-                deltaStep = txtDeltaStep.text.toDoubleOrNull()?.coerceIn(0.5, 50.0) ?: defC.deltaStep,
                 showBt = chkChartShowBt.isSelected,
                 showEt = chkChartShowEt.isSelected,
                 showRorBt = chkChartShowRorBt.isSelected,
@@ -1073,10 +916,13 @@ class SettingsController {
                 roastPropertiesWeightInKg = settings.roastPropertiesWeightInKg,
                 roastPropertiesWeightOutKg = settings.roastPropertiesWeightOutKg,
                 roastPropertiesBeansNotes = settings.roastPropertiesBeansNotes,
-                sliderStepConfig = settings.sliderStepConfig,
+                sliderStepConfig = eventButtonsDialogResult?.sliderStepConfig ?: settings.sliderStepConfig,
                 commentsConfig = settings.commentsConfig,
-                eventQuantifiers = buildEventQuantifiersFromFields(),
-                customButtons = eventButtonsFromDialog ?: settings.customButtons
+                eventQuantifiers = eventButtonsDialogResult?.eventQuantifiers ?: buildEventQuantifiersFromFields(),
+                customButtons = eventButtonsDialogResult?.customButtons ?: settings.customButtons,
+                eventButtonsConfig = eventButtonsDialogResult?.eventButtonsConfig ?: settings.eventButtonsConfig,
+                eventSliders = eventButtonsDialogResult?.eventSliders ?: settings.eventSliders,
+                deviceAssignment = deviceAssignmentConfig ?: settings.deviceAssignment
             )
             savedSettings = newSettings
             SettingsManager.save(newSettings)
@@ -1121,7 +967,7 @@ class SettingsController {
         val root = loader.load() as? javafx.scene.Parent ?: return
         val portsController = loader.getController<PortsConfigController>() ?: return
         val stage = Stage().apply {
-            title = "Ports Configuration"
+            title = "Device Assignment"
             scene = Scene(root)
             isResizable = true
             initModality(javafx.stage.Modality.APPLICATION_MODAL)
@@ -1166,16 +1012,32 @@ class SettingsController {
         )
         portsModbusInputs = portsController.getModbusInputs()
         portsModbusPid = portsController.getModbusPid()
+        val da = portsController.getDeviceAssignmentConfig()
+        deviceAssignmentConfig = da
+        txtPhidgetEtChannel.text = da.phidgets.etChannel.toString()
+        txtPhidgetBtChannel.text = da.phidgets.btChannel.toString()
     }
 
-    /** Opens Event Buttons dialog. On OK stores list in [eventButtonsFromDialog]; caller saves on Save. */
+    /** Opens Event Buttons dialog. On OK/Apply stores state; caller persists on Save. */
     private fun openEventButtonsDialog() {
         val url = SettingsController::class.java.getResource("/com/rdr/roast/ui/EventButtonsView.fxml") ?: return
         val loader = FXMLLoader(url)
         val root = loader.load() as? javafx.scene.Parent ?: return
         val controller = loader.getController<EventButtonsController>() ?: return
         val settings = SettingsManager.load()
-        controller.loadFrom(eventButtonsFromDialog ?: settings.customButtons)
+        val merged = if (eventButtonsDialogResult == null) {
+            settings
+        } else {
+            settings.copy(
+                machineConfig = settings.machineConfig.copy(eventCommands = eventButtonsDialogResult!!.eventCommands),
+                sliderStepConfig = eventButtonsDialogResult!!.sliderStepConfig,
+                eventQuantifiers = eventButtonsDialogResult!!.eventQuantifiers,
+                customButtons = eventButtonsDialogResult!!.customButtons,
+                eventButtonsConfig = eventButtonsDialogResult!!.eventButtonsConfig,
+                eventSliders = eventButtonsDialogResult!!.eventSliders
+            )
+        }
+        controller.loadFrom(merged)
         val stage = Stage().apply {
             title = "Event Buttons"
             scene = Scene(root)
@@ -1184,7 +1046,29 @@ class SettingsController {
             initOwner(btnEventButtons.scene?.window)
         }
         stage.showAndWait()
-        if (controller.applied) eventButtonsFromDialog = controller.getCustomButtons()
+        if (controller.applied) {
+            controller.getResult()?.let { eventButtonsDialogResult = it }
+        }
+    }
+
+    /** Opens separate Artisan-style Axes dialog (Config -> Axes path). */
+    private fun openAxesConfigDialog() {
+        val url = SettingsController::class.java.getResource("/com/rdr/roast/ui/AxesConfigView.fxml") ?: return
+        val loader = FXMLLoader(url)
+        val root = loader.load() as? javafx.scene.Parent ?: return
+        val controller = loader.getController<AxesConfigController>() ?: return
+        controller.loadFrom(axesConfigDraft ?: SettingsManager.load().chartConfig)
+        val stage = Stage().apply {
+            title = "Axes"
+            scene = Scene(root)
+            isResizable = false
+            initModality(javafx.stage.Modality.APPLICATION_MODAL)
+            initOwner(btnAxesConfig.scene?.window)
+        }
+        stage.showAndWait()
+        if (controller.applied) {
+            controller.getResult()?.let { axesConfigDraft = it }
+        }
     }
 
     private fun setupConnectionTooltips() {
@@ -1196,7 +1080,7 @@ class SettingsController {
         txtSlaveId.tooltip = Tooltip("Modbus Slave ID устройства (обычно 1)")
         txtPhidgetEtChannel.tooltip = Tooltip("Номер канала Phidget 1048 для датчика ET (Environment Temperature)")
         txtPhidgetBtChannel.tooltip = Tooltip("Номер канала Phidget 1048 для датчика BT (Bean Temperature)")
-        chkBetweenBatchProtocol.tooltip = Tooltip("После Stop записывать BT/ET до следующего Start (лимит 15 мин). Кнопки Restart / Stop BBP в фазе BBP.")
+        chkBetweenBatchProtocol.tooltip = Tooltip("When enabled, after you stop a roast the Between Batch timer and BT/ET curves are shown during pre- and post-roast (up to 15 min). Cropster: Roasting \u2192 Interface.")
         chkAutoDetectRoaster.tooltip = Tooltip("При нажатии «Подключить» приложение попробует найти ростер по сети и COM-портам")
         chkRememberLastRoaster.tooltip = Tooltip("При следующем подключении сначала пробовать последний успешно определённый ростер")
         txtDiscoveryHosts.tooltip = Tooltip("IP-адреса для сканирования (Modbus TCP). Пусто = 10.0.0.9, 192.168.1.100, 127.0.0.1")

@@ -1,49 +1,56 @@
 # Roasting App — Cursor Agents
 
-Этот проект использует специализированных субагентов и правила Cursor для разработки десктопного приложения для обжарки (стек: Kotlin, JavaFX, Cropster-like).
+This project uses a multi-agent orchestration system for feature delivery, bug fixing, and reference-based implementation.
 
-## Когда какого субагента вызывать
+## Orchestration workflow
 
-| Задача | Субагент |
-|--------|----------|
-| Модель данных профиля, события (charge, crack, drop), метрики (RoR, development time) | **domain-model** |
-| Экран, график, биндинги JavaFX, живая кривая обжарки | **javafx-ui** |
-| Подключение к оборудованию: MODBUS, S7, Serial, Phidget, Yoctopuce | **hardware-drivers** |
-| Юнит-тесты, моки драйверов, тесты метрик | **testing** |
-| Проверка кода на соответствие стеку и слоям | **code-reviewer** |
+For structured work, use the **orchestration workflow**:
 
-## Как вызвать
+1. **Planner** — Breaks task into steps, lists files, risks, acceptance criteria
+2. **Reference Researcher** — Inspects Cropster (`C:\Users\ilaku\Downloads\1_extracted`) and Artisan (`D:\project\Projects\artisantest-master`), follows `reference-cropster.mdc`
+3. **Implementer** — Implements after planning and reference research
+4. **Reviewer** — Checks plan compliance, reference alignment, correctness
+5. **Tester** — Runs compile/build/test and reports results
 
-В чате Cursor можно написать, например:
+The **Orchestrator** coordinates the flow and never writes production code.
 
-- «Используй субагент **domain-model**, чтобы добавить метрику времени до первого крэка»
-- «Привлеки **javafx-ui** для доработки графика»
-- «Пусть **hardware-drivers** добавит адаптер для MODBUS RTU»
-- «Запусти **code-reviewer** на последних изменениях»
+## How to trigger
 
-## Правила и скиллы
+- **Slash command**: Type `/orchestrate` in chat, then describe your task
+- **Rule**: Reference `@orchestration` or `@orchestration.mdc`
+- **Phrase**: "Run the orchestration workflow for [task]"
 
-- **Правила** (всегда или по файлам): `.cursor/rules/` — project-stack, kotlin-java, javafx-ui, hardware-drivers, tests.
-- **Скиллы** (как делать домен, UI, железо, сборку): `.cursor/skills/` — roasting-app-domain, javafx-roasting-ui, hardware-integration, gradle-packaging.
+## Agent roles
 
-Общий стек и архитектура описаны в `.cursor/rules/project-stack.mdc` (alwaysApply).
+| Agent | Purpose |
+|-------|---------|
+| **orchestrator** | Coordinates workflow; ensures order; handles review/test failures; produces final summary |
+| **planner** | Restates task; 3–7 steps; files; risks; acceptance criteria. No code. |
+| **reference-researcher** | Inspects local references; follows `reference-cropster.mdc`; returns mirror/adapt/do-not-copy |
+| **implementer** | Implements after Planner + Reference Researcher output; scoped changes |
+| **reviewer** | Plan compliance; reference alignment; correctness; edge cases; consistency |
+| **tester** | Compile/build/test; factual report; no production code changes unless asked |
 
-## Cursor Cloud specific instructions
+## Domain specialists (direct invocation)
 
-### Project overview
+For focused work without full orchestration:
 
-RDR (Roast.Drop.Repeat) is a single-module Kotlin/JavaFX desktop coffee roasting logger. No database, no Docker — settings live in `~/.rdr/settings.json`, profiles in `~/roasts/*.alog`.
+| Task | Agent |
+|------|-------|
+| Roast profile, events, metrics (RoR, development time) | **domain-model** |
+| JavaFX UI, chart, bindings, live roast curve | **javafx-ui** |
+| MODBUS, S7, Serial, Phidget, Yoctopuce drivers | **hardware-drivers** |
 
-### Build & run
+Invoke directly: e.g. "Use **domain-model** to add time-to-first-crack metric."
 
-- **Build**: `./gradlew build -x test` (compiles Kotlin, downloads all deps via Gradle).
-- **Tests**: `./gradlew test` — 3 JUnit 5 test classes (PhasesTest, ProfileStorageTest, RoRTest).
-- **Run app**: `DISPLAY=:1 ./gradlew run` — launches JavaFX UI. Requires a virtual display (Xvfb) on headless Linux; the Cloud VM already provides `DISPLAY=:1`.
-- The app defaults to **Simulator** machine type, so no physical roaster or network is needed for basic testing.
+## Rules and skills
 
-### Gotchas
+- **Rules**: `.cursor/rules/` — project-stack, kotlin-java, javafx-ui, hardware-drivers, tests, **reference-cropster** (always for reference research), **orchestration** (workflow)
+- **Skills**: `.cursor/skills/` — roasting-app-domain, javafx-roasting-ui, hardware-integration, gradle-packaging
 
-- The repo ships without a `gradlew` unix script (only `gradlew.bat`). The update script regenerates it from the existing `gradle-wrapper.jar` if missing.
-- CSS warnings about `ClassCastException` on startup are cosmetic (JavaFX 23 strictness with `appearance.css` size values) and do not affect functionality.
-- The external server (`artqqplus.ru`) is optional; the app works fully offline with the simulator. Server-dependent features (login, reference profiles, upload) degrade gracefully without credentials.
-- No lint tool (detekt, ktlint) is configured in the Gradle build. Compilation warnings from `./gradlew build` serve as the primary code-quality check.
+## Cursor Cloud specific
+
+- **Build**: `./gradlew build -x test`
+- **Tests**: `./gradlew test`
+- **Run**: `DISPLAY=:1 ./gradlew run` (Xvfb on headless Linux)
+- App defaults to Simulator; no physical roaster needed for basic testing.

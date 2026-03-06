@@ -100,11 +100,10 @@ class CurveChartFx : CurveModelListener {
         val COLOR_BBP_TEXT_BG = Color(226, 231, 233)
 
         private val CHART_FONT = Font(null, Font.PLAIN, 11)
+        /** Высота одной полосы фазы (в пикселях). */
         private const val PHASE_STRIP_HEIGHT = 10
-        /** Vertical offset from dataArea.maxY to top of live phase strip (strip above background). */
-        private const val LIVE_STRIP_TOP_OFFSET = 22
-        /** Vertical offset from dataArea.maxY to top of background phase strip (bottom row). */
-        private const val BACKGROUND_STRIP_TOP_OFFSET = 10
+        /** Вертикальный зазор между строками полос (в пикселях). */
+        private const val PHASE_STRIP_GAP = 4
         private const val BACKGROUND_STRIP_ALPHA = 0.55f
         /** RoR window in seconds (Artisan-style). */
         private const val ROR_DELTA_SEC = 30
@@ -145,6 +144,13 @@ class CurveChartFx : CurveModelListener {
     /** Current charge offset (raw ms of Charge). Used when loading reference to align ref Charge with live Charge. */
     fun getChargeOffsetMs(): Long = chargeOffsetMs
 
+    private data class LivePhaseStripState(
+        val endMs: Long,
+        val deMs: Long?,
+        val fcMs: Long?,
+        val dropMs: Long?
+    )
+
     /** Convert display time (chart X) to raw time for profile/callbacks. */
     fun toRawTime(displayMs: Long): Long = displayMs + chargeOffsetMs
 
@@ -152,6 +158,12 @@ class CurveChartFx : CurveModelListener {
     private val phaseStripAnnotations = mutableListOf<XYAnnotation>()
     /** Phase strip for reference/background profile (second row when reference is set). */
     private val backgroundPhaseStripAnnotations = mutableListOf<XYAnnotation>()
+    /** True when a reference phase strip is loaded and should stay logically independent from live strip updates. */
+    private var referencePhaseActive: Boolean = false
+    /** Once rendered for selected reference, prevent accidental rebuilds from other flows. */
+    private var referencePhaseLocked: Boolean = false
+    /** Last live phase-strip state, used to re-layout when reference strip appears/disappears. */
+    private var lastLivePhaseStripState: LivePhaseStripState? = null
 
     /** When true, chart shows BBP curves (time 0..15 min) instead of roast; live pipeline updates ignored. */
     @Volatile
@@ -506,6 +518,9 @@ class CurveChartFx : CurveModelListener {
             phaseStripAnnotations.clear()
             backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             backgroundPhaseStripAnnotations.clear()
+            referencePhaseActive = false
+            referencePhaseLocked = false
+            lastLivePhaseStripState = null
             plot.clearDomainMarkers()
             val bbpTimeRangeMs = 15 * 60 * 1000.0
             plot.domainAxis.setRange(0.0, bbpTimeRangeMs)
@@ -614,7 +629,8 @@ class CurveChartFx : CurveModelListener {
         private val x2Ms: Double,
         private val color: Color,
         private val label: String? = null,
-        private val stripTopOffset: Int = LIVE_STRIP_TOP_OFFSET
+        /** Номер "строки" полосы: 0 — у оси времени, 1 — строка выше и т.д. */
+        private val rowIndex: Int = 0
     ) : AbstractXYAnnotation() {
         override fun draw(
             g2: Graphics2D,
@@ -628,7 +644,14 @@ class CurveChartFx : CurveModelListener {
             val edge = Plot.resolveDomainAxisLocation(plot.domainAxisLocation, PlotOrientation.VERTICAL)
             val j2dx1 = domainAxis.valueToJava2D(x1Ms, dataArea, edge)
             val j2dx2 = domainAxis.valueToJava2D(x2Ms, dataArea, edge)
-            val y = dataArea.maxY - stripTopOffset - PHASE_STRIP_HEIGHT
+
+            // Две логически независимые полосы:
+            // rowIndex = 0 → reference: у оси времени (внизу, как в Cropster).
+            // rowIndex = 1 → live: в самом верху области данных, чтобы вообще не пересекаться по Y.
+            val y = when (rowIndex) {
+                0 -> dataArea.maxY - PHASE_STRIP_HEIGHT
+                else -> dataArea.minY + 5.0
+            }
             val w = (j2dx2 - j2dx1).coerceAtLeast(1.0)
             val savedComposite = g2.composite
             g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.85f)
@@ -654,6 +677,62 @@ class CurveChartFx : CurveModelListener {
         return "%d:%02d".format(m, secPart)
     }
 
+    /** Возвращает номер строки для live-полосы: 0 — если reference нет, 1 — если reference полоса активна. */
+    private fun currentLiveStripRow(): Int =
+        if (referencePhaseActive) 1 else 0
+
+    private fun clearLivePhaseStripAnnotations() {
+        phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
+        phaseStripAnnotations.clear()
+    }
+
+    private fun redrawLivePhaseStripFromState(state: LivePhaseStripState) {
+        val end = (state.endMs - chargeOffsetMs).toDouble().coerceAtLeast(0.0)
+        val drop = state.dropMs?.let { (it - chargeOffsetMs).toDouble().coerceAtLeast(0.0) }
+        val phaseEnd = drop ?: end
+        val totalSec = phaseEnd / 1000.0
+        val de = state.deMs?.let { (it - chargeOffsetMs).toDouble() }
+        val fc = state.fcMs?.let { (it - chargeOffsetMs).toDouble() }
+        val liveRow = currentLiveStripRow()
+
+        val dryingEnd = de?.coerceAtLeast(0.0) ?: fc?.coerceAtLeast(0.0) ?: phaseEnd
+        if (dryingEnd > 0) {
+            val durSec = dryingEnd / 1000.0
+            val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
+            val label = "Drying ${formatPhaseDuration(durSec)} $pct%"
+            val a = PhaseStripAnnotation(0.0, dryingEnd, COLOR_DRYING, label, liveRow)
+            plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
+            phaseStripAnnotations.add(a)
+        }
+        val maillardStart = de?.coerceAtLeast(0.0) ?: 0.0
+        val maillardEnd = fc?.coerceAtLeast(0.0) ?: phaseEnd
+        if (maillardEnd > maillardStart) {
+            val durSec = (maillardEnd - maillardStart) / 1000.0
+            val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
+            val label = "Maillard ${formatPhaseDuration(durSec)} $pct%"
+            val a = PhaseStripAnnotation(maillardStart, maillardEnd, COLOR_MAILLARD, label, liveRow)
+            plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
+            phaseStripAnnotations.add(a)
+        }
+        // Development: FC .. Drop (or end if no Drop)
+        val devEnd = fc?.let { drop ?: end }
+        if (fc != null && fc >= 0 && devEnd != null && devEnd > fc) {
+            val durSec = (devEnd - fc) / 1000.0
+            val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
+            val label = "Development ${formatPhaseDuration(durSec)} $pct%"
+            val a = PhaseStripAnnotation(fc, devEnd, COLOR_DEVELOPMENT, label, liveRow)
+            plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
+            phaseStripAnnotations.add(a)
+        }
+    }
+
+    private fun relayoutLivePhaseStripForReferencePresence() {
+        val state = lastLivePhaseStripState ?: return
+        if (lastChartConfig?.showPhaseStrips == false || state.endMs <= 0) return
+        clearLivePhaseStripAnnotations()
+        redrawLivePhaseStripFromState(state)
+    }
+
     /**
      * Update the phase strip (Drying / Maillard / Development) from profile events.
      * Boundaries: Drying 0..DE (or FC if no DE), Maillard DE..FC (or end), Development FC..drop (or end if no drop).
@@ -661,93 +740,32 @@ class CurveChartFx : CurveModelListener {
      */
     fun updatePhaseStrip(endMs: Long, deMs: Long?, fcMs: Long?, dropMs: Long? = null) {
         Platform.runLater {
-            phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
-            phaseStripAnnotations.clear()
-            if (lastChartConfig?.showPhaseStrips == false) return@runLater
-            if (endMs <= 0) return@runLater
-            val end = (endMs - chargeOffsetMs).toDouble().coerceAtLeast(0.0)
-            val drop = dropMs?.let { (it - chargeOffsetMs).toDouble().coerceAtLeast(0.0) }
-            val phaseEnd = drop ?: end
-            val totalSec = phaseEnd / 1000.0
-            val de = deMs?.let { (it - chargeOffsetMs).toDouble() }
-            val fc = fcMs?.let { (it - chargeOffsetMs).toDouble() }
-            val dryingEnd = de?.coerceAtLeast(0.0) ?: fc?.coerceAtLeast(0.0) ?: phaseEnd
-            if (dryingEnd > 0) {
-                val durSec = dryingEnd / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Drying ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(0.0, dryingEnd, COLOR_DRYING, label, LIVE_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                phaseStripAnnotations.add(a)
+            clearLivePhaseStripAnnotations()
+            if (lastChartConfig?.showPhaseStrips == false) {
+                lastLivePhaseStripState = null
+                return@runLater
             }
-            val maillardStart = de?.coerceAtLeast(0.0) ?: 0.0
-            val maillardEnd = fc?.coerceAtLeast(0.0) ?: phaseEnd
-            if (maillardEnd > maillardStart) {
-                val durSec = (maillardEnd - maillardStart) / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Maillard ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(maillardStart, maillardEnd, COLOR_MAILLARD, label, LIVE_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                phaseStripAnnotations.add(a)
+            if (endMs <= 0) {
+                lastLivePhaseStripState = null
+                return@runLater
             }
-            // Development: FC .. Drop (or end if no Drop)
-            val devEnd = fc?.let { drop ?: end }
-            if (fc != null && fc >= 0 && devEnd != null && devEnd > fc) {
-                val durSec = (devEnd - fc) / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Development ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(fc, devEnd, COLOR_DEVELOPMENT, label, LIVE_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                phaseStripAnnotations.add(a)
-            }
+            val state = LivePhaseStripState(endMs, deMs, fcMs, dropMs)
+            lastLivePhaseStripState = state
+            redrawLivePhaseStripFromState(state)
         }
     }
 
     /**
-     * Update the background (reference) phase strip. Call when reference profile is set.
-     * [refDropMs] Drop time from ref charge in ms; used as end of Development and for total %. If null, [refEndMs] is used.
+     * Update the background (reference) phase strip.
+     * Disabled by product decision: show only one phase strip (live roast).
      */
-    fun updateBackgroundPhaseStrip(shiftMs: Long, refEndMs: Long, refDeMs: Long?, refFcMs: Long?, refDropMs: Long? = null) {
+    private fun updateBackgroundPhaseStrip(shiftMs: Long, refEndMs: Long, refDeMs: Long?, refFcMs: Long?, refDropMs: Long? = null) {
         Platform.runLater {
             backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             backgroundPhaseStripAnnotations.clear()
-            if (lastChartConfig?.showPhaseStrips == false) return@runLater
-            fun withAlpha(c: Color): Color = Color(c.red, c.green, c.blue, (255.0 * BACKGROUND_STRIP_ALPHA).toInt().coerceIn(0, 255))
-            val end = refEndMs.toDouble().coerceAtLeast(0.0)
-            val drop = refDropMs?.toDouble()?.coerceAtLeast(0.0)
-            val phaseEnd = drop ?: end
-            val totalSec = phaseEnd / 1000.0
-            val shift = shiftMs.toDouble()
-            val de = refDeMs?.toDouble()
-            val fc = refFcMs?.toDouble()
-            val dryingEnd = de?.coerceAtLeast(0.0) ?: fc?.coerceAtLeast(0.0) ?: phaseEnd
-            if (dryingEnd > 0) {
-                val durSec = dryingEnd / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Drying ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(shift, shift + dryingEnd, withAlpha(COLOR_DRYING), label, BACKGROUND_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                backgroundPhaseStripAnnotations.add(a)
-            }
-            val maillardStart = de?.coerceAtLeast(0.0) ?: 0.0
-            val maillardEnd = fc?.coerceAtLeast(0.0) ?: phaseEnd
-            if (maillardEnd > maillardStart) {
-                val durSec = (maillardEnd - maillardStart) / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Maillard ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(shift + maillardStart, shift + maillardEnd, withAlpha(COLOR_MAILLARD), label, BACKGROUND_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                backgroundPhaseStripAnnotations.add(a)
-            }
-            val devEnd = fc?.let { drop ?: end }
-            if (fc != null && fc >= 0 && devEnd != null && devEnd > fc) {
-                val durSec = (devEnd - fc) / 1000.0
-                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-                val label = "Development ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(shift + fc, shift + devEnd, withAlpha(COLOR_DEVELOPMENT), label, BACKGROUND_STRIP_TOP_OFFSET)
-                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-                backgroundPhaseStripAnnotations.add(a)
-            }
+            referencePhaseActive = false
+            referencePhaseLocked = false
+            relayoutLivePhaseStripForReferencePresence()
         }
     }
 
@@ -770,6 +788,7 @@ class CurveChartFx : CurveModelListener {
             refEtSeries.clear()
             refRorBtSeries.clear()
             refRorEtSeries.clear()
+            referencePhaseLocked = false
             refMarkerOffset = 5.0
             val shiftMs = alignAtChargeMs ?: 0L
             if (profile != null && profile.timex.isNotEmpty()) {
@@ -826,8 +845,14 @@ class CurveChartFx : CurveModelListener {
                 val refDropMs = profile.eventByType(EventType.DROP)?.timeSec?.let { ((it - chargeOffsetSec) * 1000).toLong().takeIf { ms -> ms >= 0 } }
                 updateBackgroundPhaseStrip(shiftMs, refEndMs, refDeMs, refFcMs, refDropMs)
             } else {
+                // When reference is cleared explicitly (setReferenceProfile(null)),
+                // the caller is responsible for removing reference annotations.
+                // Here we only keep live state consistent.
                 backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
                 backgroundPhaseStripAnnotations.clear()
+                referencePhaseActive = false
+                referencePhaseLocked = false
+                relayoutLivePhaseStripForReferencePresence()
             }
             if (profile?.betweenBatchLog != null) {
                 setBetweenBatchAnnotation(profile.betweenBatchLog!!.durationMs)
@@ -935,6 +960,9 @@ class CurveChartFx : CurveModelListener {
             phaseStripAnnotations.clear()
             backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             backgroundPhaseStripAnnotations.clear()
+            referencePhaseActive = false
+            referencePhaseLocked = false
+            lastLivePhaseStripState = null
             markersByType.clear()
             markerOffset = 20.0
             refMarkerOffset = 5.0
@@ -1044,8 +1072,13 @@ class CurveChartFx : CurveModelListener {
 
     private fun gridPaintFromConfig(config: ChartConfig): Color {
         val base = Color.decode(config.gridColor)
-        val alpha = config.gridOpaqueness.coerceIn(0.1, 1.0).toFloat()
-        return Color(base.red.toFloat(), base.green.toFloat(), base.blue.toFloat(), alpha)
+        val alpha = (config.gridOpaqueness.coerceIn(0.1, 1.0) * 255.0).toInt().coerceIn(0, 255)
+        return Color(
+            base.red.coerceIn(0, 255),
+            base.green.coerceIn(0, 255),
+            base.blue.coerceIn(0, 255),
+            alpha
+        )
     }
 
     private fun applySeriesVisibility(config: ChartConfig) {

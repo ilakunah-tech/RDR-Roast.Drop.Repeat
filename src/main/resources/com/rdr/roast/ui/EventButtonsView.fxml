@@ -1,49 +1,261 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
-<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.rdr.roast.ui.EventButtonsController"
-      spacing="12" style="-fx-background-color: #ffffff; -fx-padding: 16; -fx-text-fill: #333333;">
+      spacing="10"
+      prefWidth="1100"
+      prefHeight="740"
+      style="-fx-background-color: #ffffff; -fx-padding: 12;">
+    <Label text="Events → Buttons" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
 
-    <Label text="Events → Buttons (custom Modbus buttons)"
-           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-    <Label text="Add buttons with label, command string (write/wcoil/sleep), visibility and color. They appear in the main window and run the command when clicked."
-           style="-fx-text-fill: #888888; -fx-font-size: 11px; -fx-wrap-text: true;"/>
+    <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+        <tabs>
+            <Tab text="Config">
+                <ScrollPane fitToWidth="true" fitToHeight="true">
+                    <content>
+                        <VBox spacing="10" style="-fx-padding: 10;">
+                            <Label text="Event type labels"/>
+                            <GridPane hgap="8" vgap="8">
+                                <Label text="Type 1" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                <TextField fx:id="txtEventType1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                <Label text="Type 2" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                                <TextField fx:id="txtEventType2" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                                <Label text="Type 3" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtEventType3" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                <Label text="Type 4" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtEventType4" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                            </GridPane>
 
-    <TableView fx:id="table" prefHeight="220" VBox.vgrow="ALWAYS">
-        <columns>
-            <TableColumn fx:id="colLabel" text="Label" prefWidth="90"/>
-            <TableColumn fx:id="colDescription" text="Description" prefWidth="100"/>
-            <TableColumn fx:id="colAction" text="Action" prefWidth="100"/>
-            <TableColumn fx:id="colCommand" text="Command" prefWidth="200"/>
-            <TableColumn fx:id="colVisibility" text="Visible" prefWidth="55"/>
-            <TableColumn fx:id="colBgColor" text="Color" prefWidth="70"/>
-        </columns>
-    </TableView>
+                            <Label text="Visibility and annotations"/>
+                            <HBox spacing="12">
+                                <CheckBox fx:id="chkEventButton" text="Event Button"/>
+                                <CheckBox fx:id="chkShowOnBt" text="Show on BT"/>
+                                <CheckBox fx:id="chkAnnotations" text="Annotations"/>
+                                <CheckBox fx:id="chkPhaseLines" text="Phase lines"/>
+                                <CheckBox fx:id="chkTimeGuide" text="Time Guide"/>
+                            </HBox>
 
-    <HBox spacing="8" alignment="CENTER_LEFT">
-        <Button fx:id="btnAdd" text="Add"
-                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-        <Button fx:id="btnEdit" text="Edit"
-                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-        <Button fx:id="btnDelete" text="Delete"
-                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-    </HBox>
+                            <Label text="Default button action / command"/>
+                            <GridPane hgap="8" vgap="8">
+                                <Label text="Action" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                <TextField fx:id="txtDefaultAction" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                <Label text="Command" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtDefaultCommand" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            </GridPane>
 
-    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 8 0 0 0;">
-        <Button fx:id="btnOk" text="OK" defaultButton="true"
-                style="-fx-background-color: #4A90D9; -fx-text-fill: white; -fx-padding: 6 16; -fx-background-radius: 4;"/>
-        <Button fx:id="btnCancel" text="Cancel" cancelButton="true"
-                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 16; -fx-background-radius: 4;"/>
+                            <Label text="Automatic marking"/>
+                            <HBox spacing="12">
+                                <CheckBox fx:id="chkAutoCharge" text="Auto Charge"/>
+                                <CheckBox fx:id="chkAutoDryEnd" text="Auto Dry End"/>
+                                <CheckBox fx:id="chkAutoFirstCrack" text="Auto First Crack"/>
+                                <CheckBox fx:id="chkAutoDrop" text="Auto Drop"/>
+                            </HBox>
+
+                            <Label text="Default event commands"/>
+                            <GridPane hgap="8" vgap="8">
+                                <Label text="Charge" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                <TextField fx:id="txtEventCharge" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                <Label text="Drop" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtEventDrop" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                <Label text="Dry End" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                                <TextField fx:id="txtEventDryEnd" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                <Label text="FC Start" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                                <TextField fx:id="txtEventFcStart" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                <Label text="Cool End" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                                <TextField fx:id="txtEventCoolEnd" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                            </GridPane>
+                        </VBox>
+                    </content>
+                </ScrollPane>
+            </Tab>
+
+            <Tab text="Buttons">
+                <VBox spacing="8" style="-fx-padding: 10;">
+                    <TableView fx:id="table" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="colLabel" text="Label" prefWidth="90"/>
+                            <TableColumn fx:id="colDescription" text="Description" prefWidth="120"/>
+                            <TableColumn fx:id="colType" text="Type" prefWidth="80"/>
+                            <TableColumn fx:id="colValue" text="Value" prefWidth="60"/>
+                            <TableColumn fx:id="colAction" text="Action" prefWidth="120"/>
+                            <TableColumn fx:id="colDocumentation" text="Documentation" prefWidth="220"/>
+                            <TableColumn fx:id="colVisibility" text="Visibility" prefWidth="70"/>
+                            <TableColumn fx:id="colBgColor" text="Color" prefWidth="80"/>
+                            <TableColumn fx:id="colTextColor" text="Text Color" prefWidth="90"/>
+                        </columns>
+                    </TableView>
+                    <HBox spacing="8">
+                        <Button fx:id="btnAdd" text="Add"/>
+                        <Button fx:id="btnInsert" text="Insert"/>
+                        <Button fx:id="btnDelete" text="Delete"/>
+                        <Button fx:id="btnCopyTable" text="Copy Table"/>
+                    </HBox>
+                    <GridPane hgap="8" vgap="8">
+                        <Label text="Max buttons/row" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <TextField fx:id="txtMaxButtonsPerRow" prefWidth="70" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="Button size" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                        <ChoiceBox fx:id="cmbButtonSize" prefWidth="110" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                        <Label text="Color pattern" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+                        <TextField fx:id="txtColorPattern" prefWidth="70" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+                        <CheckBox fx:id="chkMarkLastPressed" text="Mark Last Pressed" GridPane.columnIndex="6" GridPane.rowIndex="0"/>
+                        <CheckBox fx:id="chkTooltips" text="Tooltips" GridPane.columnIndex="7" GridPane.rowIndex="0"/>
+                    </GridPane>
+                </VBox>
+            </Tab>
+
+            <Tab text="Sliders">
+                <ScrollPane fitToWidth="true" fitToHeight="true">
+                    <content>
+                        <VBox spacing="10" style="-fx-padding: 10;">
+                            <Label text="Rows: Air / Drum / Damper / Burner"/>
+                            <GridPane hgap="8" vgap="8">
+                                <columnConstraints>
+                                    <ColumnConstraints prefWidth="80"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                    <ColumnConstraints prefWidth="65"/>
+                                    <ColumnConstraints prefWidth="65"/>
+                                    <ColumnConstraints prefWidth="65"/>
+                                    <ColumnConstraints prefWidth="65"/>
+                                    <ColumnConstraints prefWidth="80"/>
+                                    <ColumnConstraints prefWidth="65"/>
+                                    <ColumnConstraints prefWidth="60"/>
+                                    <ColumnConstraints prefWidth="90"/>
+                                </columnConstraints>
+                                <Label text="Type" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                <Label text="Command" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                <Label text="Min" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                                <Label text="Max" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                                <Label text="Factor" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+                                <Label text="Offset" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+                                <Label text="Bernoulli" GridPane.columnIndex="6" GridPane.rowIndex="0"/>
+                                <Label text="Step" GridPane.columnIndex="7" GridPane.rowIndex="0"/>
+                                <Label text="Temp" GridPane.columnIndex="8" GridPane.rowIndex="0"/>
+                                <Label text="Unit" GridPane.columnIndex="9" GridPane.rowIndex="0"/>
+
+                                <Label text="Air" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtAirCommand" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtAirMin" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtAirMax" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtAirFactor" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtAirOffset" GridPane.columnIndex="5" GridPane.rowIndex="1"/>
+                                <CheckBox fx:id="chkAirBernoulli" GridPane.columnIndex="6" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtAirStep" GridPane.columnIndex="7" GridPane.rowIndex="1"/>
+                                <CheckBox fx:id="chkAirTemp" GridPane.columnIndex="8" GridPane.rowIndex="1"/>
+                                <TextField fx:id="txtAirUnit" GridPane.columnIndex="9" GridPane.rowIndex="1"/>
+
+                                <Label text="Drum" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                                <TextField fx:id="txtDrumCommand" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                <TextField fx:id="txtDrumMin" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                                <TextField fx:id="txtDrumMax" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                                <TextField fx:id="txtDrumFactor" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+                                <TextField fx:id="txtDrumOffset" GridPane.columnIndex="5" GridPane.rowIndex="2"/>
+                                <CheckBox fx:id="chkDrumBernoulli" GridPane.columnIndex="6" GridPane.rowIndex="2"/>
+                                <TextField fx:id="txtDrumStep" GridPane.columnIndex="7" GridPane.rowIndex="2"/>
+                                <CheckBox fx:id="chkDrumTemp" GridPane.columnIndex="8" GridPane.rowIndex="2"/>
+                                <TextField fx:id="txtDrumUnit" GridPane.columnIndex="9" GridPane.rowIndex="2"/>
+
+                                <Label text="Damper" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                                <TextField fx:id="txtDamperCommand" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                <TextField fx:id="txtDamperMin" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                                <TextField fx:id="txtDamperMax" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                                <TextField fx:id="txtDamperFactor" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
+                                <TextField fx:id="txtDamperOffset" GridPane.columnIndex="5" GridPane.rowIndex="3"/>
+                                <CheckBox fx:id="chkDamperBernoulli" GridPane.columnIndex="6" GridPane.rowIndex="3"/>
+                                <TextField fx:id="txtDamperStep" GridPane.columnIndex="7" GridPane.rowIndex="3"/>
+                                <CheckBox fx:id="chkDamperTemp" GridPane.columnIndex="8" GridPane.rowIndex="3"/>
+                                <TextField fx:id="txtDamperUnit" GridPane.columnIndex="9" GridPane.rowIndex="3"/>
+
+                                <Label text="Burner" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                                <TextField fx:id="txtBurnerCommand" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                <TextField fx:id="txtBurnerMin" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
+                                <TextField fx:id="txtBurnerMax" GridPane.columnIndex="3" GridPane.rowIndex="4"/>
+                                <TextField fx:id="txtBurnerFactor" GridPane.columnIndex="4" GridPane.rowIndex="4"/>
+                                <TextField fx:id="txtBurnerOffset" GridPane.columnIndex="5" GridPane.rowIndex="4"/>
+                                <CheckBox fx:id="chkBurnerBernoulli" GridPane.columnIndex="6" GridPane.rowIndex="4"/>
+                                <TextField fx:id="txtBurnerStep" GridPane.columnIndex="7" GridPane.rowIndex="4"/>
+                                <CheckBox fx:id="chkBurnerTemp" GridPane.columnIndex="8" GridPane.rowIndex="4"/>
+                                <TextField fx:id="txtBurnerUnit" GridPane.columnIndex="9" GridPane.rowIndex="4"/>
+                            </GridPane>
+                            <HBox spacing="12">
+                                <CheckBox fx:id="chkAlternativeLayout" text="Alternative Layout"/>
+                                <CheckBox fx:id="chkKeyboardControl" text="Keyboard Control"/>
+                            </HBox>
+                        </VBox>
+                    </content>
+                </ScrollPane>
+            </Tab>
+
+            <Tab text="Quantifiers">
+                <VBox spacing="10" style="-fx-padding: 10;">
+                    <GridPane hgap="8" vgap="8">
+                        <Label text="Type" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="Source" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="SV" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                        <Label text="Min" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                        <Label text="Max" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+                        <Label text="Step" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+                        <Label text="Action" GridPane.columnIndex="6" GridPane.rowIndex="0"/>
+
+                        <Label text="Air" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="cmbQuantAirSource" prefWidth="85" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <TextField fx:id="txtQuantAirSv" prefWidth="60" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                        <TextField fx:id="txtQuantAirMin" prefWidth="60" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                        <TextField fx:id="txtQuantAirMax" prefWidth="60" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+                        <TextField fx:id="txtQuantAirStep" prefWidth="60" GridPane.columnIndex="5" GridPane.rowIndex="1"/>
+                        <CheckBox fx:id="chkQuantAirAction" GridPane.columnIndex="6" GridPane.rowIndex="1"/>
+
+                        <Label text="Drum" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <ComboBox fx:id="cmbQuantDrumSource" prefWidth="85" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <TextField fx:id="txtQuantDrumSv" prefWidth="60" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                        <TextField fx:id="txtQuantDrumMin" prefWidth="60" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                        <TextField fx:id="txtQuantDrumMax" prefWidth="60" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+                        <TextField fx:id="txtQuantDrumStep" prefWidth="60" GridPane.columnIndex="5" GridPane.rowIndex="2"/>
+                        <CheckBox fx:id="chkQuantDrumAction" GridPane.columnIndex="6" GridPane.rowIndex="2"/>
+
+                        <Label text="Damper" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                        <ComboBox fx:id="cmbQuantDamperSource" prefWidth="85" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                        <TextField fx:id="txtQuantDamperSv" prefWidth="60" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                        <TextField fx:id="txtQuantDamperMin" prefWidth="60" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                        <TextField fx:id="txtQuantDamperMax" prefWidth="60" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
+                        <TextField fx:id="txtQuantDamperStep" prefWidth="60" GridPane.columnIndex="5" GridPane.rowIndex="3"/>
+                        <CheckBox fx:id="chkQuantDamperAction" GridPane.columnIndex="6" GridPane.rowIndex="3"/>
+
+                        <Label text="Burner" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                        <ComboBox fx:id="cmbQuantBurnerSource" prefWidth="85" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        <TextField fx:id="txtQuantBurnerSv" prefWidth="60" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
+                        <TextField fx:id="txtQuantBurnerMin" prefWidth="60" GridPane.columnIndex="3" GridPane.rowIndex="4"/>
+                        <TextField fx:id="txtQuantBurnerMax" prefWidth="60" GridPane.columnIndex="4" GridPane.rowIndex="4"/>
+                        <TextField fx:id="txtQuantBurnerStep" prefWidth="60" GridPane.columnIndex="5" GridPane.rowIndex="4"/>
+                        <CheckBox fx:id="chkQuantBurnerAction" GridPane.columnIndex="6" GridPane.rowIndex="4"/>
+                    </GridPane>
+                    <HBox spacing="12">
+                        <CheckBox fx:id="chkQuantCluster" text="Cluster"/>
+                        <Button fx:id="btnApply" text="Apply"/>
+                    </HBox>
+                </VBox>
+            </Tab>
+        </tabs>
+    </TabPane>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="btnOk" text="OK" defaultButton="true"/>
+        <Button fx:id="btnCancel" text="Cancel" cancelButton="true"/>
     </HBox>
 </VBox>
