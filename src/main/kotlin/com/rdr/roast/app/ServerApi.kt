@@ -294,6 +294,19 @@ fun buildAroastPayload(
         if (notes.isNotBlank()) put("notes", notes)
         coffeeId?.takeIf { it.isNotBlank() }?.let { put("coffee_id", it) }
         blendId?.takeIf { it.isNotBlank() }?.let { put("blend_id", it) }
+        profile.betweenBatchLog?.let { bbp ->
+            put("bbp_timex", bbp.timex)
+            put("bbp_temp1", bbp.temp1)
+            put("bbp_temp2", bbp.temp2)
+            put("bbp_start_epoch_ms", bbp.startEpochMs)
+            put("bbp_duration_ms", bbp.durationMs)
+            if (bbp.temp1.isNotEmpty()) {
+                put("bbp_min_temp", bbp.temp1.min())
+                put("bbp_max_temp", bbp.temp1.max())
+            }
+            put("bbp_gas_changes", bbp.gasChanges)
+            put("bbp_air_changes", bbp.airChanges)
+        }
     }
 }
 

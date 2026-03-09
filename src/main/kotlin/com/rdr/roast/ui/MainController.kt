@@ -622,11 +622,12 @@ class MainController {
         bbpPanel.isManaged = visible
         if (!visible) return
         val session = recorder.currentBbpSession
+        val bbpState = recorder.bbpService.stateFlow.value
         val referenceHasBbp = referenceProfile?.betweenBatchLog != null
-        lblBbpStatus.text = if (session?.isStopped() == true) {
-            "Stopped. Click Start roast to continue."
-        } else {
-            "Recording between batch data"
+        lblBbpStatus.text = when (bbpState) {
+            com.rdr.roast.app.BbpState.STOPPED -> "Stopped. Click Start roast to continue."
+            com.rdr.roast.app.BbpState.RECORDING -> "Recording between batch data"
+            else -> "Between batch protocol"
         }
         lblBbpReference.text = if (referenceHasBbp) {
             "Reference between batch shown."
@@ -646,7 +647,17 @@ class MainController {
             lblBbpMinBt.text = "Lowest BT: —"
             lblBbpMaxBt.text = "Highest BT: —"
         }
-        lblBbpHint.text = "Click the chart to add a comment, gas or airflow."
+        val gasCount = session?.comments?.count { it.gas != null } ?: 0
+        val airCount = session?.comments?.count { it.airflow != null } ?: 0
+        val stats = buildList {
+            if (gasCount > 0) add("Gas changes: $gasCount")
+            if (airCount > 0) add("Air changes: $airCount")
+        }
+        lblBbpHint.text = if (stats.isNotEmpty()) {
+            stats.joinToString(" · ") + "\nClick the chart to add a comment, gas or airflow."
+        } else {
+            "Click the chart to add a comment, gas or airflow."
+        }
     }
 
     // ── Sample handling ───────────────────────────────────────────────────────
@@ -1257,6 +1268,7 @@ class MainController {
         curveChart.rebaseAllSeries(chargeTimeMs)
         curveChart.addEventMarker(chargeTimeMs, "Charge @ %.1f °C".format(sample.bt),
             com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
+        referenceProfile?.let { curveChart.setReferenceProfile(it, 0L) }
         refreshCommentsList()
     }
 
@@ -1551,9 +1563,8 @@ class MainController {
         }
         updateReferenceSummary(profile)
         updateReferenceComments(profile)
-        // If live was already rebased (Charge pressed without ref), 0 = Charge so align ref at 0; else ref at 0 until user presses C
-        val alignMs = if (curveChart.getChargeOffsetMs() > 0) 0L else null
-        curveChart.setReferenceProfile(profile, alignMs)
+        // Ref Charge always at X = 0 (Charge-to-Charge alignment); after C live is also at 0.
+        curveChart.setReferenceProfile(profile, 0L)
         curveChart.setReferenceBbp(profile.betweenBatchLog)
         updateBbpPanel()
     }

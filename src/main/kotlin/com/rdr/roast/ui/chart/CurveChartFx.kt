@@ -399,11 +399,12 @@ class CurveChartFx : CurveModelListener {
     /**
      * Rebase live series and markers so Charge = 00:00 (Cropster-style).
      * Call when user presses C: existing points get new X = rawX - offsetMs; markers are shifted; future points use this offset.
+     * Sets [chargeOffsetMs] synchronously so that addEventMarker(chargeTimeMs, ...) called immediately after computes displayMs = 0.
      */
     fun rebaseAllSeries(offsetMs: Long) {
+        chargeOffsetMs = offsetMs
         Platform.runLater {
             chart.isNotify = false
-            chargeOffsetMs = offsetMs
             for (series in listOf(btSeries, etSeries, rorBtSeries, rorEtSeries)) {
                 val points = (0 until series.itemCount).map { i ->
                     series.getX(i).toDouble() - offsetMs to series.getY(i).toDouble()
@@ -517,11 +518,15 @@ class CurveChartFx : CurveModelListener {
         }
     }
 
+    /** BBP reference time markers: "End of roast", "Lowest temperature", "Start of roast". */
+    private val bbpRefMarkers = mutableListOf<Marker>()
+
     fun setReferenceBbp(log: BetweenBatchLog?) {
         referenceBbpLog = log
         if (bbpMode) {
             Platform.runLater {
                 refreshReferenceBbpSeries()
+                refreshBbpReferenceMarkers()
                 chart.fireChartChanged()
             }
         }
@@ -537,6 +542,49 @@ class CurveChartFx : CurveModelListener {
             refBbpBtSeries.add(xMs, log.temp1[i])
             refBbpEtSeries.add(xMs, log.temp2[i])
         }
+    }
+
+    private fun refreshBbpReferenceMarkers() {
+        bbpRefMarkers.forEach { plot.removeDomainMarker(it) }
+        bbpRefMarkers.clear()
+        val log = referenceBbpLog ?: return
+
+        addBbpRefMarker(0.0, "End of roast", RectangleAnchor.TOP_RIGHT, TextAnchor.TOP_LEFT, 5.0)
+
+        log.lowestTemperatureTimeMs?.let { ms ->
+            addBbpRefMarker(ms.toDouble(), "Lowest temperature", RectangleAnchor.TOP_RIGHT, TextAnchor.TOP_LEFT, 19.0)
+        }
+
+        if (log.durationMs > 0) {
+            addBbpRefMarker(log.durationMs.toDouble(), "Start of roast", RectangleAnchor.BOTTOM_RIGHT, TextAnchor.BOTTOM_LEFT, 5.0)
+        }
+
+        log.comments.forEach { c ->
+            val xMs = c.timeSec * 1000.0
+            val parts = mutableListOf<String>()
+            c.gas?.let { parts += "Gas ${it.toInt()}" }
+            c.airflow?.let { parts += "Airflow ${it.toInt()}" }
+            c.text.takeIf { it.isNotBlank() }?.let { parts += it }
+            val suffix = parts.joinToString(" · ").ifBlank { "Comment" }
+            addBbpRefMarker(xMs, "Ref: $suffix", RectangleAnchor.TOP_RIGHT, TextAnchor.TOP_LEFT, refMarkerOffset)
+            refMarkerOffset += 14.0
+        }
+    }
+
+    private fun addBbpRefMarker(xMs: Double, label: String, anchor: RectangleAnchor, textAnchor: TextAnchor, offset: Double) {
+        val marker = ValueMarker(xMs).apply {
+            stroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(6f, 3f), 0f)
+            paint = COLOR_REF_MARKER
+            labelPaint = COLOR_REF_MARKER
+            labelBackgroundColor = COLOR_TRANSPARENT
+            this.label = label
+            labelAnchor = anchor
+            labelTextAnchor = textAnchor
+            labelOffset = RectangleInsets(offset, 0.0, 0.0, 5.0)
+            labelFont = CHART_FONT
+        }
+        plot.addDomainMarker(marker)
+        bbpRefMarkers.add(marker)
     }
 
     /** Switch chart to BBP live mode (Cropster-style): only BBP BT/ET, no reference, no phase strip, no title. */
@@ -569,6 +617,7 @@ class CurveChartFx : CurveModelListener {
             lastLivePhaseStripState = null
             plot.clearDomainMarkers()
             refreshReferenceBbpSeries()
+            refreshBbpReferenceMarkers()
             val bbpTimeRangeMs = 15 * 60 * 1000.0
             plot.domainAxis.setRange(0.0, bbpTimeRangeMs)
             chart.title = null
@@ -592,7 +641,6 @@ class CurveChartFx : CurveModelListener {
         }
     }
 
-    /** Leave BBP mode; reset domain and clear BBP series. */
     fun exitBbpMode() {
         Platform.runLater {
             bbpMode = false
@@ -603,6 +651,8 @@ class CurveChartFx : CurveModelListener {
             rorEtSeries.clear()
             refBbpBtSeries.clear()
             refBbpEtSeries.clear()
+            bbpRefMarkers.forEach { plot.removeDomainMarker(it) }
+            bbpRefMarkers.clear()
             val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
             plot.domainAxis.setRange(0.0, timeRangeMs)
             chart.fireChartChanged()
@@ -827,6 +877,10 @@ class CurveChartFx : CurveModelListener {
      * Alignment (Artisan-style): when [alignAtChargeMs] is set, the reference is shifted so that
      * Ref Charge coincides with the live Charge at that X. So ref X = (ref_time - ref_charge)*1000 + alignAtChargeMs.
      * When null, ref Charge is at 0 (ref X = (ref_time - ref_charge)*1000).
+     *
+     * Charge-to-Charge alignment: pass [alignAtChargeMs] = 0 when setting reference so ref Charge is at X = 0.
+     * After the user presses C, the caller should call setReferenceProfile(profile, 0L) again if reference is set,
+     * so that ref is rebuilt in the same coordinate system (0 = Charge) as the rebased live series.
      */
     fun setReferenceProfile(profile: RoastProfile?, alignAtChargeMs: Long? = null) {
         Platform.runLater {
@@ -1032,6 +1086,8 @@ class CurveChartFx : CurveModelListener {
             referencePhaseActive = false
             referencePhaseLocked = false
             referenceBbpLog = null
+            bbpRefMarkers.forEach { plot.removeDomainMarker(it) }
+            bbpRefMarkers.clear()
             lastLivePhaseStripState = null
             markersByType.clear()
             markerOffset = 20.0

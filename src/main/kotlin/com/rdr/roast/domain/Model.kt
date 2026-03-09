@@ -64,7 +64,8 @@ data class ProtocolComment(
     val text: String,
     val tempBT: Double? = null,
     val gas: Double? = null,
-    val airflow: Double? = null
+    val airflow: Double? = null,
+    val anchorTemp: Double? = null
 )
 
 /**

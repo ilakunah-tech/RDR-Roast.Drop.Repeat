@@ -464,7 +464,17 @@ data class AppSettings(
     val sliderPanelDetached: Boolean = false,
     /** Last position of detached slider window (x, y). Null = use default. */
     val sliderPanelDetachedX: Double? = null,
-    val sliderPanelDetachedY: Double? = null
+    val sliderPanelDetachedY: Double? = null,
+    /** When true, BBP comments anchor to BT value instead of time. */
+    val bbpCommentByTemp: Boolean = false,
+    /** Pre-fill gas value from reference BBP's last gas comment. */
+    val bbpPreFillGas: Boolean = true,
+    /** Pre-fill airflow value from reference BBP's last airflow comment. */
+    val bbpPreFillAirflow: Boolean = true,
+    /** Maximum BBP recording duration in seconds (default 15 min = 900). */
+    val bbpMaxDurationSec: Int = 900,
+    /** When true, show BBP duration exceeded alarm toast. */
+    val bbpAlarmEnabled: Boolean = true
 )
 
 object SettingsManager {

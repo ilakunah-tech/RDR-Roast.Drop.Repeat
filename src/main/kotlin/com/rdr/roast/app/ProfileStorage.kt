@@ -194,6 +194,10 @@ object ProfileStorage {
         val lowestMs = parseLong(content, "bbp_lowest_temp_time_ms")
         val highestMs = parseLong(content, "bbp_highest_temp_time_ms")
         val comments = parseComments(content, "bbp_comment")
+        val previousRoastId = parseString(content, "bbp_previous_roast_id")
+        val nextRoastId = parseString(content, "bbp_next_roast_id")
+        val gasChanges = parseLong(content, "bbp_gas_changes")?.toInt() ?: comments.count { it.gas != null }
+        val airChanges = parseLong(content, "bbp_air_changes")?.toInt() ?: comments.count { it.airflow != null }
         return BetweenBatchLog(
             startEpochMs = startMs,
             durationMs = durationMs,
@@ -203,8 +207,27 @@ object ProfileStorage {
             mode = mode,
             lowestTemperatureTimeMs = lowestMs,
             highestTemperatureTimeMs = highestMs,
-            comments = comments
+            comments = comments,
+            previousRoastId = previousRoastId,
+            nextRoastId = nextRoastId,
+            gasChanges = gasChanges,
+            airChanges = airChanges
         )
+    }
+
+    private fun parseString(content: String, key: String): String? {
+        val start = indexOfKey(content, key)
+        if (start < 0) return null
+        val after = content.substring(start)
+        val colon = after.indexOf(':', 4)
+        if (colon < 0) return null
+        val rest = after.substring(colon + 1).trim()
+        if (rest.startsWith("None") || rest.startsWith("null")) return null
+        val quote = rest.firstOrNull { it == '\'' || it == '"' } ?: return null
+        val s = rest.indexOf(quote) + 1
+        val e = rest.indexOf(quote, s)
+        if (e < 0) return null
+        return rest.substring(s, e).takeIf { it.isNotBlank() }
     }
 
     private fun parseLong(content: String, key: String): Long? {
@@ -435,7 +458,11 @@ object ProfileStorage {
             val bbpTemp2 = formatTempList(bbp.temp2)
             val opt = listOfNotNull(
                 bbp.lowestTemperatureTimeMs?.let { "'bbp_lowest_temp_time_ms': $it" },
-                bbp.highestTemperatureTimeMs?.let { "'bbp_highest_temp_time_ms': $it" }
+                bbp.highestTemperatureTimeMs?.let { "'bbp_highest_temp_time_ms': $it" },
+                bbp.previousRoastId?.let { "'bbp_previous_roast_id': '${it.replace("'", "\\'")}'" },
+                bbp.nextRoastId?.let { "'bbp_next_roast_id': '${it.replace("'", "\\'")}'" },
+                if (bbp.gasChanges > 0) "'bbp_gas_changes': ${bbp.gasChanges}" else null,
+                if (bbp.airChanges > 0) "'bbp_air_changes': ${bbp.airChanges}" else null
             ).joinToString(", ")
             val comments = formatComments("bbp_comment", bbp.comments)
             val optSuffix = if (opt.isNotEmpty()) ", $opt" else ""
