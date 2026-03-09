@@ -48,9 +48,13 @@ Invoke directly: e.g. "Use **domain-model** to add time-to-first-crack metric."
 - **Rules**: `.cursor/rules/` — project-stack, kotlin-java, javafx-ui, hardware-drivers, tests, **reference-cropster** (always for reference research), **orchestration** (workflow)
 - **Skills**: `.cursor/skills/` — roasting-app-domain, javafx-roasting-ui, hardware-integration, gradle-packaging
 
-## Cursor Cloud specific
+## Cursor Cloud specific instructions
 
 - **Build**: `./gradlew build -x test`
 - **Tests**: `./gradlew test`
 - **Run**: `DISPLAY=:1 ./gradlew run` (Xvfb on headless Linux)
 - App defaults to Simulator; no physical roaster needed for basic testing.
+- **Xvfb**: Must be running before `./gradlew run` or GUI tests. Start with `Xvfb :1 -screen 0 1280x1024x24 -ac &` then set `DISPLAY=:1`.
+- **CSS warnings**: JavaFX 23 emits `ClassCastException` warnings about `-fx-border-radius` / `-fx-background-radius` from `appearance.css`. These are cosmetic and do not affect functionality.
+- **No external services**: No database, Docker, or API server required. The app is fully self-contained with the Simulator data source.
+- **Java 21**: The Gradle toolchain requires JDK 21 (pre-installed in the Cloud VM).
