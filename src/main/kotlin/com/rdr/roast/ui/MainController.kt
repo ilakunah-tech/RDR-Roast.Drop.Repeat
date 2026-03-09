@@ -37,6 +37,7 @@ import com.rdr.roast.ui.chart.ChartPanelFx
 import com.rdr.roast.ui.chart.ChartPopupCommentResult
 import com.rdr.roast.ui.chart.ChartPopupEventResult
 import com.rdr.roast.ui.chart.ChartPopupMode
+import com.rdr.roast.ui.chart.ControlChartFx
 import com.rdr.roast.ui.chart.CurveChartFx
 import com.rdr.roast.ui.control.ControlSliderPanel
 import com.rdr.roast.ui.control.DetachableSliderWindow
@@ -86,6 +87,7 @@ import javafx.stage.Modality
 import javafx.stage.Stage
 import javafx.util.Duration
 import javafx.stage.WindowEvent
+import org.jfree.chart.fx.ChartViewer
 import javafx.scene.input.Clipboard
 import javafx.scene.input.ClipboardContent
 import javafx.scene.input.MouseButton
@@ -110,6 +112,7 @@ class MainController {
 
     @FXML lateinit var centerPane: BorderPane
     @FXML lateinit var chartContainer: Pane
+    @FXML lateinit var controlChartContainer: Pane
     @FXML lateinit var lblBTValue: Label
     @FXML lateinit var lblBTUnit: Label
     @FXML lateinit var lblRoRBTValue: Label
@@ -192,6 +195,9 @@ class MainController {
     /** Current reference/background profile (from file or server). Null = none. */
     private var referenceProfile: RoastProfile? = null
 
+    /** Cropster-style: single observable list bound to comments ListView; update content with setAll(), never replace list reference. */
+    private val commentsObservableList = FXCollections.observableArrayList<CommentListEntry>()
+
     // ── CurveModel pipeline ──────────────────────────────────────────────────
     private val btRaw = StandardCurveModel("BT")
     private val etRaw = StandardCurveModel("ET")
@@ -207,6 +213,7 @@ class MainController {
     // ── Chart ────────────────────────────────────────────────────────────────
     private val curveChart = CurveChartFx()
     private val chartPanel = ChartPanelFx(curveChart)
+    private val controlChart = ControlChartFx()
     /** Set when BBP annotation is applied for current roast (profile has betweenBatchLog); reset on clearChartAndBbpState(). */
     private var bbpAnnotationSetForCurrentRoast = false
 
@@ -237,6 +244,17 @@ class MainController {
         sidebarPanelContainer.layoutX = 0.0
         sidebarPanelContainer.layoutY = 0.0
         sidebarPanelContainer.prefHeightProperty().bind(chartContainer.heightProperty())
+
+        // Control chart (Gas/Air/Drum step curves) under main chart
+        if (::controlChartContainer.isInitialized) {
+            val controlViewer = ChartViewer(controlChart.chart).apply {
+                minWidth = 0.0
+                minHeight = 0.0
+                prefWidthProperty().bind(controlChartContainer.widthProperty())
+                prefHeightProperty().bind(controlChartContainer.heightProperty())
+            }
+            controlChartContainer.children.setAll(controlViewer)
+        }
 
         recorder.betweenBatchProtocolEnabled = SettingsManager.load().betweenBatchProtocolEnabled
 
@@ -288,8 +306,16 @@ class MainController {
                         }
                     }
                     updateBbpPanel()
-                    refreshCommentsList()
+                    // Do not refresh comments here: elapsedSec/bbpElapsedSec tick often and would cause
+                    // constant opacity=0 + FadeTransition flicker. Comments are refreshed on profile/state/reference changes.
                 }
+            }
+        }
+
+        // Control chart (Gas/Air/Drum): show roast control events; hide or clear in BBP mode
+        scope.launch {
+            combine(recorder.currentProfile, recorder.stateFlow) { p, s -> Pair(p, s) }.collect { (profile, state) ->
+                Platform.runLater { updateControlChart(profile, state) }
             }
         }
 
@@ -424,6 +450,7 @@ class MainController {
             }
         }
         list.selectionModel.selectionMode = SelectionMode.SINGLE
+        list.items = commentsObservableList
     }
 
     private fun buildCommentCard(row: CommentListEntry): HBox {
@@ -542,13 +569,13 @@ class MainController {
                 lblCommentsHeader.text = "Events & comments"
                 buildBbpCommentEntries().takeLast(10)
             }
-            state == RecorderState.RECORDING || state == RecorderState.STOPPED -> {
-                lblCommentsHeader.text = "Events & comments"
-                buildRoastCommentEntries(recorder.currentProfile.value).takeLast(10)
-            }
             referenceProfile != null -> {
                 lblCommentsHeader.text = "Reference comments"
                 buildReferenceComments(referenceProfile!!)
+            }
+            state == RecorderState.RECORDING || state == RecorderState.STOPPED -> {
+                lblCommentsHeader.text = "Events & comments"
+                buildRoastCommentEntries(recorder.currentProfile.value).takeLast(10)
             }
             else -> {
                 lblCommentsHeader.text = "Events & comments"
@@ -558,13 +585,8 @@ class MainController {
         if (::btnCommentsSettings.isInitialized) {
             btnCommentsSettings.isDisable = referenceProfile == null || state == RecorderState.RECORDING || state == RecorderState.BBP
         }
-        list.items = FXCollections.observableArrayList(rows)
-        list.opacity = 0.0
-        FadeTransition(Duration.millis(180.0), list).apply {
-            fromValue = 0.0
-            toValue = 1.0
-            play()
-        }
+        // Cropster-style: update the same observable list (no new list reference), so ListView does not re-bind and does not flicker.
+        commentsObservableList.setAll(rows)
     }
 
     private fun formatCommentEntry(comment: ProtocolComment): String {
@@ -684,6 +706,19 @@ class MainController {
 
         updatePhaseStrip()
         updateBbpPanel()
+        updateControlChart(recorder.currentProfile.value, recorder.stateFlow.value)
+    }
+
+    private fun updateControlChart(profile: RoastProfile, state: RecorderState) {
+        if (!::controlChartContainer.isInitialized) return
+        if (state == RecorderState.BBP) {
+            controlChartContainer.isVisible = false
+            controlChart.updateControlEvents(emptyList(), 0.0)
+        } else {
+            controlChartContainer.isVisible = true
+            val chargeOffsetSec = profile.eventByType(EventType.CHARGE)?.timeSec ?: 0.0
+            controlChart.updateControlEvents(profile.controlEvents, chargeOffsetSec)
+        }
     }
 
     private fun updatePhaseStrip() {
@@ -709,6 +744,7 @@ class MainController {
         bbpAnnotationSetForCurrentRoast = false
         chartPanel.lastDataTimeMs = null
         tpMarkerPlaced = false
+        updateControlChart(recorder.currentProfile.value, recorder.stateFlow.value)
         refreshCommentsList()
         updateBbpPanel()
     }
@@ -961,46 +997,59 @@ class MainController {
         }
     }
 
-    /** Build custom event buttons from settings (visibility = true). On click run command via ModbusCommandExecutor on background thread. */
+    /** Build custom event buttons from settings (visibility = true). On click run command via ModbusCommandExecutor on background thread. Placed under the chart (centerPane bottom). */
     private fun refreshCustomButtonsPanel() {
         if (!::customButtonsPanel.isInitialized) return
-        val buttons = SettingsManager.load().customButtons.filter { it.visibility }
+        val settings = SettingsManager.load()
+        val buttons = settings.customButtons.filter { it.visibility }
         customButtonsPanel.children.clear()
-        if (buttons.isEmpty()) {
+        if (buttons.isEmpty() || !settings.eventButtonsConfig.eventButtonEnabled) {
             customButtonsPanel.isVisible = false
             customButtonsPanel.isManaged = false
             return
         }
         customButtonsPanel.isVisible = true
         customButtonsPanel.isManaged = true
-        val flow = HBox(6.0).apply { alignment = Pos.CENTER }
-        for (cfg in buttons) {
-            val cmd = cfg.commandString.trim()
-            val btn = Button(cfg.label.ifBlank { "…" }).apply {
-                style = "-fx-background-color: ${cfg.backgroundColor}; -fx-text-fill: ${cfg.textColor}; -fx-padding: 6 12; -fx-background-radius: 4;"
-                tooltip = Tooltip(
-                    (if (cfg.description.isNotBlank()) cfg.description + "\n" else "") +
-                        "Command: ${if (cmd.isNotBlank()) cmd else "(none)"}"
-                )
-                setOnAction {
-                    if (cmd.isEmpty()) return@setOnAction
-                    val runner = recorder.dataSource as? ModbusCommandRunner
-                    if (runner == null) {
-                        ErrorLogBuffer.append(IllegalStateException("Not connected to Modbus"), "Custom button \"${cfg.label}\"")
-                        return@setOnAction
+        val maxPerRow = settings.eventButtonsConfig.maxButtonsPerRow.coerceIn(1, 30)
+        val padding = when (settings.eventButtonsConfig.buttonSize) {
+            com.rdr.roast.app.ButtonSize.TINY -> "4 8"
+            com.rdr.roast.app.ButtonSize.LARGE -> "10 16"
+            else -> "6 12"
+        }
+        val rows = buttons.chunked(maxPerRow)
+        for (rowButtons in rows) {
+            val row = HBox(6.0).apply { alignment = Pos.CENTER }
+            for (cfg in rowButtons) {
+                val cmd = (cfg.documentation.ifBlank { cfg.commandString }).trim()
+                val showTooltip = settings.eventButtonsConfig.tooltips
+                val btn = Button(cfg.label.ifBlank { "…" }).apply {
+                    style = "-fx-background-color: ${cfg.backgroundColor}; -fx-text-fill: ${cfg.textColor}; -fx-padding: $padding; -fx-background-radius: 4;"
+                    if (showTooltip) {
+                        tooltip = Tooltip(
+                            (if (cfg.description.isNotBlank()) cfg.description + "\n" else "") +
+                                "Command: ${if (cmd.isNotBlank()) cmd else "(none)"}"
+                        )
                     }
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            ModbusCommandExecutor.execute(runner, cmd)
-                        } catch (e: Exception) {
-                            Platform.runLater { ErrorLogBuffer.append(e, "Custom button \"${cfg.label}\"") }
+                    setOnAction {
+                        if (cmd.isEmpty()) return@setOnAction
+                        val runner = recorder.dataSource as? ModbusCommandRunner
+                        if (runner == null) {
+                            ErrorLogBuffer.append(IllegalStateException("Not connected to Modbus"), "Custom button \"${cfg.label}\"")
+                            return@setOnAction
+                        }
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                ModbusCommandExecutor.execute(runner, cmd)
+                            } catch (e: Exception) {
+                                Platform.runLater { ErrorLogBuffer.append(e, "Custom button \"${cfg.label}\"") }
+                            }
                         }
                     }
                 }
+                row.children.add(btn)
             }
-            flow.children.add(btn)
+            customButtonsPanel.children.add(row)
         }
-        customButtonsPanel.children.add(flow)
     }
 
     private fun formatControlValue(value: Double): String {
@@ -1057,6 +1106,7 @@ class MainController {
             }
         }
         updateBbpPanel()
+        refreshCommentsList()
     }
 
     private fun setBbpButtonsVisible(visible: Boolean) {
@@ -1659,6 +1709,7 @@ class MainController {
             }
             val updated = SettingsManager.load()
             curveChart.applySettings(updated.chartColors, updated.chartConfig)
+            controlChart.setTimeRangeMinutes(updated.chartConfig.timeRangeMin)
             updateReadoutUnits()
             refreshCustomButtonsPanel()
         }

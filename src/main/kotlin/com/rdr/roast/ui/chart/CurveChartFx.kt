@@ -5,6 +5,7 @@ import com.rdr.roast.app.ChartColors
 import com.rdr.roast.app.GridStyle
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.domain.BetweenBatchLog
+import com.rdr.roast.domain.ControlEvent
 import com.rdr.roast.domain.ControlEventType
 import com.rdr.roast.domain.EventType
 import com.rdr.roast.domain.RoastProfile
@@ -94,8 +95,8 @@ class CurveChartFx : CurveModelListener {
         val COLOR_REF_ET    = Color(120, 150, 210, 140)
         val COLOR_REF_ROR_BT = Color(100, 120, 140, 120)
         val COLOR_REF_ROR_ET = Color(160, 170, 175, 120)
-        /** Reference event markers: subtle gray. */
-        val COLOR_REF_MARKER = Color(140, 140, 140, 180)
+        /** Artisan bgeventmarker #7f7f7f for reference event lines and labels. */
+        val COLOR_REF_MARKER = Color(0x7f, 0x7f, 0x7f)
         /** BBP period band (Cropster-style: before roast start). */
         val COLOR_BBP_BAND = Color(196, 196, 196)
         val COLOR_BBP_TEXT_BG = Color(226, 231, 233)
@@ -876,17 +877,18 @@ class CurveChartFx : CurveModelListener {
                         val adjustedSec = ce.timeSec - chargeOffsetSec
                         if (adjustedSec < 0) return@forEach
                         val xMs = (adjustedSec * 1000).toLong() + shiftMs
-                        val label = ce.displayString?.takeIf { it.isNotBlank() }
-                            ?: run {
-                                val tag = when (ce.type) {
-                                    ControlEventType.GAS -> "GAS"
-                                    ControlEventType.AIR -> "AIR"
-                                    ControlEventType.DRUM -> "DRUM"
-                                    ControlEventType.DAMPER -> "DAMPER"
-                                }
-                                "Ref: $tag ${ce.value.toInt()}"
-                            }
-                        addReferenceEventMarker(xMs, label)
+                        addReferenceEventMarker(xMs, refControlEventLabel(ce))
+                    }
+                    profile.comments.forEach { c ->
+                        val adjustedSec = c.timeSec - chargeOffsetSec
+                        if (adjustedSec < 0) return@forEach
+                        val xMs = (adjustedSec * 1000).toLong() + shiftMs
+                        val parts = mutableListOf<String>()
+                        c.gas?.let { parts += "Gas ${it.toInt()}" }
+                        c.airflow?.let { parts += "Airflow ${it.toInt()}" }
+                        c.text.takeIf { it.isNotBlank() }?.let { parts += it }
+                        val suffix = parts.joinToString(" · ").ifBlank { "Comment" }
+                        addReferenceEventMarker(xMs, "Ref: $suffix")
                     }
                 }
                 val refEndSec = (timex.maxOrNull() ?: 0.0) - chargeOffsetSec
@@ -914,6 +916,19 @@ class CurveChartFx : CurveModelListener {
             chart.isNotify = true
             chart.fireChartChanged()
         }
+    }
+
+    /** Artisan-style label for reference control event: specialeventsStrings if set, else "Ref: Type value". */
+    private fun refControlEventLabel(ce: ControlEvent): String {
+        val desc = ce.displayString?.trim()?.takeIf { it.isNotBlank() }
+        return if (desc != null) "Ref: $desc" else "Ref: ${controlEventTypeLabel(ce.type)} ${ce.value.toInt()}"
+    }
+
+    private fun controlEventTypeLabel(type: ControlEventType): String = when (type) {
+        ControlEventType.GAS -> "Gas"
+        ControlEventType.AIR -> "Air"
+        ControlEventType.DRUM -> "Drum"
+        ControlEventType.DAMPER -> "Damper"
     }
 
     private fun refEventLabel(type: com.rdr.roast.domain.EventType, timeSec: Double, bt: Double?, et: Double?): String {
