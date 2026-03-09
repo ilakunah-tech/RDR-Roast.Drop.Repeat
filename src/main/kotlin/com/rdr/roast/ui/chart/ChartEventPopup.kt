@@ -103,7 +103,15 @@ class ChartEventPopup(
                 hide()
             }
         }
-        actions.children.addAll(btnDE, btnFC)
+        val btnSC = Button("Second crack").apply {
+            maxWidth = Double.MAX_VALUE
+            style = greenButtonStyle()
+            setOnAction {
+                onAdd(ChartPopupEventResult(timeMs, "SC @ $mmss"))
+                hide()
+            }
+        }
+        actions.children.addAll(btnDE, btnFC, btnSC)
         root.children += actions
         root.children += Separator()
 

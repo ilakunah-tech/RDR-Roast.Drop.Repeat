@@ -670,6 +670,7 @@ class CurveChartFx : CurveModelListener {
         label.startsWith("TP @")     -> "TP"
         label.startsWith("DE @")     -> "DE"
         label.startsWith("FC @")     -> "FC"
+        label.startsWith("SC @")     -> "SC"
         label.startsWith("Drop @")   -> "Drop"
         else -> null
     }
@@ -792,6 +793,7 @@ class CurveChartFx : CurveModelListener {
         val totalSec = phaseEnd / 1000.0
         val de = state.deMs?.let { (it - chargeOffsetMs).toDouble() }
         val fc = state.fcMs?.let { (it - chargeOffsetMs).toDouble() }
+        if (de == null && fc == null) return
         val liveRow = currentLiveStripRow()
 
         val dryingEnd = de?.coerceAtLeast(0.0) ?: fc?.coerceAtLeast(0.0) ?: phaseEnd
@@ -803,15 +805,17 @@ class CurveChartFx : CurveModelListener {
             plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
             phaseStripAnnotations.add(a)
         }
-        val maillardStart = de?.coerceAtLeast(0.0) ?: 0.0
-        val maillardEnd = fc?.coerceAtLeast(0.0) ?: phaseEnd
-        if (maillardEnd > maillardStart) {
-            val durSec = (maillardEnd - maillardStart) / 1000.0
-            val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
-            val label = "Maillard ${formatPhaseDuration(durSec)} $pct%"
-            val a = PhaseStripAnnotation(maillardStart, maillardEnd, COLOR_MAILLARD, label, liveRow)
-            plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
-            phaseStripAnnotations.add(a)
+        if (de != null) {
+            val maillardStart = de.coerceAtLeast(0.0)
+            val maillardEnd = fc?.coerceAtLeast(0.0) ?: phaseEnd
+            if (maillardEnd > maillardStart) {
+                val durSec = (maillardEnd - maillardStart) / 1000.0
+                val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
+                val label = "Maillard ${formatPhaseDuration(durSec)} $pct%"
+                val a = PhaseStripAnnotation(maillardStart, maillardEnd, COLOR_MAILLARD, label, liveRow)
+                plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
+                phaseStripAnnotations.add(a)
+            }
         }
         // Development: FC .. Drop (or end if no Drop)
         val devEnd = fc?.let { drop ?: end }
@@ -992,6 +996,7 @@ class CurveChartFx : CurveModelListener {
             com.rdr.roast.domain.EventType.TP    -> "Ref: TP @ $t · ${bt?.let { "%.1f".format(it) } ?: "-"} °C"
             com.rdr.roast.domain.EventType.CC -> "Ref: DE @ $t"
             com.rdr.roast.domain.EventType.FC    -> "Ref: FC @ $t"
+            com.rdr.roast.domain.EventType.SC    -> "Ref: SC @ $t"
             com.rdr.roast.domain.EventType.DROP -> "Ref: Drop @ $t"
             else -> "Ref @ $t"
         }

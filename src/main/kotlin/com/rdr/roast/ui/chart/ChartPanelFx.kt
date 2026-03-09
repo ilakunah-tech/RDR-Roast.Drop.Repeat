@@ -5,6 +5,7 @@ import javafx.scene.control.Label
 import javafx.scene.input.ContextMenuEvent
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
+import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.HBox
@@ -143,6 +144,24 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
             val window = chartViewer.scene?.window ?: return@addEventHandler
             // Offset slightly so the popup doesn't sit directly under the cursor
             popup.show(window, e.screenX + 8, e.screenY - 8)
+        }
+
+        // ── Ctrl+Wheel → zoom domain axis ───────────────────────────────────
+        chartViewer.addEventFilter(ScrollEvent.SCROLL) { event ->
+            if (event.isShortcutDown) {
+                event.consume()
+                val zoomFactor = 0.1
+                val domainAxis = curveChart.plot.domainAxis
+                val currentRange = domainAxis.range
+                val rangeLenMs = currentRange.length
+
+                val zf = if (event.deltaY > 0) 1.0 / (1.0 + zoomFactor) else (1.0 + zoomFactor)
+                val newRange = rangeLenMs * zf
+                val anchor = currentRange.lowerBound + rangeLenMs / 2.0
+                val newLower = anchor - newRange / 2.0
+                val newUpper = anchor + newRange / 2.0
+                domainAxis.setRange(newLower.coerceAtLeast(0.0), newUpper)
+            }
         }
     }
 }

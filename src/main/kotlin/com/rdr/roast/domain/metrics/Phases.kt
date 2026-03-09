@@ -7,28 +7,43 @@ import com.rdr.roast.domain.RoastProfile
 /**
  * Computes roast phase durations: Drying, Maillard, Development.
  *
- * - Drying: CHARGE to CC. If no CHARGE, uses timex[0]. If no CC, duration 0.
- * - Maillard: CC to DROP (MVP has no separate FC; Maillard is CC→DROP).
- * - Development: 0 duration for MVP (will be refined when FC event is added).
+ * - Drying: CHARGE → CC (or FC if no CC, or end time if neither).
+ * - Maillard: CC → FC (or end time if no FC). Only present when CC exists.
+ * - Development: FC → end time. Only present when FC exists.
  *
- * @return List of 3 PhaseDuration when profile has >= 2 points; empty list otherwise.
+ * End time is DROP if set, otherwise the last timex value.
+ *
+ * @return Non-empty list of phases with positive duration; empty if profile has < 2 points or no CHARGE.
  */
 fun computePhases(profile: RoastProfile): List<PhaseDuration> {
     if (profile.timex.size < 2) return emptyList()
 
     val charge = profile.eventByType(EventType.CHARGE)
     val cc = profile.eventByType(EventType.CC)
+    val fc = profile.eventByType(EventType.FC)
     val drop = profile.eventByType(EventType.DROP)
 
-    val dryingStart = charge?.timeSec ?: profile.timex.first()
-    val dryingEnd = cc?.timeSec ?: dryingStart
-    val drying = PhaseDuration("Drying", dryingStart, dryingEnd)
+    val chargeTime = charge?.timeSec ?: return emptyList()
+    val endTime = drop?.timeSec ?: profile.timex.lastOrNull() ?: return emptyList()
+    val ccTime = cc?.timeSec
+    val fcTime = fc?.timeSec
 
-    val maillardStart = cc?.timeSec ?: 0.0
-    val maillardEnd = drop?.timeSec ?: maillardStart
-    val maillard = PhaseDuration("Maillard", maillardStart, maillardEnd)
+    val phases = mutableListOf<PhaseDuration>()
 
-    val development = PhaseDuration("Development", 0.0, 0.0)
+    val dryingEnd = ccTime ?: fcTime ?: endTime
+    val drying = PhaseDuration("Drying", chargeTime, dryingEnd)
+    if (drying.durationSec > 0) phases.add(drying)
 
-    return listOf(drying, maillard, development)
+    if (ccTime != null) {
+        val maillardEnd = fcTime ?: endTime
+        val maillard = PhaseDuration("Maillard", ccTime, maillardEnd)
+        if (maillard.durationSec > 0) phases.add(maillard)
+    }
+
+    if (fcTime != null) {
+        val development = PhaseDuration("Development", fcTime, endTime)
+        if (development.durationSec > 0) phases.add(development)
+    }
+
+    return phases
 }

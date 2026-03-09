@@ -48,6 +48,7 @@ object ProfileStorage {
             addEventFromTimeindex(events, timeindex, timexList, btList, etList, 0, EventType.CHARGE)
             addEventFromTimeindex(events, timeindex, timexList, btList, etList, 1, EventType.CC)   // Dry End
             addEventFromTimeindex(events, timeindex, timexList, btList, etList, 2, EventType.FC)   // FCs
+            addEventFromTimeindex(events, timeindex, timexList, btList, etList, 4, EventType.SC)   // SCs
             addEventFromTimeindex(events, timeindex, timexList, btList, etList, 6, EventType.DROP)
             addTpEventIfMissing(events, timexList, btList, etList)
             events.sortBy { it.timeSec }
@@ -380,6 +381,7 @@ object ProfileStorage {
             addEventFromTimeindex(events, timeindex, timexList, bt, et, 0, EventType.CHARGE)
             addEventFromTimeindex(events, timeindex, timexList, bt, et, 1, EventType.CC)
             addEventFromTimeindex(events, timeindex, timexList, bt, et, 2, EventType.FC)
+            addEventFromTimeindex(events, timeindex, timexList, bt, et, 4, EventType.SC)
             addEventFromTimeindex(events, timeindex, timexList, bt, et, 6, EventType.DROP)
             addTpEventIfMissing(events, timexList, bt, et)
             events.sortBy { it.timeSec }
@@ -444,8 +446,9 @@ object ProfileStorage {
         val chargeIdx = profile.eventIndex(EventType.CHARGE).coerceAtLeast(-1)
         val deIdx = profile.eventIndex(EventType.CC).coerceAtLeast(-1)
         val fcIdx = profile.eventIndex(EventType.FC).coerceAtLeast(-1)
+        val scIdx = profile.eventIndex(EventType.SC).coerceAtLeast(-1)
         val dropIdx = profile.eventIndex(EventType.DROP).coerceAtLeast(-1)
-        val timeindex = listOf(chargeIdx, deIdx, fcIdx, -1, -1, -1, dropIdx, -1)
+        val timeindex = listOf(chargeIdx, deIdx, fcIdx, -1, scIdx, -1, dropIdx, -1)
         val timeindexStr = formatIntList(timeindex)
 
         val now = java.time.LocalDateTime.now()

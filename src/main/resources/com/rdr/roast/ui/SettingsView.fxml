@@ -303,6 +303,11 @@
                     <CheckBox fx:id="chkChartShowPhaseStrips" text="Показывать phase strips"
                               style="-fx-text-fill: #333333;"/>
 
+                    <Label text="RoR Smoothing"
+                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
+                    <ComboBox fx:id="cmbRorSmoothing" prefWidth="200"
+                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
+
                     <Label text="Толщина линий"
                            style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
                     <HBox spacing="8" alignment="CENTER_LEFT">

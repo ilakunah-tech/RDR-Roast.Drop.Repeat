@@ -24,6 +24,10 @@ object HotkeysHelpView {
         Row("Space", "Start при простое; Drop при записи"),
         Row("C", "Charge — отметить charge в текущее время"),
         Row("D", "Drop — отметить drop и завершить обжарку"),
+        Row("$modifier+1", "First crack"),
+        Row("$modifier+2", "Second crack"),
+        Row("$modifier+3", "Dry end (color change)"),
+        Row("$modifier+R", "Reset chart zoom"),
         Row("$modifier+Esc", "Прервать обжарку (во время записи)"),
         Row("F1", "Показать эту справку"),
     )

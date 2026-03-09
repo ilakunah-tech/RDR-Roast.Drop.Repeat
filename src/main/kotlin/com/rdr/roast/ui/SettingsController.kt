@@ -11,6 +11,7 @@ import com.rdr.roast.app.ConnectionTester
 import com.rdr.roast.app.DeviceAssignmentConfig
 import com.rdr.roast.app.MachineConfig
 import com.rdr.roast.app.MachineType
+import com.rdr.roast.app.RorSmoothing
 import com.rdr.roast.app.ModbusInputConfig
 import com.rdr.roast.app.ModbusPidConfig
 import com.rdr.roast.app.ModbusTransportType
@@ -279,6 +280,9 @@ class SettingsController {
 
     @FXML
     lateinit var btnAxesConfig: Button
+
+    @FXML
+    lateinit var cmbRorSmoothing: ComboBox<String>
 
     @FXML
     lateinit var settingsTabPane: TabPane
@@ -597,6 +601,16 @@ class SettingsController {
         txtChartRefLineWidth.text = config.refLineWidth.toString()
         txtChartBackground.text = config.backgroundColor
         txtChartGridColor.text = config.gridColor
+
+        if (::cmbRorSmoothing.isInitialized) {
+            cmbRorSmoothing.items.setAll("Sensitive", "Recommended", "Noise Resistant")
+            cmbRorSmoothing.value = when (settings.rorSmoothing) {
+                RorSmoothing.SENSITIVE -> "Sensitive"
+                RorSmoothing.RECOMMENDED -> "Recommended"
+                RorSmoothing.NOISE_RESISTANT -> "Noise Resistant"
+            }
+            cmbRorSmoothing.tooltip = Tooltip("RoR smoothing level: Sensitive (fast), Recommended, or Noise Resistant (heavy smoothing)")
+        }
 
         val quantifiers = settings.eventQuantifiers
         val sourceItems = listOf("None", "ET", "BT")
@@ -922,7 +936,14 @@ class SettingsController {
                 customButtons = eventButtonsDialogResult?.customButtons ?: settings.customButtons,
                 eventButtonsConfig = eventButtonsDialogResult?.eventButtonsConfig ?: settings.eventButtonsConfig,
                 eventSliders = eventButtonsDialogResult?.eventSliders ?: settings.eventSliders,
-                deviceAssignment = deviceAssignmentConfig ?: settings.deviceAssignment
+                deviceAssignment = deviceAssignmentConfig ?: settings.deviceAssignment,
+                rorSmoothing = if (::cmbRorSmoothing.isInitialized) {
+                    when (cmbRorSmoothing.value) {
+                        "Sensitive" -> RorSmoothing.SENSITIVE
+                        "Noise Resistant" -> RorSmoothing.NOISE_RESISTANT
+                        else -> RorSmoothing.RECOMMENDED
+                    }
+                } else settings.rorSmoothing
             )
             savedSettings = newSettings
             SettingsManager.save(newSettings)

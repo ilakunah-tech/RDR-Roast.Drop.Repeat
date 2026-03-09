@@ -7,6 +7,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+enum class RorSmoothing(val movingAvgWindow: Int, val rorWindowMs: Long) {
+    SENSITIVE(5, 10_000L),
+    RECOMMENDED(10, 18_000L),
+    NOISE_RESISTANT(10, 30_000L)
+}
+
 enum class MachineType { SIMULATOR, BESCA, DIEDRICH }
 
 /** How the app connects to the roaster: serial (Modbus RTU), TCP (Modbus TCP), or Phidget USB. */
@@ -273,6 +279,8 @@ data class EventButtonsDialogConfig(
     val autoMarkDryEnd: Boolean = false,
     val autoMarkFirstCrack: Boolean = false,
     val autoMarkDrop: Boolean = false,
+    val autoMarkDryEndTemp: Double? = null,
+    val autoMarkFirstCrackTemp: Double? = null,
     val maxButtonsPerRow: Int = 8,
     val buttonSize: ButtonSize = ButtonSize.SMALL,
     val colorPattern: Int = 0,
@@ -474,7 +482,8 @@ data class AppSettings(
     /** Maximum BBP recording duration in seconds (default 15 min = 900). */
     val bbpMaxDurationSec: Int = 900,
     /** When true, show BBP duration exceeded alarm toast. */
-    val bbpAlarmEnabled: Boolean = true
+    val bbpAlarmEnabled: Boolean = true,
+    val rorSmoothing: RorSmoothing = RorSmoothing.RECOMMENDED
 )
 
 object SettingsManager {

@@ -202,13 +202,11 @@ class MainController {
     private val btRaw = StandardCurveModel("BT")
     private val etRaw = StandardCurveModel("ET")
 
-    // Smooth raw readings with a 5-sample moving average before RoR calculation
-    private val btSmooth = MovingAverageCurveModel(btRaw, windowSize = 5)
-    private val etSmooth = MovingAverageCurveModel(etRaw, windowSize = 5)
-
-    // RoR over the smoothed signal with a 30-second window
-    private val rorBt = RorCurveModel(btSmooth, windowMs = 30_000L)
-    private val rorEt = RorCurveModel(etSmooth, windowMs = 30_000L)
+    private val initSmoothing = SettingsManager.load().rorSmoothing
+    private var btSmooth = MovingAverageCurveModel(btRaw, windowSize = initSmoothing.movingAvgWindow)
+    private var etSmooth = MovingAverageCurveModel(etRaw, windowSize = initSmoothing.movingAvgWindow)
+    private var rorBt = RorCurveModel(btSmooth, windowMs = initSmoothing.rorWindowMs)
+    private var rorEt = RorCurveModel(etSmooth, windowMs = initSmoothing.rorWindowMs)
 
     // ── Chart ────────────────────────────────────────────────────────────────
     private val curveChart = CurveChartFx()
@@ -222,6 +220,7 @@ class MainController {
     private val scope = CoroutineScope(Dispatchers.JavaFx + SupervisorJob())
     private var shouldAutoStartAfterConnect = false
     private var connectionStateJob: Job? = null
+    private var reconnectJob: Job? = null
     private val controlDebounceJobs = mutableMapOf<String, Job>()
     private var sliderPanelVisible: Boolean = true
     private var detachableSliderWindow: DetachableSliderWindow? = null
@@ -367,6 +366,11 @@ class MainController {
                             recorder.markEventAt(timeSec, EventType.FC)
                             curveChart.addEventMarker(result.timeMs, formatMarkerLabel(result.label, btAtTime))
                         }
+                        result.label.startsWith("SC @") -> {
+                            runEventCommand("SC_START")
+                            recorder.markEventAt(timeSec, EventType.SC)
+                            curveChart.addEventMarker(result.timeMs, formatMarkerLabel(result.label, btAtTime))
+                        }
                     }
                     updatePhaseStrip()
                     refreshCommentsList()
@@ -497,6 +501,7 @@ class MainController {
                 EventType.TP -> "Turning point"
                 EventType.CC -> "Dry end"
                 EventType.FC -> "First crack"
+                EventType.SC -> "Second crack"
                 EventType.DROP -> "Drop"
             }
             out += CommentListEntry(title = title, timeSec = relSec, bt = event.tempBT, source = CommentListSource.REFERENCE)
@@ -528,6 +533,7 @@ class MainController {
                     EventType.TP -> "Turning point"
                     EventType.CC -> "Dry end"
                     EventType.FC -> "First crack"
+                    EventType.SC -> "Second crack"
                     EventType.DROP -> "Drop"
                 }
                 CommentListEntry(title = title, timeSec = event.timeSec, bt = event.tempBT, source = CommentListSource.LIVE)
@@ -715,6 +721,45 @@ class MainController {
             }
         }
 
+        // Auto-Charge detection (throttled every 5 samples)
+        val settings = SettingsManager.load()
+        if (settings.eventButtonsConfig.autoMarkCharge &&
+            profile.eventByType(EventType.CHARGE) == null &&
+            profile.timex.size > 30 &&
+            autoChargeCheckCounter++ % 5 == 0) {
+            val chargeIdx = com.rdr.roast.domain.metrics.findChargeDropIndex(profile)
+            if (chargeIdx != null) {
+                triggerCharge()
+            }
+        }
+
+        // Auto Dry End by temperature threshold
+        if (settings.eventButtonsConfig.autoMarkDryEnd &&
+            settings.eventButtonsConfig.autoMarkDryEndTemp != null &&
+            profile.eventByType(EventType.CHARGE) != null &&
+            profile.eventByType(EventType.CC) == null &&
+            sample.bt >= settings.eventButtonsConfig.autoMarkDryEndTemp!!) {
+            triggerDryEnd()
+        }
+
+        // Auto First Crack by temperature threshold
+        if (settings.eventButtonsConfig.autoMarkFirstCrack &&
+            settings.eventButtonsConfig.autoMarkFirstCrackTemp != null &&
+            profile.eventByType(EventType.CC) != null &&
+            profile.eventByType(EventType.FC) == null &&
+            sample.bt >= settings.eventButtonsConfig.autoMarkFirstCrackTemp!!) {
+            triggerFirstCrack()
+        }
+
+        // Hint: if BT > 200°C and Charge not yet marked
+        if (!chargeHintShown &&
+            sample.bt > 200.0 &&
+            profile.eventByType(EventType.CHARGE) == null &&
+            recorder.stateFlow.value == RecorderState.RECORDING) {
+            chargeHintShown = true
+            lblDuration.text = "Press C for Charge"
+        }
+
         updatePhaseStrip()
         updateBbpPanel()
         updateControlChart(recorder.currentProfile.value, recorder.stateFlow.value)
@@ -749,12 +794,16 @@ class MainController {
     }
 
     private var tpMarkerPlaced = false
+    private var autoChargeCheckCounter = 0
+    private var chargeHintShown = false
 
     private fun clearChartAndBbpState() {
         curveChart.clearAll()
         bbpAnnotationSetForCurrentRoast = false
         chartPanel.lastDataTimeMs = null
         tpMarkerPlaced = false
+        autoChargeCheckCounter = 0
+        chargeHintShown = false
         updateControlChart(recorder.currentProfile.value, recorder.stateFlow.value)
         refreshCommentsList()
         updateBbpPanel()
@@ -770,6 +819,17 @@ class MainController {
         connectionStateJob = scope.launch {
             recorder.dataSource.connectionState().collect { state ->
                 Platform.runLater { updateConnectionStatus(state) }
+                if (state is ConnectionState.Disconnected &&
+                    lastConnectionState is ConnectionState.Connected) {
+                    reconnectJob?.cancel()
+                    reconnectJob = scope.launch {
+                        repeat(10) { attempt ->
+                            delay(3000)
+                            if (recorder.dataSource.connectionState().value is ConnectionState.Connected) return@launch
+                            try { recorder.connect() } catch (_: Exception) {}
+                        }
+                    }
+                }
             }
         }
     }
@@ -1211,6 +1271,28 @@ class MainController {
                             clearChartAndBbpState()
                         }
                     }
+                    e.code == KeyCode.DIGIT1 && e.isShortcutDown -> {
+                        if (recorder.stateFlow.value == RecorderState.RECORDING) {
+                            e.consume()
+                            triggerFirstCrack()
+                        }
+                    }
+                    e.code == KeyCode.DIGIT2 && e.isShortcutDown -> {
+                        if (recorder.stateFlow.value == RecorderState.RECORDING) {
+                            e.consume()
+                            triggerSecondCrack()
+                        }
+                    }
+                    e.code == KeyCode.DIGIT3 && e.isShortcutDown -> {
+                        if (recorder.stateFlow.value == RecorderState.RECORDING) {
+                            e.consume()
+                            triggerDryEnd()
+                        }
+                    }
+                    e.code == KeyCode.R && e.isShortcutDown -> {
+                        e.consume()
+                        curveChart.resetAxes()
+                    }
                     e.code == KeyCode.F1 -> {
                         e.consume()
                         showShortcutsHelp()
@@ -1280,6 +1362,47 @@ class MainController {
             com.rdr.roast.ui.chart.CurveChartFx.COLOR_MARKER)
         val profile = recorder.stop()
         showFinishRoastDialog(profile)
+    }
+
+    private fun triggerDryEnd() {
+        val profile = recorder.currentProfile.value
+        if (profile.eventByType(EventType.CC) != null) return
+        val sample = recorder.currentSample.value ?: return
+        runEventCommand("DRY_END")
+        recorder.markEvent(EventType.CC)
+        curveChart.addEventMarker(
+            (sample.timeSec * 1000).toLong(),
+            "DE @ ${formatSec(sample.timeSec)} · %.1f °C".format(sample.bt)
+        )
+        updatePhaseStrip()
+        refreshCommentsList()
+    }
+
+    private fun triggerFirstCrack() {
+        val profile = recorder.currentProfile.value
+        if (profile.eventByType(EventType.FC) != null) return
+        val sample = recorder.currentSample.value ?: return
+        runEventCommand("FC_START")
+        recorder.markEvent(EventType.FC)
+        curveChart.addEventMarker(
+            (sample.timeSec * 1000).toLong(),
+            "FC @ ${formatSec(sample.timeSec)} · %.1f °C".format(sample.bt)
+        )
+        updatePhaseStrip()
+        refreshCommentsList()
+    }
+
+    private fun triggerSecondCrack() {
+        val profile = recorder.currentProfile.value
+        if (profile.eventByType(EventType.SC) != null) return
+        val sample = recorder.currentSample.value ?: return
+        runEventCommand("SC_START")
+        recorder.markEvent(EventType.SC)
+        curveChart.addEventMarker(
+            (sample.timeSec * 1000).toLong(),
+            "SC @ ${formatSec(sample.timeSec)} · %.1f °C".format(sample.bt)
+        )
+        refreshCommentsList()
     }
 
     /** Cropster-style: after Stop/Drop show finish panel on the left of the chart (no modal). */

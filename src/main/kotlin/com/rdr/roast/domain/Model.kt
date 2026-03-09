@@ -20,6 +20,7 @@ enum class EventType {
     TP,
     CC,
     FC,   // First Crack
+    SC,   // Second Crack
     DROP
 }
 
