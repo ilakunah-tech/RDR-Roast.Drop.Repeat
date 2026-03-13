@@ -1,0 +1,64 @@
+<mxfile host="app.diagrams.net" modified="2025-03-10T12:00:00.000Z" agent="RDR-docs" version="22.0.0" etag="flow1" type="device">
+  <diagram id="dataflow" name="RDR Data Flow">
+    <mxGraphModel dx="900" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="user" value="User" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="30" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="mc" value="MainController&#xa;(UI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="180" y="260" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="rr" value="RoastRecorder" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="360" y="260" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="se" value="SamplingEngine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="540" y="260" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ds" value="RoastDataSource&#xa;(Besca/Sim/...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="720" y="260" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="rp" value="RoastProfile" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;" vertex="1" parent="1">
+          <mxGeometry x="360" y="380" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="chart" value="CurveChartFx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="180" y="380" width="120" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1" value="Connect / Start / Stop" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e_u_mc">
+          <mxGeometry x="-0.2" y="1" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e_u_mc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0;entryY=0.5;exitX=1;exitY=0.5;" edge="1" parent="1" source="user" target="mc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mc_rr" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="mc" target="rr">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_rr_se" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="rr" target="se">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_se_ds" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="se" target="ds">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ds_se" value="TemperatureSample" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;endArrow=open;endFill=0;" edge="1" parent="1" source="ds" target="se">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_se_rp" value="addSample()" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="se" target="rp">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="600" y="400"/><mxPoint x="420" y="400"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e_rr_rp" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="rr" target="rp">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_rp_chart" value="StateFlow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="rp" target="chart">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="300" y="405"/><mxPoint x="240" y="405"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e_chart_u" value="отрисовка" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;endArrow=open;endFill=0;" edge="1" parent="1" source="chart" target="user">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="55" y="405"/><mxPoint x="55" y="310"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="phase1" value="Поток: оборудование → sampleFlow() → RoastProfile → UI" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="180" y="480" width="400" height="28" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

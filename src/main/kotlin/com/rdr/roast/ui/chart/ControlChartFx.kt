@@ -1,6 +1,8 @@
 package com.rdr.roast.ui.chart
 
+import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.SettingsManager
+import com.rdr.roast.app.ThemeSettings
 import com.rdr.roast.domain.ControlEvent
 import com.rdr.roast.domain.ControlEventType
 import javafx.application.Platform
@@ -50,6 +52,21 @@ class ControlChartFx {
         private val COLOR_DRUM = Color(100, 140, 80)
     }
 
+    private fun decodeColor(hex: String?, fallback: Color): Color {
+        val value = hex?.trim().orEmpty()
+        return try {
+            Color.decode(if (value.startsWith("#")) value else "#$value")
+        } catch (_: Exception) {
+            fallback
+        }
+    }
+
+    private fun chartFont(config: ChartConfig): Font {
+        val family = config.fontFamily.trim()
+        val size = config.axisFontSize.toInt().coerceAtLeast(8)
+        return if (family.isBlank()) Font(null, Font.PLAIN, size) else Font(family, Font.PLAIN, size)
+    }
+
     init {
         val config = SettingsManager.load().chartConfig
         val timeAxis = NumberAxis("Time").apply {
@@ -57,8 +74,10 @@ class ControlChartFx {
             isAutoRange = false
             setRange(0.0, timeRangeMs)
             standardTickUnits = buildTimeTickUnits()
-            tickLabelFont = CHART_FONT
-            labelFont = CHART_FONT
+            tickLabelFont = chartFont(config)
+            labelFont = chartFont(config)
+            tickLabelPaint = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
+            labelPaint = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
         }
         val valueFormat = DecimalFormat("0.#")
         val valueAxis = NumberAxis("").apply {
@@ -71,8 +90,10 @@ class ControlChartFx {
                     add(NumberTickUnit(it, valueFormat))
                 }
             }
-            tickLabelFont = CHART_FONT
-            labelFont = CHART_FONT
+            tickLabelFont = chartFont(config)
+            labelFont = chartFont(config)
+            tickLabelPaint = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
+            labelPaint = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
         }
 
         val stepRenderer = XYStepRenderer().apply {
@@ -88,16 +109,16 @@ class ControlChartFx {
         }
 
         plot = XYPlot(collection, timeAxis, valueAxis, stepRenderer).apply {
-            backgroundPaint = Color.WHITE
-            domainGridlinePaint = Color(220, 220, 220)
-            rangeGridlinePaint = Color(220, 220, 220)
+            backgroundPaint = decodeColor(config.backgroundColor, Color.WHITE)
+            domainGridlinePaint = decodeColor(config.gridColor, Color(220, 220, 220))
+            rangeGridlinePaint = decodeColor(config.gridColor, Color(220, 220, 220))
             isDomainGridlinesVisible = true
             isRangeGridlinesVisible = true
         }
 
         chart = JFreeChart(plot).apply {
             isBorderVisible = false
-            backgroundPaint = Color.WHITE
+            backgroundPaint = decodeColor(config.backgroundColor, Color.WHITE)
             title = null
         }
     }
@@ -143,7 +164,7 @@ class ControlChartFx {
                     ControlEventType.GAS -> gasSeries
                     ControlEventType.AIR -> airSeries
                     ControlEventType.DRUM -> drumSeries
-                    ControlEventType.DAMPER -> continue
+                    ControlEventType.DAMPER, ControlEventType.BURNER -> continue
                 }
                 val sorted = events.filter { it.type == eventType }.sortedBy { it.timeSec }
                 if (sorted.isEmpty()) continue
@@ -166,5 +187,33 @@ class ControlChartFx {
     fun setTimeRangeMinutes(minutes: Int) {
         val ms = minutes * 60 * 1000.0
         plot.domainAxis.setRange(0.0, ms)
+    }
+
+    /** Apply theme colors (sliders + chart background/grid). Called when theme or settings change. */
+    fun applyTheme(theme: ThemeSettings, chartConfig: ChartConfig) {
+        Platform.runLater {
+            val decode = { hex: String -> Color.decode(hex.takeIf { it.startsWith("#") } ?: "#$hex") }
+            (plot.renderer as? XYStepRenderer)?.apply {
+                setSeriesPaint(0, decode(theme.sliders.gasColor))
+                setSeriesPaint(1, decode(theme.sliders.airColor))
+                setSeriesPaint(2, decode(theme.sliders.drumColor))
+            }
+            val bg = decodeColor(chartConfig.backgroundColor, decode(theme.charts.backgroundColor))
+            val grid = decodeColor(chartConfig.gridColor, decode(theme.charts.gridColor))
+            val axis = decodeColor(chartConfig.axisLabelColor, decode(theme.charts.axisLabelColor))
+            val font = chartFont(chartConfig)
+            plot.domainAxis.tickLabelFont = font
+            plot.domainAxis.labelFont = font
+            plot.rangeAxis.tickLabelFont = font
+            plot.rangeAxis.labelFont = font
+            plot.domainAxis.tickLabelPaint = axis
+            plot.domainAxis.labelPaint = axis
+            plot.rangeAxis.tickLabelPaint = axis
+            plot.rangeAxis.labelPaint = axis
+            plot.backgroundPaint = bg
+            plot.domainGridlinePaint = grid
+            plot.rangeGridlinePaint = grid
+            chart.backgroundPaint = bg
+        }
     }
 }

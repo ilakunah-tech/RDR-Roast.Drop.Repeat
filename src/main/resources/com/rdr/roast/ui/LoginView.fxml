@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Hyperlink?>
@@ -8,30 +7,30 @@
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.rdr.roast.ui.LoginController"
-      spacing="12" alignment="TOP_CENTER"
-      style="-fx-background-color: #ffffff; -fx-padding: 20; -fx-min-width: 320;">
-    <Label text="Вход на сервер" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;"/>
-    <Label fx:id="lblEmail" text="Email" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-    <TextField fx:id="txtEmail" promptText="email@example.com" prefWidth="280"
-               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-font-size: 12px;"/>
-    <Label fx:id="lblPassword" text="Пароль" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-    <PasswordField fx:id="txtPassword" prefWidth="280" promptText="Пароль"
-                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-font-size: 12px;"/>
-    <CheckBox fx:id="chkRemember" text="Запомнить email" style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
-    <HBox spacing="16" alignment="CENTER" style="-fx-padding: 8 0 0 0;">
-        <Button fx:id="btnOk" text="OK" defaultButton="true"
-                style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 8 24; -fx-background-radius: 4;"/>
-        <Button fx:id="btnCancel" text="Отмена" cancelButton="true"
-                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 8 24; -fx-background-radius: 4;"/>
+      styleClass="drawer-form"
+      spacing="14" alignment="TOP_LEFT" minWidth="340" prefWidth="340" fillWidth="true">
+    <Label text="Вход на сервер" styleClass="drawer-sheet-title"/>
+    <Label text="Авторизуйтесь, чтобы подгружать расписание, эталоны и отправлять профили на сервер." styleClass="drawer-sheet-subtitle"/>
+    <VBox spacing="10" styleClass="drawer-section-card, drawer-hero-card">
+        <Label fx:id="lblEmail" text="Email" styleClass="secondary-field-label"/>
+        <TextField fx:id="txtEmail" promptText="email@example.com" styleClass="secondary-input"/>
+        <Label fx:id="lblPassword" text="Пароль" styleClass="secondary-field-label"/>
+        <PasswordField fx:id="txtPassword" promptText="Пароль" styleClass="secondary-input"/>
+        <CheckBox fx:id="chkRemember" text="Запомнить email" styleClass="secondary-hint-label"/>
+    </VBox>
+    <HBox spacing="10" alignment="CENTER_LEFT" styleClass="drawer-toolbar">
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="btnCancel" text="Отмена" cancelButton="true" styleClass="btn-secondary"/>
+        <Button fx:id="btnOk" text="Войти" defaultButton="true" styleClass="btn-primary"/>
     </HBox>
-    <HBox spacing="12" alignment="CENTER" style="-fx-padding: 8 0 0 0;">
-        <Hyperlink fx:id="linkRegister" text="Регистрация" style="-fx-font-size: 11px;"/>
-        <Hyperlink fx:id="linkResetPassword" text="Восстановление пароля" style="-fx-font-size: 11px;"/>
+    <HBox spacing="12" alignment="CENTER_LEFT" styleClass="secondary-link-row">
+        <Hyperlink fx:id="linkRegister" text="Регистрация" styleClass="secondary-hint-label"/>
+        <Hyperlink fx:id="linkResetPassword" text="Восстановление пароля" styleClass="secondary-hint-label"/>
     </HBox>
-    <Label fx:id="lblError" text="" wrapText="true" maxWidth="280" visible="false" managed="false"
-           style="-fx-text-fill: #c0392b; -fx-font-size: 11px;"/>
+    <Label fx:id="lblError" text="" wrapText="true" maxWidth="320" visible="false" managed="false" styleClass="secondary-error-label"/>
 </VBox>

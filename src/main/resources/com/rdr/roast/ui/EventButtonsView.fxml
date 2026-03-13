@@ -19,13 +19,13 @@
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.rdr.roast.ui.EventButtonsController"
+      styleClass="secondary-window-shell"
       spacing="10"
       prefWidth="1100"
-      prefHeight="740"
-      style="-fx-background-color: #ffffff; -fx-padding: 12;">
-    <Label text="Events → Buttons" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+      prefHeight="740">
+    <Label text="Events → Buttons" styleClass="drawer-sheet-title"/>
 
-    <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+    <TabPane styleClass="secondary-tab-pane" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
         <tabs>
             <Tab text="Config">
                 <ScrollPane fitToWidth="true" fitToHeight="true">
@@ -254,8 +254,8 @@
         </tabs>
     </TabPane>
 
-    <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button fx:id="btnOk" text="OK" defaultButton="true"/>
-        <Button fx:id="btnCancel" text="Cancel" cancelButton="true"/>
+    <HBox spacing="10" alignment="CENTER_RIGHT" styleClass="secondary-action-row">
+        <Button fx:id="btnOk" text="OK" defaultButton="true" styleClass="btn-primary"/>
+        <Button fx:id="btnCancel" text="Cancel" cancelButton="true" styleClass="btn-secondary"/>
     </HBox>
 </VBox>

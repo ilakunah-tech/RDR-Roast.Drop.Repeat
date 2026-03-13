@@ -8,462 +8,883 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.control.TreeView?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.rdr.roast.ui.SettingsController"
-      spacing="0" alignment="TOP_CENTER"
-      style="-fx-background-color: #ffffff; -fx-padding: 16; -fx-text-fill: #333333;">
+      styleClass="secondary-window-shell settings-shell"
+      spacing="18"
+      alignment="TOP_CENTER">
     <fx:define>
         <ToggleGroup fx:id="tglUnit"/>
+        <ToggleGroup fx:id="navSectionGroup"/>
     </fx:define>
 
-    <TabPane fx:id="settingsTabPane" VBox.vgrow="ALWAYS">
-        <Tab text="Тема">
-            <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;">
-                <VBox spacing="12" style="-fx-background-color: transparent;">
-                    <Label text="Тема оформления"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbTheme" prefWidth="280"/>
+    <HBox alignment="CENTER_LEFT" styleClass="settings-topbar">
+        <VBox spacing="4">
+            <Label text="Настройки" styleClass="settings-dialog-title"/>
+            <Label text="Современная панель управления внешним видом, подключением и графиком." styleClass="settings-dialog-subtitle" wrapText="true"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label text="RDR Control Center" styleClass="settings-topbar-badge"/>
+    </HBox>
 
-                    <Label text="Масштаб интерфейса"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbScale" prefWidth="280"/>
+    <HBox spacing="18" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
+        <HBox spacing="0" alignment="CENTER_LEFT">
+            <VBox styleClass="settings-sidebar-strip" alignment="CENTER">
+                <Button fx:id="btnSidebarToggle" styleClass="settings-sidebar-toggle"/>
+            </VBox>
+            <VBox fx:id="settingsSidebar" styleClass="settings-sidebar">
+                <VBox spacing="4">
+                    <Label text="Разделы" styleClass="settings-sidebar-title"/>
+                    <Label text="Переключайтесь между крупными блоками, не теряя контекст." styleClass="settings-sidebar-subtitle" wrapText="true"/>
+                </VBox>
 
-                    <Label text="Размер шрифта"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbFontSize" prefWidth="280"/>
+                <VBox spacing="8">
+                    <ToggleButton fx:id="btnNavAppearance" text="Общий вид" toggleGroup="$navSectionGroup" styleClass="settings-nav-btn"/>
+                    <ToggleButton fx:id="btnNavConnection" text="Подключение" toggleGroup="$navSectionGroup" styleClass="settings-nav-btn"/>
+                    <ToggleButton fx:id="btnNavChart" text="График" toggleGroup="$navSectionGroup" styleClass="settings-nav-btn"/>
+                    <ToggleButton fx:id="btnNavRoastPhases" text="Roast Phases" toggleGroup="$navSectionGroup" styleClass="settings-nav-btn"/>
+                    <ToggleButton fx:id="btnNavColors" text="Цвета" toggleGroup="$navSectionGroup" styleClass="settings-nav-btn"/>
+                    <ToggleButton fx:id="btnNavEvents" text="События" toggleGroup="$navSectionGroup" styleClass="settings-nav-btn"/>
+                </VBox>
 
-                    <Label text="Плотность интерфейса"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbDensity" prefWidth="280"/>
+                <Separator/>
 
-                    <Label text="Скругление углов"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Slider fx:id="sldRadius" min="0" max="20" value="10" blockIncrement="1" majorTickUnit="5" minorTickCount="0" showTickLabels="false" showTickMarks="false" prefWidth="200"/>
-                        <Label fx:id="lblRadiusValue" text="10px" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <Button fx:id="btnRadiusReset" text="Сброс"
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
+                <VBox spacing="8" styleClass="settings-sidebar-card">
+                    <Label text="Подсказка" styleClass="settings-mini-card-title"/>
+                    <Label text="Основные настройки вынесены наверх, а редкие параметры сгруппированы внутри карточек." styleClass="secondary-hint-label" wrapText="true"/>
+                </VBox>
+            </VBox>
+        </HBox>
+
+        <VBox spacing="14" HBox.hgrow="ALWAYS">
+            <HBox spacing="16" alignment="TOP_LEFT">
+                <VBox styleClass="settings-hero-card" HBox.hgrow="ALWAYS">
+                    <Label fx:id="lblSettingsHeroEyebrow" text="SETTINGS" styleClass="settings-hero-eyebrow"/>
+                    <Label fx:id="lblSettingsHeroTitle" text="Общий вид" styleClass="settings-hero-title"/>
+                    <Label fx:id="lblSettingsHeroSubtitle" text="Управляйте темой, масштабом, плотностью интерфейса и акцентными цветами." styleClass="settings-hero-subtitle" wrapText="true"/>
+                </VBox>
+
+                <VBox styleClass="settings-preview-card">
+                    <HBox alignment="CENTER_LEFT" spacing="10">
+                        <VBox spacing="2" HBox.hgrow="ALWAYS">
+                            <Label text="LIVE PREVIEW" styleClass="settings-preview-eyebrow"/>
+                            <Label fx:id="lblThemePreviewTitle" text="Cupertino Light" styleClass="settings-preview-title"/>
+                        </VBox>
+                        <Region fx:id="themePreviewAccentSwatch" styleClass="settings-preview-accent"/>
                     </HBox>
-
-                    <Label text="Акцентный цвет"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <ColorPicker fx:id="colorAccent"/>
-                        <Button fx:id="btnAccentDefault" text="По умолчанию"
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                    </HBox>
-                    <HBox spacing="6" alignment="CENTER_LEFT">
-                        <Label text="Пресеты:" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <Button fx:id="btnPresetPeach" styleClass="accent-preset" style="-fx-background-color: #E8896A; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
-                        <Button fx:id="btnPresetTeal" styleClass="accent-preset" style="-fx-background-color: #4AABA8; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
-                        <Button fx:id="btnPresetIndigo" styleClass="accent-preset" style="-fx-background-color: #5C6BC0; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
-                        <Button fx:id="btnPresetSage" styleClass="accent-preset" style="-fx-background-color: #7BAE7F; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
-                        <Button fx:id="btnPresetRose" styleClass="accent-preset" style="-fx-background-color: #C2666E; -fx-min-width: 20; -fx-max-width: 20; -fx-min-height: 20; -fx-max-height: 20; -fx-background-radius: 10;"/>
-                    </HBox>
-
-                    <Label text="Цвет фона панелей (боковая панель, drawer)"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <ColorPicker fx:id="colorPanelBg"/>
-                        <Button fx:id="btnPanelBgDefault" text="По умолчанию"
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                    </HBox>
-
-                    <Label text="Применить все настройки темы к главному окну"
-                           style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 8 0 0 0;">
-                        <Button fx:id="btnApplyTheme" text="Применить"
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                        <Button fx:id="btnRestoreAppearance" text="Восстановить по умолчанию"
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
+                    <Label fx:id="lblThemePreviewMeta" text="100% • 14px • Обычный" styleClass="settings-preview-meta" wrapText="true"/>
+                    <HBox spacing="8">
+                        <Label fx:id="lblThemePreviewMode" text="LIGHT" styleClass="settings-preview-pill"/>
+                        <Label fx:id="lblThemePreviewRadius" text="Radius 10px" styleClass="settings-preview-pill settings-preview-pill-soft"/>
                     </HBox>
                 </VBox>
-            </ScrollPane>
-        </Tab>
-        <Tab text="Подключение">
-            <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;">
-                <VBox spacing="12" style="-fx-background-color: transparent;">
-                    <Label text="Источник данных"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbSource" prefWidth="280"
-                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
+            </HBox>
 
-                    <Label fx:id="lblEtBtSource" text="ET/BT source: —"
-                           style="-fx-font-size: 12px; -fx-text-fill: #666666; -fx-wrap-text: true;"/>
+            <StackPane VBox.vgrow="ALWAYS">
+                <ScrollPane fx:id="appearanceSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll">
+                    <VBox spacing="16" styleClass="settings-content-column">
+                        <padding>
+                            <Insets top="4" right="4" bottom="4" left="4"/>
+                        </padding>
 
-                    <Label text="Профиль подключения"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <ComboBox fx:id="cmbPreset" prefWidth="180" promptText="— Текущий —"
-                                  style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <Button fx:id="btnLoadPreset" text="Загрузить"
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                        <Button fx:id="btnSavePreset" text="Сохранить как..."
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                    </HBox>
+                        <HBox spacing="16">
+                            <VBox spacing="12" styleClass="secondary-section-card settings-card-emphasis" HBox.hgrow="ALWAYS">
+                                <Label text="Быстрые пресеты" styleClass="secondary-section-title"/>
+                                <Label text="Быстро переключайте атмосферу приложения и сразу смотрите live preview." styleClass="secondary-hint-label" wrapText="true"/>
+                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <Button fx:id="btnThemeLight" text="Светлая" styleClass="btn-secondary settings-chip-btn"/>
+                                    <Button fx:id="btnThemeDark" text="Тёмная" styleClass="btn-secondary settings-chip-btn"/>
+                                </HBox>
+                            </VBox>
+                            <VBox spacing="12" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                <Label text="Тема оформления" styleClass="secondary-section-title"/>
+                                <Label text="Базовая тема влияет на палитру, глубину поверхностей и контрастность элементов." styleClass="secondary-hint-label" wrapText="true"/>
+                                <ComboBox fx:id="cmbTheme" prefWidth="280" styleClass="secondary-combo"/>
+                            </VBox>
+                        </HBox>
 
-                    <Label text="Кастомные кнопки (под графиком)"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Button fx:id="btnEventButtons" text="Event Buttons…"
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                    </HBox>
+                        <HBox spacing="16">
+                            <VBox spacing="12" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                <Label text="Масштаб и типографика" styleClass="secondary-section-title"/>
+                                <GridPane styleClass="secondary-grid">
+                                    <columnConstraints>
+                                        <ColumnConstraints minWidth="120" prefWidth="160"/>
+                                        <ColumnConstraints hgrow="ALWAYS"/>
+                                    </columnConstraints>
+                                    <Label text="Масштаб интерфейса" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                    <ComboBox fx:id="cmbScale" prefWidth="260" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                    <Label text="Размер шрифта" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                    <ComboBox fx:id="cmbFontSize" prefWidth="260" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                    <Label text="Плотность интерфейса" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                    <ComboBox fx:id="cmbDensity" prefWidth="260" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                </GridPane>
+                            </VBox>
+                            <VBox spacing="12" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                <Label text="Скругление" styleClass="secondary-section-title"/>
+                                <Label text="Меняйте характер интерфейса от строгого к более мягкому." styleClass="secondary-hint-label" wrapText="true"/>
+                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <Slider fx:id="sldRadius" min="0" max="20" value="10" blockIncrement="1" majorTickUnit="5" minorTickCount="0" showTickLabels="false" showTickMarks="false" HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="lblRadiusValue" text="10px" styleClass="settings-value-pill"/>
+                                    <Button fx:id="btnRadiusReset" text="Сброс" styleClass="btn-secondary"/>
+                                </HBox>
+                            </VBox>
+                        </HBox>
 
-                    <Label text="Параметры подключения"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <VBox fx:id="portFieldsContainer" spacing="12" style="-fx-background-color: transparent;">
-                        <GridPane hgap="16" vgap="8" style="-fx-background-color: transparent;">
-                            <columnConstraints>
-                                <ColumnConstraints minWidth="100" prefWidth="140"/>
-                                <ColumnConstraints minWidth="200" prefWidth="280"/>
-                            </columnConstraints>
-                            <Label text="Транспорт" GridPane.columnIndex="0" GridPane.rowIndex="0"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <ComboBox fx:id="cmbTransport" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="0"
-                                      style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-
-                            <Label fx:id="lblHost" text="Host (TCP)" GridPane.columnIndex="0" GridPane.rowIndex="1"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtHost" promptText="10.0.0.9" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-
-                            <Label fx:id="lblTcpPort" text="Port (TCP)" GridPane.columnIndex="0" GridPane.rowIndex="2"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtTcpPort" promptText="502" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-
-                            <Label fx:id="lblComPort" text="COM Port" GridPane.columnIndex="0" GridPane.rowIndex="3"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <HBox spacing="8" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="3">
-                                <ComboBox fx:id="cmbPort" prefWidth="200" editable="true" promptText="COM4"
-                                          style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                                <Button fx:id="btnRefreshPorts" text="Обновить порты"
-                                        style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
+                        <VBox spacing="14" styleClass="secondary-section-card">
+                            <Label text="Палитра бренда" styleClass="secondary-section-title"/>
+                            <HBox spacing="18" alignment="TOP_LEFT">
+                                <VBox spacing="10" HBox.hgrow="ALWAYS">
+                                    <Label text="Акцентный цвет" styleClass="secondary-field-label"/>
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <ColorPicker fx:id="colorAccent"/>
+                                        <Button fx:id="btnAccentDefault" text="По умолчанию" styleClass="btn-secondary"/>
+                                    </HBox>
+                                    <HBox spacing="8" alignment="CENTER_LEFT">
+                                        <Label text="Пресеты" styleClass="secondary-hint-label"/>
+                                        <Button fx:id="btnPresetPeach" styleClass="accent-preset-dot" style="-fx-background-color: #E8896A;"/>
+                                        <Button fx:id="btnPresetTeal" styleClass="accent-preset-dot" style="-fx-background-color: #4AABA8;"/>
+                                        <Button fx:id="btnPresetIndigo" styleClass="accent-preset-dot" style="-fx-background-color: #5C6BC0;"/>
+                                        <Button fx:id="btnPresetSage" styleClass="accent-preset-dot" style="-fx-background-color: #7BAE7F;"/>
+                                        <Button fx:id="btnPresetRose" styleClass="accent-preset-dot" style="-fx-background-color: #C2666E;"/>
+                                    </HBox>
+                                </VBox>
+                                <VBox spacing="10" HBox.hgrow="ALWAYS">
+                                    <Label text="Фон панелей" styleClass="secondary-field-label"/>
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <ColorPicker fx:id="colorPanelBg"/>
+                                        <Button fx:id="btnPanelBgDefault" text="По умолчанию" styleClass="btn-secondary"/>
+                                    </HBox>
+                                    <Label text="Используется для боковых панелей, drawer-режима и вспомогательных поверхностей." styleClass="secondary-hint-label" wrapText="true"/>
+                                </VBox>
                             </HBox>
+                        </VBox>
 
-                            <Label fx:id="lblBaudRate" text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="4"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtBaudRate" promptText="9600" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="4"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-
-                            <Label fx:id="lblSlaveId" text="Slave ID" GridPane.columnIndex="0" GridPane.rowIndex="5"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtSlaveId" promptText="1" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="5"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-
-                            <Label fx:id="lblBtRegister" text="BT Register" GridPane.columnIndex="0" GridPane.rowIndex="6"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtBtRegister" promptText="6" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="6"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-
-                            <Label fx:id="lblEtRegister" text="ET Register" GridPane.columnIndex="0" GridPane.rowIndex="7"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtEtRegister" promptText="7" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="7"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-
-                            <Label fx:id="lblDivider" text="Divider (1/x)" GridPane.columnIndex="0" GridPane.rowIndex="8"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtDivider" promptText="10" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="8"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-
-                            <Label fx:id="lblPhidgetEt" text="Phidget ET channel" GridPane.columnIndex="0" GridPane.rowIndex="9"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtPhidgetEtChannel" promptText="1" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="9"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-
-                            <Label fx:id="lblPhidgetBt" text="Phidget BT channel" GridPane.columnIndex="0" GridPane.rowIndex="10"
-                                   style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                            <TextField fx:id="txtPhidgetBtChannel" promptText="2" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="10"
-                                       style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        </GridPane>
-                        <HBox spacing="8" alignment="CENTER_LEFT" style="-fx-padding: 8 0 0 0;">
-                            <Button fx:id="btnPortsConfig" text="Device Assignment…"
-                                    style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                            <Button fx:id="btnTestConnection" text="Проверить подключение"
-                                    style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                            <CheckBox fx:id="chkVerifyBeforeSave" text="Проверить перед сохранением"
-                                      style="-fx-text-fill: #555555;"/>
+                        <HBox spacing="16">
+                            <VBox spacing="12" styleClass="secondary-section-card settings-card-soft" HBox.hgrow="ALWAYS">
+                                <Label text="Применение темы" styleClass="secondary-section-title"/>
+                                <Label text="Примените текущий draft к основному окну, не закрывая настройки." styleClass="secondary-hint-label" wrapText="true"/>
+                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <Button fx:id="btnApplyTheme" text="Применить к окну" styleClass="btn-secondary"/>
+                                    <Button fx:id="btnRestoreAppearance" text="Сбросить оформление" styleClass="btn-secondary"/>
+                                </HBox>
+                            </VBox>
                         </HBox>
                     </VBox>
+                </ScrollPane>
 
-                    <Label text="Между партиями (BBP)"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <CheckBox fx:id="chkBetweenBatchProtocol" text="Display &quot;Between Batch&quot; curves and timer during pre- and post-roast"
-                              style="-fx-text-fill: #555555;"/>
+                <ScrollPane fx:id="connectionSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
+                    <VBox spacing="16" styleClass="settings-content-column">
+                        <padding>
+                            <Insets top="4" right="4" bottom="4" left="4"/>
+                        </padding>
 
-                    <Label text="Автоопределение ростера"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <CheckBox fx:id="chkAutoDetectRoaster" text="Определять ростер автоматически при подключении"
-                              style="-fx-text-fill: #555555;"/>
-                    <CheckBox fx:id="chkRememberLastRoaster" text="Запоминать последний определённый ростер"
-                              style="-fx-text-fill: #555555;"/>
-                    <Label text="IP для сканирования (через запятую, пусто = по умолчанию)"
-                           style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                    <TextField fx:id="txtDiscoveryHosts" promptText="10.0.0.9, 192.168.1.100" prefWidth="280"
-                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
+                        <TabPane tabClosingPolicy="UNAVAILABLE" styleClass="secondary-tab-pane">
+                            <tabs>
+                                <Tab text="Machine">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column" VBox.vgrow="ALWAYS">
+                                            <VBox spacing="12" styleClass="secondary-section-card settings-card-emphasis" VBox.vgrow="ALWAYS">
+                                                <Label text="Machine" styleClass="secondary-section-title"/>
+                                                <Label text="Select your roaster brand and model. Settings will be auto-configured from the Artisan preset." styleClass="secondary-hint-label" wrapText="true"/>
+                                                <TextField fx:id="txtMachineFilter" promptText="Filter machines..." styleClass="secondary-field"/>
+                                                <TreeView fx:id="machineTree" prefHeight="320" VBox.vgrow="ALWAYS" styleClass="secondary-tree"/>
+                                                <Label fx:id="lblPresetSummary" styleClass="secondary-hint-label" wrapText="true"/>
+                                            </VBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
 
-                    <Label text="Интервал опроса (сек)"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <TextField fx:id="txtSamplingIntervalSec" promptText="0.1–3" prefWidth="80"
-                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
+                                <Tab text="Devices">
+                                    <content>
+                                        <VBox spacing="12">
+                                            <Button fx:id="btnPortsConfig" text="Device Assignment…" visible="false" managed="false"/>
+                                            <fx:include fx:id="devicesTabsInclude" source="PortsConfigView.fxml"/>
+                                        </VBox>
+                                    </content>
+                                </Tab>
 
-                    <Label text="Event commands (Modbus)"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <Label text="write(slaveId,reg,val); wcoil(slaveId,coil,0|1); sleep(sec). Run on C=Charge, D=Drop, DE/FC from chart."
-                           style="-fx-text-fill: #888888; -fx-font-size: 11px; -fx-wrap-text: true;"/>
-                    <GridPane hgap="12" vgap="6" style="-fx-background-color: transparent;">
-                        <columnConstraints>
-                            <ColumnConstraints minWidth="80" prefWidth="90"/>
-                            <ColumnConstraints minWidth="200" prefWidth="320" hgrow="ALWAYS"/>
-                        </columnConstraints>
-                        <Label text="CHARGE" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <TextField fx:id="txtEventCharge" promptText="write(1,1008,2);sleep(15)" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="0"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <Label text="DROP" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <TextField fx:id="txtEventDrop" promptText="write(1,1008,5)" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="1"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <Label text="DRY_END (DE)" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <TextField fx:id="txtEventDryEnd" promptText="wcoil(1,2005,1)" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="2"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <Label text="FC_START" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <TextField fx:id="txtEventFcStart" promptText="write(1,1008,3)" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="3"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <Label text="COOL_END" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <TextField fx:id="txtEventCoolEnd" promptText="write(1,1008,0)" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="4"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                    </GridPane>
+                                <Tab text="Port">
+                                    <content>
+                                        <VBox spacing="12">
+                                            <fx:include fx:id="portTabsInclude" source="PortsConfigView.fxml"/>
+                                            <VBox spacing="12" styleClass="secondary-section-card settings-card-soft" visible="false" managed="false">
+                                                <Label text="Ports Configuration" styleClass="secondary-section-title"/>
+                                                <Label text="Структура вкладок повторяет Artisan: ET/BT, Extra, Modbus, S7, WebSocket." styleClass="secondary-hint-label" wrapText="true"/>
+                                                <TabPane tabClosingPolicy="UNAVAILABLE" styleClass="secondary-tab-pane">
+                                                <tabs>
+                                                    <Tab text="ET/BT">
+                                                        <content>
+                                                            <VBox spacing="12">
+                                                                <VBox spacing="12" styleClass="secondary-section-card settings-card-emphasis">
+                                                                    <Label text="Источник и профиль" styleClass="secondary-section-title"/>
+                                                                    <GridPane styleClass="secondary-grid">
+                                                                        <columnConstraints>
+                                                                            <ColumnConstraints minWidth="140" prefWidth="160"/>
+                                                                            <ColumnConstraints hgrow="ALWAYS"/>
+                                                                        </columnConstraints>
+                                                                        <Label text="Профиль" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                                        <HBox spacing="8" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                                                            <ComboBox fx:id="cmbPreset" prefWidth="220" promptText="— Текущий —" styleClass="secondary-combo"/>
+                                                                            <Button fx:id="btnLoadPreset" text="Загрузить" styleClass="btn-secondary"/>
+                                                                            <Button fx:id="btnSavePreset" text="Сохранить как..." styleClass="btn-secondary"/>
+                                                                        </HBox>
+                                                                    </GridPane>
+                                                                    <Label fx:id="lblEtBtSource" text="ET/BT source: —" styleClass="secondary-hint-label" wrapText="true"/>
+                                                                </VBox>
 
-                    <Label text="Единицы температуры"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="16">
-                        <RadioButton fx:id="rbCelsius" text="°C" toggleGroup="$tglUnit" selected="true"
-                                     style="-fx-text-fill: #333333;"/>
-                        <RadioButton fx:id="rbFahrenheit" text="°F" toggleGroup="$tglUnit"
-                                     style="-fx-text-fill: #333333;"/>
-                    </HBox>
+                                                                <VBox fx:id="portFieldsContainer" spacing="14" styleClass="secondary-section-card">
+                                                                    <Label text="Параметры транспорта" styleClass="secondary-section-title"/>
+                                                                    <GridPane styleClass="secondary-grid" hgap="16" vgap="10">
+                                                                        <columnConstraints>
+                                                                            <ColumnConstraints minWidth="150" prefWidth="180"/>
+                                                                            <ColumnConstraints hgrow="ALWAYS"/>
+                                                                        </columnConstraints>
 
-                    <Label text="Папка сохранения (.alog)"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="8">
-                        <TextField fx:id="txtSavePath" prefWidth="220" HBox.hgrow="ALWAYS"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <Button fx:id="btnBrowse" text="Обзор..."
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 8 16; -fx-background-radius: 4;"/>
-                    </HBox>
-                </VBox>
-            </ScrollPane>
-        </Tab>
+                                                                        <Label text="Транспорт" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                                        <ComboBox fx:id="cmbTransport" prefWidth="260" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
 
-        <Tab text="График">
-            <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;">
-                <VBox spacing="12" style="-fx-background-color: transparent;">
-                    <Label text="График"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
+                                                                        <Label fx:id="lblHost" text="Host (TCP)" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                                        <TextField fx:id="txtHost" promptText="10.0.0.9" prefWidth="260" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
 
-                    <Label text="Axes (оси графика)"
-                           style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Button fx:id="btnAxesConfig" text="Axes..."
-                                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                        <Label text="Time / Temperature / Legend / Grid / Delta"
-                               style="-fx-text-fill: #777777; -fx-font-size: 11px;"/>
-                    </HBox>
+                                                                        <Label fx:id="lblTcpPort" text="Port (TCP)" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                                                        <TextField fx:id="txtTcpPort" promptText="502" prefWidth="260" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
 
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="Длительность (мин)" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartTimeRange" prefWidth="50"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
-                    </HBox>
+                                                                        <Label fx:id="lblComPort" text="COM Port" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                                                        <HBox spacing="8" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                                                                            <ComboBox fx:id="cmbPort" prefWidth="260" editable="true" promptText="COM4" styleClass="secondary-combo"/>
+                                                                            <Button fx:id="btnRefreshPorts" text="Обновить порты" styleClass="btn-secondary"/>
+                                                                        </HBox>
 
-                    <CheckBox fx:id="chkChartShowGrid" text="Показать сетку"
-                              style="-fx-text-fill: #333333;"/>
-                    <CheckBox fx:id="chkChartShowBt" text="Показывать BT"
-                              style="-fx-text-fill: #333333;"/>
-                    <CheckBox fx:id="chkChartShowEt" text="Показывать ET"
-                              style="-fx-text-fill: #333333;"/>
-                    <CheckBox fx:id="chkChartShowRorBt" text="Показывать RoR BT"
-                              style="-fx-text-fill: #333333;"/>
-                    <CheckBox fx:id="chkChartShowRorEt" text="Показывать RoR ET"
-                              style="-fx-text-fill: #333333;"/>
-                    <CheckBox fx:id="chkChartShowReferenceCurves" text="Показывать reference curves"
-                              style="-fx-text-fill: #333333;"/>
-                    <CheckBox fx:id="chkChartShowReferenceEvents" text="Показывать reference events"
-                              style="-fx-text-fill: #333333;"/>
-                    <CheckBox fx:id="chkChartShowPhaseStrips" text="Показывать phase strips"
-                              style="-fx-text-fill: #333333;"/>
+                                                                        <Label fx:id="lblBaudRate" text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="secondary-field-label"/>
+                                                                        <TextField fx:id="txtBaudRate" promptText="9600" prefWidth="260" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
 
-                    <Label text="RoR Smoothing"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbRorSmoothing" prefWidth="200"
-                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333;"/>
+                                                                        <Label fx:id="lblSlaveId" text="Slave ID" GridPane.columnIndex="0" GridPane.rowIndex="5" styleClass="secondary-field-label"/>
+                                                                        <TextField fx:id="txtSlaveId" promptText="1" prefWidth="260" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
 
-                    <Label text="Толщина линий"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="BT" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartBtLineWidth" prefWidth="40" promptText="2"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <Label text="ET" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartEtLineWidth" prefWidth="40" promptText="2"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <Label text="RoR BT" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartRorLineWidth" prefWidth="40" promptText="1.5"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <Label text="RoR ET" style="-fx-text-fill: #555555; -fx-font-size: 11px;"/>
-                        <TextField fx:id="txtChartRefLineWidth" prefWidth="40" promptText="1.5"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                    </HBox>
+                                                                        <Label fx:id="lblBtRegister" text="BT Register" GridPane.columnIndex="0" GridPane.rowIndex="6" styleClass="secondary-field-label"/>
+                                                                        <TextField fx:id="txtBtRegister" promptText="6" prefWidth="120" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
 
-                    <Label text="Фон / Сетка"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <TextField fx:id="txtChartBackground" promptText="#ffffff" prefWidth="80"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                        <TextField fx:id="txtChartGridColor" promptText="#d3d3d3" prefWidth="80"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                    </HBox>
-                </VBox>
-            </ScrollPane>
-        </Tab>
+                                                                        <Label fx:id="lblEtRegister" text="ET Register" GridPane.columnIndex="0" GridPane.rowIndex="7" styleClass="secondary-field-label"/>
+                                                                        <TextField fx:id="txtEtRegister" promptText="7" prefWidth="120" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
 
-        <Tab text="Цвета">
-            <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;">
-                <VBox spacing="12" style="-fx-background-color: transparent;">
-                    <Label text="Живой BT / Живой ET"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
+                                                                        <Label fx:id="lblDivider" text="Divider (1/x)" GridPane.columnIndex="0" GridPane.rowIndex="8" styleClass="secondary-field-label"/>
+                                                                        <TextField fx:id="txtDivider" promptText="10" prefWidth="120" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="8"/>
 
-                    <GridPane hgap="12" vgap="8" style="-fx-background-color: transparent;">
-                        <columnConstraints>
-                            <ColumnConstraints minWidth="60" prefWidth="70"/>
-                            <ColumnConstraints minWidth="120" prefWidth="140"/>
-                            <ColumnConstraints minWidth="70" prefWidth="90"/>
-                        </columnConstraints>
-                        <Label text="BT" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <ColorPicker fx:id="colorLiveBt" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                        <TextField fx:id="txtColorLiveBt" promptText="#d4483b" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="0"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
+                                                                        <Label fx:id="lblPhidgetEt" text="Phidget ET channel" GridPane.columnIndex="0" GridPane.rowIndex="9" styleClass="secondary-field-label"/>
+                                                                        <TextField fx:id="txtPhidgetEtChannel" promptText="1" prefWidth="120" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="9"/>
 
-                        <Label text="ET" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <ColorPicker fx:id="colorLiveEt" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtColorLiveEt" promptText="#3498db" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="1"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
+                                                                        <Label fx:id="lblPhidgetBt" text="Phidget BT channel" GridPane.columnIndex="0" GridPane.rowIndex="10" styleClass="secondary-field-label"/>
+                                                                        <TextField fx:id="txtPhidgetBtChannel" promptText="2" prefWidth="120" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="10"/>
+                                                                    </GridPane>
+                                                                </VBox>
 
-                        <Label text="RoR BT" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <ColorPicker fx:id="colorLiveRorBt" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                        <TextField fx:id="txtColorLiveRorBt" promptText="#2c3e50" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="2"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
+                                                                <VBox spacing="12" styleClass="secondary-section-card">
+                                                                    <Label text="Сервисные действия" styleClass="secondary-section-title"/>
+                                                                    <Label text="Проверяйте конфигурацию до сохранения." styleClass="secondary-hint-label" wrapText="true"/>
+                                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                                        <Button fx:id="btnTestConnection" text="Проверить подключение" styleClass="btn-secondary"/>
+                                                                    </HBox>
+                                                                    <CheckBox fx:id="chkVerifyBeforeSave" text="Проверять подключение перед сохранением" styleClass="secondary-hint-label"/>
+                                                                </VBox>
 
-                        <Label text="RoR ET" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <ColorPicker fx:id="colorLiveRorEt" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
-                        <TextField fx:id="txtColorLiveRorEt" promptText="#95a5a6" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="3"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                    </GridPane>
+                                                                <HBox spacing="16">
+                                                                    <VBox spacing="12" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                                                        <Label text="Поведение подключения" styleClass="secondary-section-title"/>
+                                                                        <CheckBox fx:id="chkBetweenBatchProtocol" text="Display &quot;Between Batch&quot; curves and timer during pre- and post-roast" styleClass="secondary-hint-label"/>
+                                                                        <CheckBox fx:id="chkAutoDetectRoaster" text="Определять ростер автоматически при подключении" styleClass="secondary-hint-label"/>
+                                                                        <CheckBox fx:id="chkRememberLastRoaster" text="Запоминать последний определённый ростер" styleClass="secondary-hint-label"/>
+                                                                        <GridPane styleClass="secondary-grid">
+                                                                            <columnConstraints>
+                                                                                <ColumnConstraints minWidth="150" prefWidth="180"/>
+                                                                                <ColumnConstraints hgrow="ALWAYS"/>
+                                                                            </columnConstraints>
+                                                                            <Label text="IP для сканирования" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                                            <TextField fx:id="txtDiscoveryHosts" promptText="10.0.0.9, 192.168.1.100" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                                                            <Label text="Интервал опроса (сек)" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                                            <TextField fx:id="txtSamplingIntervalSec" promptText="0.1–3" prefWidth="120" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                                                        </GridPane>
+                                                                    </VBox>
 
-                    <Label text="Цвета reference"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
+                                                                    <VBox spacing="12" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                                                        <Label text="Единицы и сохранение" styleClass="secondary-section-title"/>
+                                                                        <HBox spacing="18" alignment="CENTER_LEFT">
+                                                                            <RadioButton fx:id="rbCelsius" text="°C" toggleGroup="$tglUnit" selected="true"/>
+                                                                            <RadioButton fx:id="rbFahrenheit" text="°F" toggleGroup="$tglUnit"/>
+                                                                        </HBox>
+                                                                        <Label text="Папка сохранения (.alog)" styleClass="secondary-field-label"/>
+                                                                        <HBox spacing="8" alignment="CENTER_LEFT">
+                                                                            <TextField fx:id="txtSavePath" prefWidth="260" styleClass="secondary-input" HBox.hgrow="ALWAYS"/>
+                                                                            <Button fx:id="btnBrowse" text="Обзор..." styleClass="btn-secondary"/>
+                                                                        </HBox>
+                                                                    </VBox>
+                                                                </HBox>
+                                                            </VBox>
+                                                        </content>
+                                                    </Tab>
+                                                    <Tab text="Extra">
+                                                        <content>
+                                                            <VBox spacing="8">
+                                                                <Label text="Расширенные serial/tcp настройки (заготовка)." styleClass="secondary-hint-label" wrapText="true"/>
+                                                            </VBox>
+                                                        </content>
+                                                    </Tab>
+                                                    <Tab text="Modbus">
+                                                        <content>
+                                                            <VBox spacing="8">
+                                                                <Label text="Modbus-специфичные параметры портов (заготовка)." styleClass="secondary-hint-label" wrapText="true"/>
+                                                            </VBox>
+                                                        </content>
+                                                    </Tab>
+                                                    <Tab text="S7">
+                                                        <content>
+                                                            <VBox spacing="8">
+                                                                <Label text="S7 параметры подключения (заготовка)." styleClass="secondary-hint-label" wrapText="true"/>
+                                                            </VBox>
+                                                        </content>
+                                                    </Tab>
+                                                    <Tab text="WebSocket">
+                                                        <content>
+                                                            <VBox spacing="8">
+                                                                <Label text="WebSocket параметры подключения (заготовка)." styleClass="secondary-hint-label" wrapText="true"/>
+                                                            </VBox>
+                                                        </content>
+                                                    </Tab>
+                                                </tabs>
+                                                </TabPane>
+                                            </VBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                            </tabs>
+                        </TabPane>
+                    </VBox>
+                </ScrollPane>
 
-                    <GridPane hgap="12" vgap="8" style="-fx-background-color: transparent;">
-                        <columnConstraints>
-                            <ColumnConstraints minWidth="60" prefWidth="70"/>
-                            <ColumnConstraints minWidth="120" prefWidth="140"/>
-                            <ColumnConstraints minWidth="70" prefWidth="90"/>
-                        </columnConstraints>
-                        <Label text="BT" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <ColorPicker fx:id="colorRefBt" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                        <TextField fx:id="txtColorRefBt" promptText="#d4483b" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="0"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
+                <ScrollPane fx:id="roastPhasesSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
+                    <VBox spacing="16" styleClass="settings-content-column">
+                        <padding>
+                            <Insets top="4" right="4" bottom="4" left="4"/>
+                        </padding>
+                        <VBox spacing="12" styleClass="secondary-section-card">
+                            <Label text="Температуры фаз обжарки" styleClass="secondary-section-title"/>
+                            <Label text="Границы фаз Drying, Maillard и Finishing (℃). Совместимо с диалогом Roast Phases в Artisan." styleClass="secondary-hint-label" wrapText="true"/>
+                            <GridPane styleClass="secondary-grid">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="80" prefWidth="100"/>
+                                    <ColumnConstraints minWidth="70" prefWidth="90"/>
+                                    <ColumnConstraints minWidth="70" prefWidth="90"/>
+                                    <ColumnConstraints minWidth="120" prefWidth="140"/>
+                                    <ColumnConstraints minWidth="60" prefWidth="80"/>
+                                </columnConstraints>
+                                <Label text="" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                <Label text="min" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                <Label text="max" GridPane.columnIndex="2" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                <Label text="Phases LCDs Mode" GridPane.columnIndex="3" GridPane.rowIndex="0" styleClass="secondary-field-label" wrapText="true"/>
+                                <Label text="Phases LCDs All" GridPane.columnIndex="4" GridPane.rowIndex="0" styleClass="secondary-field-label" wrapText="true"/>
+                                <Label text="Drying" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                <TextField fx:id="phasesDryMin" promptText="80" prefWidth="70" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                <TextField fx:id="phasesDryMax" promptText="157" prefWidth="70" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                <ComboBox fx:id="phasesLcdModeDry" prefWidth="130" styleClass="secondary-combo" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                                <Label text="" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+                                <Label text="Maillard" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                <Label fx:id="lblPhasesMaillardMin" text="157" styleClass="secondary-field-label" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                <TextField fx:id="phasesMaillardMax" promptText="197" prefWidth="70" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                                <ComboBox fx:id="phasesLcdModeMaillard" prefWidth="130" styleClass="secondary-combo" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                                <Label text="" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+                                <Label text="Finishing" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                <Label fx:id="lblPhasesFinishMin" text="197" styleClass="secondary-field-label" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                <TextField fx:id="phasesFinishMax" promptText="232" prefWidth="70" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                                <ComboBox fx:id="phasesLcdModeFinish" prefWidth="130" styleClass="secondary-combo" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                                <CheckBox fx:id="phasesLcdAllFinish" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
+                            </GridPane>
+                        </VBox>
+                        <VBox spacing="10" styleClass="secondary-section-card">
+                            <Label text="Поведение и отображение" styleClass="secondary-section-title"/>
+                            <GridPane styleClass="secondary-grid">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="180" prefWidth="220"/>
+                                    <ColumnConstraints minWidth="180" prefWidth="220"/>
+                                </columnConstraints>
+                                <CheckBox fx:id="phasesAutoAdjusted" text="Auto Adjusted" styleClass="secondary-hint-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                                <CheckBox fx:id="phasesFromBackground" text="From Background" styleClass="secondary-hint-label" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                <CheckBox fx:id="phasesWatermarks" text="Watermarks" styleClass="secondary-hint-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                                <CheckBox fx:id="phasesLcds" text="Phases LCDs" styleClass="secondary-hint-label" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                <CheckBox fx:id="phasesAutoDry" text="Auto DRY" styleClass="secondary-hint-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                                <CheckBox fx:id="phasesAutoFcs" text="Auto FCs" styleClass="secondary-hint-label" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            </GridPane>
+                        </VBox>
+                        <VBox spacing="12" styleClass="secondary-section-card settings-card-soft">
+                            <Label text="Сброс по умолчанию" styleClass="secondary-section-title"/>
+                            <Label text="Восстановить температуры и флаги Roast Phases как в Artisan (Celsius)." styleClass="secondary-hint-label" wrapText="true"/>
+                            <Button fx:id="btnRoastPhasesRestoreDefaults" text="Restore Defaults" styleClass="btn-secondary"/>
+                        </VBox>
+                    </VBox>
+                </ScrollPane>
 
-                        <Label text="ET" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                        <ColorPicker fx:id="colorRefEt" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtColorRefEt" promptText="#3498db" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="1"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                    </GridPane>
+                <ScrollPane fx:id="chartSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
+                    <VBox spacing="16" styleClass="settings-content-column">
+                        <padding>
+                            <Insets top="4" right="4" bottom="4" left="4"/>
+                        </padding>
+                        <TabPane fx:id="chartCurvesTabPane" tabClosingPolicy="UNAVAILABLE" styleClass="secondary-tab-pane">
+                            <tabs>
+                                <Tab text="RoR">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="RoR — настройки кривых и LCD Rate of Rise (по образцу Artisan Curves)." styleClass="secondary-hint-label" wrapText="true"/>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Filters">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="Filters — входной фильтр, сглаживание кривых, отображение, фильтр RoR (по образцу Artisan Curves)." styleClass="secondary-hint-label" wrapText="true"/>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Plotter">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="Plotter — параметры кривых P1–P9, цвета, фон (по образцу Artisan Curves)." styleClass="secondary-hint-label" wrapText="true"/>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Math">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="Math — интерполяция, Univariate, In(), Exponent, Polyfit (по образцу Artisan Curves)." styleClass="secondary-hint-label" wrapText="true"/>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Analyze">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="Analyze — окно кривой, интервал анализа, пороги (по образцу Artisan Curves)." styleClass="secondary-hint-label" wrapText="true"/>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="UI">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="UI — оформление графика, разрешение, десятичные знаки, переименование ET/BT (по образцу Artisan Curves)." styleClass="secondary-hint-label" wrapText="true"/>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Axes">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <fx:include fx:id="axesTabInclude" source="graph/GraphAxesTab.fxml"/>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                            </tabs>
+                        </TabPane>
+                    </VBox>
+                </ScrollPane>
 
-                    <Label text="Прозрачность ref"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
-                    <HBox spacing="12" alignment="CENTER_LEFT">
-                        <Slider fx:id="sldRefAlpha" min="0" max="255" value="80" prefWidth="180" showTickLabels="false" showTickMarks="false"/>
-                        <TextField fx:id="txtColorRefAlpha" promptText="80" prefWidth="50"
-                                   style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-prompt-text-fill: #888888;"/>
-                    </HBox>
+                <ScrollPane fx:id="colorsSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
+                    <VBox spacing="16" styleClass="settings-content-column">
+                        <padding>
+                            <Insets top="4" right="4" bottom="4" left="4"/>
+                        </padding>
+                        <TabPane fx:id="colorsTabPane" tabClosingPolicy="UNAVAILABLE" styleClass="secondary-tab-pane">
+                            <tabs>
+                                <Tab text="Curves">
+                                    <content>
+                                        <VBox spacing="16" styleClass="settings-content-column">
+                                            <HBox spacing="16">
+                                                <VBox spacing="12" styleClass="secondary-section-card settings-card-emphasis" HBox.hgrow="ALWAYS">
+                                                    <Label text="Profile Colors" styleClass="secondary-section-title"/>
+                                                    <Label text="Цвета текущего профиля (живые кривые)." styleClass="secondary-hint-label" wrapText="true"/>
+                                                    <GridPane styleClass="secondary-grid">
+                                                        <columnConstraints>
+                                                            <ColumnConstraints minWidth="70" prefWidth="80"/>
+                                                            <ColumnConstraints minWidth="120" prefWidth="140"/>
+                                                            <ColumnConstraints minWidth="90" prefWidth="100"/>
+                                                        </columnConstraints>
+                                                        <Label text="ET" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorLiveEt" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                                        <TextField fx:id="txtColorLiveEt" promptText="#3498db" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                                                        <Label text="BT" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorLiveBt" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                                        <TextField fx:id="txtColorLiveBt" promptText="#d4483b" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                                        <Label text="Δ ET" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorLiveRorEt" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                                        <TextField fx:id="txtColorLiveRorEt" promptText="#95a5a6" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                                                        <Label text="Δ BT" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorLiveRorBt" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                                        <TextField fx:id="txtColorLiveRorBt" promptText="#2c3e50" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                                                    </GridPane>
+                                                </VBox>
+                                                <VBox spacing="12" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                                    <Label text="Background Profile Colors" styleClass="secondary-section-title"/>
+                                                    <Label text="Цвета фоновых (reference) профилей." styleClass="secondary-hint-label" wrapText="true"/>
+                                                    <GridPane styleClass="secondary-grid">
+                                                        <columnConstraints>
+                                                            <ColumnConstraints minWidth="70" prefWidth="80"/>
+                                                            <ColumnConstraints minWidth="120" prefWidth="140"/>
+                                                            <ColumnConstraints minWidth="90" prefWidth="100"/>
+                                                        </columnConstraints>
+                                                        <Label text="ET" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorRefEt" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                                        <TextField fx:id="txtColorRefEt" promptText="#3498db" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                                                        <Label text="BT" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorRefBt" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                                        <TextField fx:id="txtColorRefBt" promptText="#d4483b" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                                        <Label text="Δ ET" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorRefRorEt" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                                        <TextField fx:id="txtColorRefRorEt" promptText="#aaaaff" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                                                        <Label text="Δ BT" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorRefRorBt" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                                        <TextField fx:id="txtColorRefRorBt" promptText="#ffaa00" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                                                        <Label text="Extra 1" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorRefExtra1" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                                        <TextField fx:id="txtColorRefExtra1" promptText="#008000" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
+                                                        <Label text="Extra 2" GridPane.columnIndex="0" GridPane.rowIndex="5" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorRefExtra2" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                                                        <TextField fx:id="txtColorRefExtra2" promptText="#403e3e" prefWidth="90" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="5"/>
+                                                    </GridPane>
+                                                    <Label text="Opaqueness" styleClass="secondary-field-label"/>
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Slider fx:id="sldRefAlpha" min="0" max="255" value="80" prefWidth="220" showTickLabels="false" showTickMarks="false"/>
+                                                        <TextField fx:id="txtColorRefAlpha" promptText="80" prefWidth="60" styleClass="secondary-input"/>
+                                                    </HBox>
+                                                </VBox>
+                                            </HBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Graph">
+                                    <content>
+                                        <VBox spacing="16" styleClass="settings-content-column">
+                                            <HBox spacing="16">
+                                                <VBox spacing="12" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                                    <Label text="Canvas &amp; axes" styleClass="secondary-section-title"/>
+                                                    <GridPane styleClass="secondary-grid">
+                                                        <columnConstraints>
+                                                            <ColumnConstraints minWidth="120" prefWidth="140"/>
+                                                            <ColumnConstraints minWidth="140" prefWidth="160"/>
+                                                        </columnConstraints>
+                                                        <Label text="Canvas" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphCanvas" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                                        <Label text="Background" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphBackground" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                                        <Label text="Title" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphTitle" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                                        <Label text="Grid" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphGrid" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                                        <Label text="Y Label" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphYLabel" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                                        <Label text="X Label" GridPane.columnIndex="0" GridPane.rowIndex="5" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphXLabel" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                                                        <Label text="Markers" GridPane.columnIndex="0" GridPane.rowIndex="6" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphMarkers" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+                                                        <Label text="Text" GridPane.columnIndex="0" GridPane.rowIndex="7" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphText" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
+                                                    </GridPane>
+                                                </VBox>
+                                                <VBox spacing="12" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                                    <Label text="Phases &amp; legend" styleClass="secondary-section-title"/>
+                                                    <GridPane styleClass="secondary-grid">
+                                                        <columnConstraints>
+                                                            <ColumnConstraints minWidth="120" prefWidth="140"/>
+                                                            <ColumnConstraints minWidth="140" prefWidth="160"/>
+                                                        </columnConstraints>
+                                                        <Label text="Drying Phase" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphDrying" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                                        <Label text="Maillard Phase" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphMaillard" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                                        <Label text="Finishing Phase" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphFinishing" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                                        <Label text="Cooling Phase" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphCooling" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                                        <Label text="Legend bkgnd" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphLegendBg" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                                        <Label text="Legend border" GridPane.columnIndex="0" GridPane.rowIndex="5" styleClass="secondary-field-label"/>
+                                                        <ColorPicker fx:id="colorGraphLegendBorder" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                                                    </GridPane>
+                                                </VBox>
+                                            </HBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="LCDs">
+                                    <content>
+                                        <VBox spacing="16" styleClass="settings-content-column">
+                                            <Label text="Цвета цифр и фона LCD-блоков (по образцу Artisan Colors → LCDs)." styleClass="secondary-hint-label" wrapText="true"/>
+                                            <HBox spacing="16">
+                                                <VBox spacing="10" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                                    <Label text="ET / Δ ET / BT / Δ BT" styleClass="secondary-section-title"/>
+                                                    <GridPane styleClass="secondary-grid" hgap="12" vgap="8">
+                                                        <columnConstraints>
+                                                            <ColumnConstraints minWidth="100" prefWidth="120"/>
+                                                            <ColumnConstraints minWidth="90" prefWidth="100"/>
+                                                            <ColumnConstraints minWidth="90" prefWidth="100"/>
+                                                        </columnConstraints>
+                                                        <Label text="LCD" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                        <Label text="Digits" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                        <Label text="Background" GridPane.columnIndex="2" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                        <Label text="ET LCD" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                        <Button fx:id="btnLcdEtDigits" text="Digits" styleClass="btn-secondary" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                                        <Button fx:id="btnLcdEtBg" text="Background" styleClass="btn-secondary" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                                        <Label text="Δ ET LCD" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                                        <Button fx:id="btnLcdDeltaEtDigits" text="Digits" styleClass="btn-secondary" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                                        <Button fx:id="btnLcdDeltaEtBg" text="Background" styleClass="btn-secondary" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                                                        <Label text="BT LCD" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                                        <Button fx:id="btnLcdBtDigits" text="Digits" styleClass="btn-secondary" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                                        <Button fx:id="btnLcdBtBg" text="Background" styleClass="btn-secondary" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                                                        <Label text="Δ BT LCD" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="secondary-field-label"/>
+                                                        <Button fx:id="btnLcdDeltaBtDigits" text="Digits" styleClass="btn-secondary" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                                        <Button fx:id="btnLcdDeltaBtBg" text="Background" styleClass="btn-secondary" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
+                                                    </GridPane>
+                                                </VBox>
+                                                <VBox spacing="10" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                                    <Label text="Timer / Extra" styleClass="secondary-section-title"/>
+                                                    <GridPane styleClass="secondary-grid" hgap="12" vgap="8">
+                                                        <columnConstraints>
+                                                            <ColumnConstraints minWidth="100" prefWidth="140"/>
+                                                            <ColumnConstraints minWidth="90" prefWidth="100"/>
+                                                            <ColumnConstraints minWidth="90" prefWidth="100"/>
+                                                        </columnConstraints>
+                                                        <Label text="Timer LCD" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                        <Button fx:id="btnLcdTimerDigits" text="Digits" styleClass="btn-secondary" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                                        <Button fx:id="btnLcdTimerBg" text="Background" styleClass="btn-secondary" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                                                        <Label text="Ramp/Soak Timer LCD" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                        <Button fx:id="btnLcdRampDigits" text="Digits" styleClass="btn-secondary" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                                        <Button fx:id="btnLcdRampBg" text="Background" styleClass="btn-secondary" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                                        <Label text="Extra / PID SV LCD" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                                        <Button fx:id="btnLcdExtraDigits" text="Digits" styleClass="btn-secondary" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                                        <Button fx:id="btnLcdExtraBg" text="Background" styleClass="btn-secondary" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                                                        <Label text="Slow Cooling Timer LCD" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                                        <Button fx:id="btnLcdSlowCoolDigits" text="Digits" styleClass="btn-secondary" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                                        <Button fx:id="btnLcdSlowCoolBg" text="Background" styleClass="btn-secondary" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                                                    </GridPane>
+                                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                                        <Button fx:id="btnLcdBw" text="B/W" styleClass="btn-secondary"/>
+                                                    </HBox>
+                                                </VBox>
+                                            </HBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                            </tabs>
+                        </TabPane>
+                        <VBox spacing="12" styleClass="secondary-section-card settings-card-soft">
+                            <Label text="Сброс палитры" styleClass="secondary-section-title"/>
+                            <Label text="Restore Defaults — вернуть цвета Curves/Graph по умолчанию. Grey — оттенки серого для кнопок и LCD." styleClass="secondary-hint-label" wrapText="true"/>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Button fx:id="btnResetColors" text="Restore Defaults" styleClass="btn-secondary"/>
+                                <Button fx:id="btnColorsGrey" text="Grey" styleClass="btn-secondary"/>
+                            </HBox>
+                        </VBox>
+                    </VBox>
+                </ScrollPane>
 
-                    <Button fx:id="btnResetColors" text="Сбросить..."
-                            style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 12; -fx-background-radius: 4;"/>
-                </VBox>
-            </ScrollPane>
-        </Tab>
+                <ScrollPane fx:id="eventsSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
+                    <VBox spacing="16" styleClass="settings-content-column">
+                        <padding>
+                            <Insets top="4" right="4" bottom="4" left="4"/>
+                        </padding>
+                        <TabPane fx:id="eventsTabPane" tabClosingPolicy="UNAVAILABLE" styleClass="secondary-tab-pane">
+                            <tabs>
+                                <Tab text="Config">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="Общие настройки событий (по образцу Artisan Events → Config)." styleClass="secondary-hint-label" wrapText="true"/>
+                                            <VBox spacing="10" styleClass="secondary-section-card">
+                                                <Label text="Отображение" styleClass="secondary-section-title"/>
+                                                <CheckBox text="Event Button" styleClass="secondary-hint-label"/>
+                                                <CheckBox text="Show on BT" styleClass="secondary-hint-label"/>
+                                                <CheckBox text="Annotations" styleClass="secondary-hint-label"/>
+                                                <CheckBox text="Time Guide" styleClass="secondary-hint-label"/>
+                                            </VBox>
+                                            <VBox spacing="10" styleClass="secondary-section-card">
+                                                <Label text="Event Types" styleClass="secondary-section-title"/>
+                                                <HBox spacing="16" alignment="CENTER_LEFT">
+                                                    <CheckBox text="1 Air" styleClass="secondary-hint-label"/>
+                                                    <CheckBox text="2 Drum" styleClass="secondary-hint-label"/>
+                                                    <CheckBox text="3 Damper" styleClass="secondary-hint-label"/>
+                                                    <CheckBox text="4 Burner" styleClass="secondary-hint-label"/>
+                                                    <CheckBox text="5 —" styleClass="secondary-hint-label"/>
+                                                </HBox>
+                                            </VBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Buttons">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <HBox spacing="16">
+                                                <VBox spacing="12" styleClass="secondary-section-card settings-card-emphasis" HBox.hgrow="ALWAYS">
+                                                    <Label text="Event Buttons" styleClass="secondary-section-title"/>
+                                                    <Label text="Настройка кастомных кнопок и поведения панели управления под графиком." styleClass="secondary-hint-label" wrapText="true"/>
+                                                    <Button fx:id="btnEventButtons" text="Открыть Event Buttons…" styleClass="btn-secondary"/>
+                                                </VBox>
+                                                <VBox spacing="12" styleClass="secondary-section-card" HBox.hgrow="ALWAYS">
+                                                    <Label text="Команды Modbus" styleClass="secondary-section-title"/>
+                                                    <Label text="write(slaveId,reg,val); wcoil(slaveId,coil,0|1); sleep(sec). Запускаются для основных событий обжара." styleClass="secondary-hint-label" wrapText="true"/>
+                                                </VBox>
+                                            </HBox>
+                                            <VBox spacing="12" styleClass="secondary-section-card">
+                                                <Label text="Привязка команд к событиям (Default Buttons)" styleClass="secondary-section-title"/>
+                                                <GridPane styleClass="secondary-grid" hgap="12" vgap="8">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints minWidth="120" prefWidth="140"/>
+                                                        <ColumnConstraints hgrow="ALWAYS"/>
+                                                    </columnConstraints>
+                                                    <Label text="CHARGE" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-field-label"/>
+                                                    <TextField fx:id="txtEventCharge" promptText="write(1,1008,2);sleep(15)" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                                                    <Label text="DROP" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                    <TextField fx:id="txtEventDrop" promptText="write(1,1008,5)" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                                    <Label text="DRY_END (DE)" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                                    <TextField fx:id="txtEventDryEnd" promptText="wcoil(1,2005,1)" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                                    <Label text="FC_START" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                                    <TextField fx:id="txtEventFcStart" promptText="write(1,1008,3)" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                                    <Label text="COOL_END" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="secondary-field-label"/>
+                                                    <TextField fx:id="txtEventCoolEnd" promptText="write(1,1008,0)" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                                </GridPane>
+                                            </VBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Sliders">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="Sliders — привязка событий Air, Drum, Damper, Burner к командам (Action, Command, Min, Max, Factor, Offset). По образцу Artisan Events → Sliders." styleClass="secondary-hint-label" wrapText="true"/>
+                                            <VBox spacing="10" styleClass="secondary-section-card">
+                                                <Label text="Таблица слайдеров" styleClass="secondary-section-title"/>
+                                                <Label text="Здесь будет таблица: Event, Action, Command, Min, Max, Factor, Offset, Bernoulli, Step, Temp Unit. Содержимое — в следующих итерациях." styleClass="secondary-hint-label" wrapText="true"/>
+                                            </VBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Quantifiers">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <VBox spacing="12" styleClass="secondary-section-card">
+                                                <Label text="Квантайзеры событий" styleClass="secondary-section-title"/>
+                                                <Label text="Для слайдеров Air, Drum, Damper и Burner: source, SV, min, max, step и action. Значения применяются при сохранении." wrapText="true" styleClass="secondary-hint-label"/>
+                                                <GridPane fx:id="quantifiersGrid" styleClass="secondary-grid" hgap="12" vgap="8">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints minWidth="90" prefWidth="110"/>
+                                                        <ColumnConstraints minWidth="90" prefWidth="100"/>
+                                                        <ColumnConstraints minWidth="55" prefWidth="65"/>
+                                                        <ColumnConstraints minWidth="55" prefWidth="65"/>
+                                                        <ColumnConstraints minWidth="55" prefWidth="65"/>
+                                                        <ColumnConstraints minWidth="55" prefWidth="65"/>
+                                                        <ColumnConstraints minWidth="65" prefWidth="75"/>
+                                                    </columnConstraints>
+                                                    <Label text="Событие" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="secondary-section-title"/>
+                                                    <Label text="Source" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="secondary-section-title"/>
+                                                    <Label text="SV" GridPane.columnIndex="2" GridPane.rowIndex="0" styleClass="secondary-section-title"/>
+                                                    <Label text="Min" GridPane.columnIndex="3" GridPane.rowIndex="0" styleClass="secondary-section-title"/>
+                                                    <Label text="Max" GridPane.columnIndex="4" GridPane.rowIndex="0" styleClass="secondary-section-title"/>
+                                                    <Label text="Step" GridPane.columnIndex="5" GridPane.rowIndex="0" styleClass="secondary-section-title"/>
+                                                    <Label text="Action" GridPane.columnIndex="6" GridPane.rowIndex="0" styleClass="secondary-section-title"/>
 
-        <Tab text="Квантайзеры событий">
-            <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;">
-                <VBox spacing="12" style="-fx-background-color: transparent;">
-                    <Label text="Квантайзеры для слайдеров (Air, Drum, Damper, Burner): Source (ET/BT), SV, Min, Max, Step, Action. Применяются при сохранении настроек."
-                           wrapText="true" style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
-                    <GridPane fx:id="quantifiersGrid" hgap="12" vgap="8" style="-fx-background-color: transparent;">
-                        <columnConstraints>
-                            <ColumnConstraints minWidth="70" prefWidth="90"/>
-                            <ColumnConstraints minWidth="80" prefWidth="90"/>
-                            <ColumnConstraints minWidth="50" prefWidth="60"/>
-                            <ColumnConstraints minWidth="50" prefWidth="60"/>
-                            <ColumnConstraints minWidth="50" prefWidth="60"/>
-                            <ColumnConstraints minWidth="50" prefWidth="60"/>
-                            <ColumnConstraints minWidth="55" prefWidth="70"/>
-                        </columnConstraints>
-                        <Label text="Событие" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                        <Label text="Source" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                        <Label text="SV" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                        <Label text="Min" GridPane.columnIndex="3" GridPane.rowIndex="0" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                        <Label text="Max" GridPane.columnIndex="4" GridPane.rowIndex="0" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                        <Label text="Step" GridPane.columnIndex="5" GridPane.rowIndex="0" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                        <Label text="Action" GridPane.columnIndex="6" GridPane.rowIndex="0" style="-fx-font-weight: bold; -fx-text-fill: #555555;"/>
-                        <Label text="Air" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
-                        <ComboBox fx:id="cmbQuantAirSource" prefWidth="85" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtQuantAirSv" prefWidth="50" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtQuantAirMin" prefWidth="50" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtQuantAirMax" prefWidth="50" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
-                        <TextField fx:id="txtQuantAirStep" prefWidth="50" GridPane.columnIndex="5" GridPane.rowIndex="1"/>
-                        <CheckBox fx:id="chkQuantAirAction" GridPane.columnIndex="6" GridPane.rowIndex="1"/>
-                        <Label text="Drum" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
-                        <ComboBox fx:id="cmbQuantDrumSource" prefWidth="85" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                        <TextField fx:id="txtQuantDrumSv" prefWidth="50" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
-                        <TextField fx:id="txtQuantDrumMin" prefWidth="50" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
-                        <TextField fx:id="txtQuantDrumMax" prefWidth="50" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
-                        <TextField fx:id="txtQuantDrumStep" prefWidth="50" GridPane.columnIndex="5" GridPane.rowIndex="2"/>
-                        <CheckBox fx:id="chkQuantDrumAction" GridPane.columnIndex="6" GridPane.rowIndex="2"/>
-                        <Label text="Damper" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
-                        <ComboBox fx:id="cmbQuantDamperSource" prefWidth="85" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
-                        <TextField fx:id="txtQuantDamperSv" prefWidth="50" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
-                        <TextField fx:id="txtQuantDamperMin" prefWidth="50" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
-                        <TextField fx:id="txtQuantDamperMax" prefWidth="50" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
-                        <TextField fx:id="txtQuantDamperStep" prefWidth="50" GridPane.columnIndex="5" GridPane.rowIndex="3"/>
-                        <CheckBox fx:id="chkQuantDamperAction" GridPane.columnIndex="6" GridPane.rowIndex="3"/>
-                        <Label text="Burner" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555;"/>
-                        <ComboBox fx:id="cmbQuantBurnerSource" prefWidth="85" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
-                        <TextField fx:id="txtQuantBurnerSv" prefWidth="50" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
-                        <TextField fx:id="txtQuantBurnerMin" prefWidth="50" GridPane.columnIndex="3" GridPane.rowIndex="4"/>
-                        <TextField fx:id="txtQuantBurnerMax" prefWidth="50" GridPane.columnIndex="4" GridPane.rowIndex="4"/>
-                        <TextField fx:id="txtQuantBurnerStep" prefWidth="50" GridPane.columnIndex="5" GridPane.rowIndex="4"/>
-                        <CheckBox fx:id="chkQuantBurnerAction" GridPane.columnIndex="6" GridPane.rowIndex="4"/>
-                    </GridPane>
-                </VBox>
-            </ScrollPane>
-        </Tab>
-    </TabPane>
+                                                    <Label text="Air" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="secondary-field-label"/>
+                                                    <ComboBox fx:id="cmbQuantAirSource" prefWidth="90" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                                    <TextField fx:id="txtQuantAirSv" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                                                    <TextField fx:id="txtQuantAirMin" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                                                    <TextField fx:id="txtQuantAirMax" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+                                                    <TextField fx:id="txtQuantAirStep" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="5" GridPane.rowIndex="1"/>
+                                                    <CheckBox fx:id="chkQuantAirAction" GridPane.columnIndex="6" GridPane.rowIndex="1"/>
 
-    <HBox spacing="12" alignment="CENTER_RIGHT" style="-fx-padding: 16 0 0 0;">
-        <Button fx:id="btnSave" text="Сохранить"
-                style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 8 24; -fx-background-radius: 4;"/>
-        <Button fx:id="btnCancel" text="Отмена"
-                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 8 24; -fx-background-radius: 4;"/>
+                                                    <Label text="Drum" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="secondary-field-label"/>
+                                                    <ComboBox fx:id="cmbQuantDrumSource" prefWidth="90" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                                    <TextField fx:id="txtQuantDrumSv" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                                                    <TextField fx:id="txtQuantDrumMin" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                                                    <TextField fx:id="txtQuantDrumMax" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+                                                    <TextField fx:id="txtQuantDrumStep" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="5" GridPane.rowIndex="2"/>
+                                                    <CheckBox fx:id="chkQuantDrumAction" GridPane.columnIndex="6" GridPane.rowIndex="2"/>
+
+                                                    <Label text="Damper" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="secondary-field-label"/>
+                                                    <ComboBox fx:id="cmbQuantDamperSource" prefWidth="90" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                                    <TextField fx:id="txtQuantDamperSv" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                                                    <TextField fx:id="txtQuantDamperMin" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                                                    <TextField fx:id="txtQuantDamperMax" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
+                                                    <TextField fx:id="txtQuantDamperStep" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="5" GridPane.rowIndex="3"/>
+                                                    <CheckBox fx:id="chkQuantDamperAction" GridPane.columnIndex="6" GridPane.rowIndex="3"/>
+
+                                                    <Label text="Burner" GridPane.columnIndex="0" GridPane.rowIndex="4" styleClass="secondary-field-label"/>
+                                                    <ComboBox fx:id="cmbQuantBurnerSource" prefWidth="90" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                                    <TextField fx:id="txtQuantBurnerSv" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
+                                                    <TextField fx:id="txtQuantBurnerMin" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="3" GridPane.rowIndex="4"/>
+                                                    <TextField fx:id="txtQuantBurnerMax" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="4" GridPane.rowIndex="4"/>
+                                                    <TextField fx:id="txtQuantBurnerStep" prefWidth="55" styleClass="secondary-input" GridPane.columnIndex="5" GridPane.rowIndex="4"/>
+                                                    <CheckBox fx:id="chkQuantBurnerAction" GridPane.columnIndex="6" GridPane.rowIndex="4"/>
+                                                </GridPane>
+                                            </VBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Palettes">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="Palettes — управление палитрами кнопок (Store Palette, Activate Palette). По образцу Artisan Events → Palettes." styleClass="secondary-hint-label" wrapText="true"/>
+                                            <VBox spacing="10" styleClass="secondary-section-card">
+                                                <Label text="Management" styleClass="secondary-section-title"/>
+                                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                                    <Button text="&lt;&lt; Store Palette" styleClass="btn-secondary"/>
+                                                    <Label text="current:" styleClass="secondary-field-label"/>
+                                                    <TextField promptText="default" prefWidth="120" styleClass="secondary-input"/>
+                                                    <Button text="Activate Palette &gt;&gt;" styleClass="btn-secondary"/>
+                                                </HBox>
+                                                <CheckBox text="Switch Using Number Keys + Cmd" styleClass="secondary-hint-label"/>
+                                            </VBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Style">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="Style — цвет, текст, маркер, толщина, прозрачность, размер для типов событий (Air, Drum, Damper, Burner). По образцу Artisan Events → Style." styleClass="secondary-hint-label" wrapText="true"/>
+                                            <VBox spacing="10" styleClass="secondary-section-card">
+                                                <Label text="Стили событий" styleClass="secondary-section-title"/>
+                                                <Label text="Таблица: Color, Text Color, Marker, Thickness, Opacity, Size. Содержимое — в следующих итерациях." styleClass="secondary-hint-label" wrapText="true"/>
+                                            </VBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                                <Tab text="Annotations">
+                                    <content>
+                                        <VBox spacing="12" styleClass="settings-content-column">
+                                            <Label text="Annotations — шаблоны подписей к событиям на графике (Show, Annotation, Example before/after FCs). По образцу Artisan Events → Annotations." styleClass="secondary-hint-label" wrapText="true"/>
+                                            <VBox spacing="10" styleClass="secondary-section-card">
+                                                <Label text="Annotation" styleClass="secondary-section-title"/>
+                                                <Label text="Поля Show и Annotation для типов Air, Drum, Damper, Burner; Allowed Annotation Overlap. Содержимое — в следующих итерациях." styleClass="secondary-hint-label" wrapText="true"/>
+                                            </VBox>
+                                        </VBox>
+                                    </content>
+                                </Tab>
+                            </tabs>
+                        </TabPane>
+                    </VBox>
+                </ScrollPane>
+            </StackPane>
+        </VBox>
+    </HBox>
+
+    <HBox spacing="12" alignment="CENTER_LEFT" styleClass="secondary-action-row settings-bottom-bar">
+        <Label text="Изменения применяются после сохранения. Визуальные настройки можно preview в реальном времени." styleClass="secondary-hint-label"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="btnCancel" text="Отмена" styleClass="btn-secondary"/>
+        <Button fx:id="btnSave" text="Сохранить" styleClass="btn-primary"/>
     </HBox>
 </VBox>

@@ -32,7 +32,8 @@ enum class ControlEventType {
     GAS,
     AIR,
     DRUM,
-    DAMPER
+    DAMPER,
+    BURNER
 }
 
 /**
@@ -70,12 +71,14 @@ data class ProtocolComment(
 )
 
 /**
- * A single temperature reading (bean temp, environment temp).
+ * A single temperature reading (bean temp, environment temp) plus optional extra sensor channels.
+ * Extra channels are keyed by channel index (0-based): device 0 → channels 0,1; device 1 → channels 2,3; etc.
  */
 data class TemperatureSample(
     val timeSec: Double,
     val bt: Double,
-    val et: Double
+    val et: Double,
+    val extras: Map<Int, Double> = emptyMap()
 )
 
 /**
@@ -109,11 +112,14 @@ class RoastProfile(
     controlEvents: List<ControlEvent> = emptyList(),
     val mode: TemperatureUnit = TemperatureUnit.CELSIUS,
     /** BBP recorded before this roast (between previous Stop and this Start). Cropster-style. */
-    val betweenBatchLog: BetweenBatchLog? = null
+    val betweenBatchLog: BetweenBatchLog? = null,
+    /** Extra sensor channel data keyed by channel index. */
+    extraTemp: Map<Int, MutableList<Double>> = emptyMap()
 ) {
     val events: MutableList<RoastEvent> = Collections.synchronizedList(events.toMutableList())
     val comments: MutableList<ProtocolComment> = Collections.synchronizedList(comments.toMutableList())
     val controlEvents: MutableList<ControlEvent> = controlEvents.toMutableList()
+    val extraTemp: MutableMap<Int, MutableList<Double>> = extraTemp.mapValues { it.value.toMutableList() }.toMutableMap()
 
     @Synchronized
     fun addControlEvent(timeSec: Double, type: ControlEventType, value: Double, displayString: String? = null) {
@@ -125,6 +131,9 @@ class RoastProfile(
         timex.add(sample.timeSec)
         temp1.add(sample.bt)
         temp2.add(sample.et)
+        for ((ch, value) in sample.extras) {
+            extraTemp.getOrPut(ch) { mutableListOf() }.add(value)
+        }
     }
 
     @Synchronized

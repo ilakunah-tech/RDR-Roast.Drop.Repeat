@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.graph.GraphFiltersTabController"
+      styleClass="settings-content-column"
+      spacing="16">
+    <padding>
+        <Insets top="4" right="4" bottom="4" left="4"/>
+    </padding>
+
+    <!-- Input Filter -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Input Filter" styleClass="secondary-section-title"/>
+        <Label text="Interpolate duplicates, drop spikes, ET↔BT swap, and temperature limits." styleClass="secondary-hint-label" wrapText="true"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <columnConstraints>
+                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+            <CheckBox fx:id="chkInterpolateDuplicates" text="Interpolate Duplicates" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <HBox spacing="8" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                <Label text="Limit" styleClass="secondary-field-label"/>
+                <TextField fx:id="txtDropDuplicatesLimit" promptText="0.1" prefWidth="80" styleClass="secondary-input"/>
+            </HBox>
+            <CheckBox fx:id="chkDropSpikes" text="Drop Spikes" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="1"/>
+            <CheckBox fx:id="chkSwapETBT" text="ET ↔ BT" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="2"/>
+            <CheckBox fx:id="chkMinMaxLimits" text="Limits (min/max)" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+            <HBox spacing="8" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                <Label text="Tmin" styleClass="secondary-field-label"/>
+                <TextField fx:id="txtFilterDropOutTmin" promptText="10" prefWidth="60" styleClass="secondary-input"/>
+                <Label text="Tmax" styleClass="secondary-field-label"/>
+                <TextField fx:id="txtFilterDropOutTmax" promptText="700" prefWidth="60" styleClass="secondary-input"/>
+            </HBox>
+        </GridPane>
+    </VBox>
+
+    <!-- Curve Filter -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Curve Filter" styleClass="secondary-section-title"/>
+        <Label text="Smooth curves and smooth spikes." styleClass="secondary-hint-label" wrapText="true"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <columnConstraints>
+                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+            <Label text="Smooth Curves" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Spinner fx:id="spinnerCurveFilter" prefWidth="100" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <CheckBox fx:id="chkFilterDropOuts" text="Smooth Spikes" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="1"/>
+        </GridPane>
+    </VBox>
+
+    <!-- Display Filter -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Display Filter" styleClass="secondary-section-title"/>
+        <Label text="Show full range and interpolate drops." styleClass="secondary-hint-label" wrapText="true"/>
+        <VBox spacing="8">
+            <CheckBox fx:id="chkForegroundShowFull" text="Show Full"/>
+            <CheckBox fx:id="chkInterpolateDrops" text="Interpolate Drops"/>
+        </VBox>
+    </VBox>
+
+    <!-- Rate of Rise Filter -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Rate of Rise Filter" styleClass="secondary-section-title"/>
+        <Label text="Delta span (Δ ET / Δ BT), smoothing, polyfit RoR, optimal smoothing, and RoR limits." styleClass="secondary-hint-label" wrapText="true"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <columnConstraints>
+                <ColumnConstraints minWidth="160" prefWidth="200"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+            <Label text="Δ ET (Delta Span)" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Spinner fx:id="spinnerDeltaET" prefWidth="100" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Δ BT (Delta Span)" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Spinner fx:id="spinnerDeltaBT" prefWidth="100" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <CheckBox fx:id="chkPolyfitRoRcalc" text="Polyfit RoR computation" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="2"/>
+            <CheckBox fx:id="chkOptimalSmoothing" text="Optimal Smoothing" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="3"/>
+            <CheckBox fx:id="chkRorLimitFlag" text="RoR Limits" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+            <HBox spacing="8" alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="4">
+                <Label text="Min" styleClass="secondary-field-label"/>
+                <TextField fx:id="txtRorLimitMin" promptText="-95" prefWidth="60" styleClass="secondary-input"/>
+                <Label text="Max" styleClass="secondary-field-label"/>
+                <TextField fx:id="txtRorLimitMax" promptText="95" prefWidth="60" styleClass="secondary-input"/>
+            </HBox>
+        </GridPane>
+    </VBox>
+</VBox>

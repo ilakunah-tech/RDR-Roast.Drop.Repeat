@@ -39,11 +39,11 @@
 /* Radius applied via -rdr-radius on .root */
 .button, .text-field, .combo-box, .list-view, .table-view,
 .tab-pane, .context-menu {
-    -fx-background-radius: -rdr-radius;
-    -fx-border-radius: -rdr-radius;
+    -fx-background-radius: var(-rdr-radius);
+    -fx-border-radius: var(-rdr-radius);
 }
 
 .card {
-    -fx-background-radius: -rdr-radius;
-    -fx-border-radius: -rdr-radius;
+    -fx-background-radius: var(-rdr-radius);
+    -fx-border-radius: var(-rdr-radius);
 }

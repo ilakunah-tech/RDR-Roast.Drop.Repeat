@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.graph.GraphMathTabController"
+      spacing="12"
+      prefWidth="700">
+    <padding>
+        <Insets top="8" right="12" bottom="8" left="12"/>
+    </padding>
+    <fx:define>
+        <ToggleGroup fx:id="expPowerGroup"/>
+    </fx:define>
+
+    <HBox spacing="16">
+        <TitledPane text="Interpolate" expanded="true">
+            <VBox spacing="8">
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <CheckBox fx:id="chkInterpShow" text="Show"/>
+                    <ComboBox fx:id="cmbInterpKind" prefWidth="100" promptText="linear"/>
+                </HBox>
+            </VBox>
+        </TitledPane>
+        <TitledPane text="Univariate" expanded="true">
+            <VBox spacing="8">
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <CheckBox fx:id="chkUnivarShow" text="Show"/>
+                    <Button fx:id="btnUnivarInfo" text="Info"/>
+                </HBox>
+            </VBox>
+        </TitledPane>
+    </HBox>
+
+    <HBox spacing="16">
+        <TitledPane text="ln()" expanded="true">
+            <VBox spacing="8">
+                <CheckBox fx:id="chkLnShow" text="Show"/>
+                <TextField fx:id="txtLnResult" editable="false" promptText="ln result" prefWidth="200"
+                           style="-fx-background-color: #e8e8e8;"/>
+            </VBox>
+        </TitledPane>
+        <TitledPane text="Exponent" expanded="true">
+            <VBox spacing="8">
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <RadioButton fx:id="radExpX2" text="x²" toggleGroup="$expPowerGroup"/>
+                    <RadioButton fx:id="radExpX3" text="x³" toggleGroup="$expPowerGroup"/>
+                    <Label text="Offset seconds from CHARGE"/>
+                    <TextField fx:id="txtExpOffsetSec" prefWidth="60"/>
+                </HBox>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <CheckBox fx:id="chkExpShow" text="Show"/>
+                    <TextField fx:id="txtExpResult" editable="false" promptText="exp result" prefWidth="180"
+                               style="-fx-background-color: #e8e8e8;"/>
+                    <Button fx:id="btnCreateBackgroundCurve" text="Create Background Curve"/>
+                </HBox>
+            </VBox>
+        </TitledPane>
+    </HBox>
+
+    <TitledPane text="Polyfit" expanded="true">
+        <VBox spacing="10">
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <CheckBox fx:id="chkPolyfitShow" text="Show"/>
+                <Label text="Start"/>
+                <TextField fx:id="txtPolyfitStartSec" prefWidth="70"/>
+                <Label text="End"/>
+                <TextField fx:id="txtPolyfitEndSec" prefWidth="70"/>
+                <Label text="deg"/>
+                <Spinner fx:id="spnPolyfitDeg" prefWidth="60" editable="true"/>
+            </HBox>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="Δ Axis"/>
+                <ComboBox fx:id="cmbPolyfitC1" prefWidth="80" promptText="ET"/>
+                <TextField fx:id="txtPolyfitResult" editable="false" promptText="polyfit result" prefWidth="200"
+                           style="-fx-background-color: #e8e8e8;"/>
+                <ComboBox fx:id="cmbPolyfitC2" prefWidth="80" promptText="BT"/>
+            </HBox>
+        </VBox>
+    </TitledPane>
+</VBox>

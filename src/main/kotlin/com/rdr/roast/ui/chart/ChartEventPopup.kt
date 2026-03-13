@@ -46,27 +46,21 @@ class ChartEventPopup(
         val mmss = formatTime(timeMs)
 
         val root = VBox(8.0).apply {
+            styleClass.add("popup-shell")
             padding = Insets(10.0, 12.0, 10.0, 12.0)
             minWidth = 220.0
             maxWidth = 300.0
-            style = """
-                -fx-background-color: white;
-                -fx-border-color: #c0c0c0;
-                -fx-border-radius: 6;
-                -fx-background-radius: 6;
-                -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.22), 10, 0, 0, 3);
-            """.trimIndent()
         }
 
         val lblAt = Label(if (mode == ChartPopupMode.BBP) "Between batch comment at" else "Comment at").apply {
-            style = "-fx-font-size: 11px; -fx-text-fill: #888;"
+            styleClass.add("secondary-hint-label")
         }
-        val lblTime = Label(mmss).apply { style = "-fx-font-size: 14px; -fx-font-weight: bold;" }
-        val lblUnit = Label("mm:ss").apply { style = "-fx-font-size: 10px; -fx-text-fill: #bbb;" }
+        val lblTime = Label(mmss).apply { styleClass.add("drawer-sheet-title") }
+        val lblUnit = Label("mm:ss").apply { styleClass.add("secondary-hint-label") }
         root.children += HBox(6.0, lblAt, lblTime, lblUnit).apply { alignment = Pos.CENTER_LEFT }
         btAtTime?.let { bt ->
             root.children += Label("BT ${"%.1f".format(bt)} °C").apply {
-                style = "-fx-font-size: 11px; -fx-text-fill: #666;"
+                styleClass.add("secondary-value-label")
             }
         }
         root.children += Separator()
@@ -77,8 +71,8 @@ class ChartEventPopup(
         }
 
         val btnClose = Button("Cancel").apply {
+            styleClass.add("btn-secondary")
             maxWidth = Double.MAX_VALUE
-            style = secondaryButtonStyle()
             setOnAction { hide() }
         }
         root.children += btnClose
@@ -88,24 +82,24 @@ class ChartEventPopup(
     private fun buildRoastContent(root: VBox, mmss: String) {
         val actions = VBox(6.0)
         val btnDE = Button("Dry end").apply {
+            styleClass.add("btn-primary")
             maxWidth = Double.MAX_VALUE
-            style = greenButtonStyle()
             setOnAction {
                 onAdd(ChartPopupEventResult(timeMs, "DE @ $mmss"))
                 hide()
             }
         }
         val btnFC = Button("First crack").apply {
+            styleClass.add("btn-primary")
             maxWidth = Double.MAX_VALUE
-            style = greenButtonStyle()
             setOnAction {
                 onAdd(ChartPopupEventResult(timeMs, "FC @ $mmss"))
                 hide()
             }
         }
         val btnSC = Button("Second crack").apply {
+            styleClass.add("btn-primary")
             maxWidth = Double.MAX_VALUE
-            style = greenButtonStyle()
             setOnAction {
                 onAdd(ChartPopupEventResult(timeMs, "SC @ $mmss"))
                 hide()
@@ -116,11 +110,11 @@ class ChartEventPopup(
         root.children += Separator()
 
         val txtComment = TextField().apply {
+            styleClass.add("secondary-input")
             promptText = "Comment"
-            style = "-fx-font-size: 11px;"
         }
         val btnAdd = Button("Add comment").apply {
-            style = primaryButtonStyle()
+            styleClass.add("btn-primary")
             setOnAction {
                 val txt = txtComment.text.trim()
                 if (txt.isNotEmpty()) {
@@ -137,12 +131,12 @@ class ChartEventPopup(
 
     private fun buildBbpContent(root: VBox) {
         val txtGas = TextField().apply {
+            styleClass.add("secondary-input")
             promptText = "Gas"
-            style = "-fx-font-size: 11px;"
         }
         val txtAirflow = TextField().apply {
+            styleClass.add("secondary-input")
             promptText = "Airflow"
-            style = "-fx-font-size: 11px;"
         }
         root.children += HBox(6.0, txtGas, txtAirflow).also { row ->
             row.alignment = Pos.CENTER_LEFT
@@ -151,11 +145,11 @@ class ChartEventPopup(
         }
 
         val txtComment = TextField().apply {
+            styleClass.add("secondary-input")
             promptText = "Comment"
-            style = "-fx-font-size: 11px;"
         }
         val btnAdd = Button("Add comment").apply {
-            style = primaryButtonStyle()
+            styleClass.add("btn-primary")
             setOnAction {
                 val gas = txtGas.text.trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()
                 val airflow = txtAirflow.text.trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()
@@ -171,28 +165,6 @@ class ChartEventPopup(
             HBox.setHgrow(txtComment, Priority.ALWAYS)
         }
     }
-
-    private fun greenButtonStyle() = """
-        -fx-background-color: #27ae60;
-        -fx-text-fill: white;
-        -fx-font-size: 11px;
-        -fx-background-radius: 3;
-        -fx-cursor: hand;
-    """.trimIndent()
-
-    private fun primaryButtonStyle() = """
-        -fx-background-color: #3498db;
-        -fx-text-fill: white;
-        -fx-font-size: 11px;
-        -fx-background-radius: 3;
-    """.trimIndent()
-
-    private fun secondaryButtonStyle() = """
-        -fx-background-color: #ecf0f1;
-        -fx-text-fill: #555;
-        -fx-font-size: 11px;
-        -fx-background-radius: 3;
-    """.trimIndent()
 
     private fun formatTime(ms: Long): String {
         val s = (ms / 1000).coerceAtLeast(0)

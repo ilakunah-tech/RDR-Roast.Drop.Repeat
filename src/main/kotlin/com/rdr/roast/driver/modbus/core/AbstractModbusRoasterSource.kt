@@ -73,7 +73,8 @@ abstract class AbstractModbusRoasterSource(
             }
             try {
                 val (bt, et) = readBtEtFromConfig()
-                emit(TemperatureSample(timeSec = timeSec, bt = bt, et = et))
+                val extras = readExtraChannels()
+                emit(TemperatureSample(timeSec = timeSec, bt = bt, et = et, extras = extras))
                 timeSec += pollMs / 1000.0
             } catch (e: Exception) {
                 val msg = e.message ?: "Read failed"
@@ -110,6 +111,31 @@ abstract class AbstractModbusRoasterSource(
         val bt = (regs.getOrNull(0)?.value ?: 0) / config.divisionFactor
         val et = (regs.getOrNull((etReg - btReg).coerceAtLeast(0))?.value ?: 0) / config.divisionFactor
         return bt to et
+    }
+
+    /**
+     * Reads extra sensor channels from modbusInputs[2..9].
+     * Returns a map of (channel index → value) for channels that have deviceId != 0.
+     * Channel indices map to ExtraSensorChannelConfig: modbusInputs[2]→ch 0, [3]→ch 1, etc.
+     */
+    private fun readExtraChannels(): Map<Int, Double> {
+        val inputs = config.modbusInputs
+        if (inputs.size <= 2) return emptyMap()
+        val result = mutableMapOf<Int, Double>()
+        for (i in 2 until inputs.size) {
+            val ch = inputs[i]
+            if (ch.deviceId == 0) continue
+            if (!decodeSupported(ch.decode)) continue
+            try {
+                val value = readChannelFromInput(ch)
+                if (value != null) {
+                    result[i - 2] = value
+                }
+            } catch (e: Exception) {
+                log.trace("Extra channel {} read failed: {}", i, e.message)
+            }
+        }
+        return result
     }
 
     private fun decodeSupported(decode: com.rdr.roast.app.ModbusInputDecode): Boolean =

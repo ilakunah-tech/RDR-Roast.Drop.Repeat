@@ -1,0 +1,127 @@
+@startuml RDR Core Classes and Dependencies
+!theme plain
+title RDR — Ключевые классы и зависимости (уровень 2)
+
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 10
+
+interface RoastDataSource {
+  + connect()
+  + disconnect()
+  + sampleFlow() : Flow<TemperatureSample>
+  + connectionState() : StateFlow<ConnectionState>
+}
+
+interface RoastControl {
+  + supportsControl() : Boolean
+  + controlSpecs() : List<ControlSpec>
+  + setControl(id, value)
+}
+
+class RoastRecorder {
+  - dataSource : RoastDataSource
+  - samplingEngine : SamplingEngine
+  - bbpService : BbpService
+  + stateFlow : StateFlow<RecorderState>
+  + currentProfile : StateFlow<RoastProfile>
+  + connect()
+  + disconnect()
+  + startRecording()
+  + stopRecording()
+}
+
+class SamplingEngine {
+  - dataSource : RoastDataSource
+  + start(onSample)
+  + stop()
+}
+
+class BbpService {
+  - samplingEngine : SamplingEngine
+  + currentSession : BetweenBatchSession?
+  + startBbp() / stopBbp()
+}
+
+object DataSourceFactory {
+  + create(config : MachineConfig) : RoastDataSource
+}
+
+class RoastProfile {
+  + timex, temp1, temp2 : MutableList
+  + events, comments, controlEvents
+  + addSample(sample)
+  + addEvent(event)
+  + addComment(comment)
+}
+
+interface CurveModel {
+  + getValue(timeMs) : Double?
+  + getValues() : SortedMap
+  + addListener / removeListener
+}
+
+class MainController {
+  - recorder : RoastRecorder
+  - profileStorage : ProfileStorage
+  - dataSourceFactory : DataSourceFactory
+  - chartPanel : ChartPanelFx
+  - curveChart : CurveChartFx
+  + initialize()
+}
+
+class ChartPanelFx {
+  + curveChart : CurveChartFx
+  + chartViewer : ChartViewer
+}
+
+class CurveChartFx {
+  + chart : JFreeChart
+  + bind profile, curve models
+}
+
+abstract AbstractModbusRoasterSource {
+  # core : ModbusConnectionCore
+  # config : MachineConfig
+  + connect() / disconnect()
+  + sampleFlow() : Flow<TemperatureSample>
+}
+
+class BescaModbusSource
+class BescaModbusTcpSource
+class DiedrichSource
+class SimulatorSource
+class ErrorDataSource
+
+RoastDataSource <|.. AbstractModbusRoasterSource
+RoastDataSource <|.. SimulatorSource
+RoastDataSource <|.. ErrorDataSource
+AbstractModbusRoasterSource <|-- BescaModbusSource
+AbstractModbusRoasterSource <|-- BescaModbusTcpSource
+RoastDataSource <|.. DiedrichSource
+
+RoastControl <|.. AbstractModbusRoasterSource : optional
+
+RoastRecorder o-- RoastDataSource : 1
+RoastRecorder o-- SamplingEngine : 1
+RoastRecorder o-- BbpService : 1
+SamplingEngine o-- RoastDataSource : uses
+
+RoastRecorder --> RoastProfile : emits
+SamplingEngine --> TemperatureSample : collects
+
+DataSourceFactory ..> RoastDataSource : create
+MainController --> RoastRecorder : owns
+MainController --> DataSourceFactory : uses
+MainController --> ChartPanelFx : contains
+MainController --> CurveChartFx : via ChartPanelFx
+ChartPanelFx o-- CurveChartFx : 1
+CurveChartFx --> RoastProfile : binds
+CurveChartFx --> CurveModel : binds
+
+RoastProfile --> TemperatureSample : stores
+RoastProfile --> RoastEvent : stores
+CurveModel <|.. StandardCurveModel
+CurveModel <|.. RorCurveModel
+CurveModel <|.. MovingAverageCurveModel
+
+@enduml

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RDR — Структура проекта (Roast.Drop.Repeat)</title>
+  <style>
+    :root { --bg: #fafafa; --text: #1a1a1a; --border: #ddd; --accent: #2563eb; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5; color: var(--text); background: var(--bg); max-width: 900px; margin: 0 auto; padding: 2rem; }
+    h1 { font-size: 1.75rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; }
+    h2 { font-size: 1.35rem; margin-top: 2rem; color: #0f172a; }
+    h3 { font-size: 1.1rem; margin-top: 1.25rem; }
+    a { color: var(--accent); }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.9rem; }
+    th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; }
+    th { background: #e2e8f0; }
+    pre { background: #1e293b; color: #e2e8f0; padding: 1rem; overflow-x: auto; border-radius: 6px; font-size: 0.8rem; }
+    .diagram-source { margin: 0.5rem 0; }
+    .file-ref { font-family: monospace; background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px; }
+    .toc { list-style: none; padding-left: 0; }
+    .toc li { margin: 0.4rem 0; }
+    .toc a { text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 0.75rem; margin: 1rem 0; }
+    .level-badge { display: inline-block; background: #334155; color: #fff; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-right: 0.5rem; }
+    @media print {
+      body { background: #fff; padding: 1rem; }
+      .no-print { display: none; }
+      h2 { page-break-after: avoid; }
+      table, pre { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <h1>RDR — Визуальная структура проекта (Roast.Drop.Repeat)</h1>
+  <p>Единый артефакт: онбординг, рефакторинг, документация продукта. Три уровня (пакеты → классы → зависимости), три аспекта (структура кода, потоки данных, конфигурация/запуск).</p>
+
+  <nav>
+    <h2>Содержание</h2>
+    <ul class="toc">
+      <li><a href="#onboarding">1. Для онбординга</a></li>
+      <li><a href="#refactoring">2. Для рефакторинга</a></li>
+      <li><a href="#product">3. Документация продукта</a></li>
+      <li><a href="#level1">4. Уровень 1: пакеты и связи</a></li>
+      <li><a href="#level2">5. Уровень 2: классы и файлы</a></li>
+      <li><a href="#level3">6. Уровень 3: зависимости между классами</a></li>
+      <li><a href="#aspects">7. Три аспекта: структура, потоки, конфигурация</a></li>
+      <li><a href="#files">8. Справочник файлов</a></li>
+      <li><a href="#diagrams">9. Диаграммы (PlantUML и draw.io)</a></li>
+    </ul>
+  </nav>
+
+  <hr/>
+
+  <h2 id="onboarding">1. Для онбординга</h2>
+  <p><strong>С чего начать:</strong> точка входа — <span class="file-ref">App.kt</span> (<code>main()</code> → <code>RoastApp.start()</code>). Загружается <span class="file-ref">MainView.fxml</span>, создаётся <span class="file-ref">MainController</span>. Вся основная логика записи обжарки и UI сходится в <span class="file-ref">MainController.kt</span> (крупный контроллер).</p>
+  <p><strong>Где что лежит:</strong></p>
+  <ul>
+    <li><strong>app</strong> — настройки (AppSettings, MachineConfig), создание источника данных (DataSourceFactory), запись (RoastRecorder, SamplingEngine, BbpService), API (ServerApi, BbpApi, ReferenceApi), темы и внешний вид.</li>
+    <li><strong>ui</strong> — JavaFX: MainController + FXML-экраны (MainView, SettingsView, LoginView, PortsConfigView, AxesConfigView, EventButtonsView, RoastPropertiesView, FinishRoastView). Подпапки: <code>ui.chart</code> (графики JFreeChart), <code>ui.control</code> (слайдеры управления газ/воздух/барабан).</li>
+    <li><strong>domain</strong> — модель обжарки: RoastProfile, TemperatureSample, события (EventType, RoastEvent, ControlEvent), кривые (CurveModel, StandardCurveModel, RorCurveModel), метрики (Phases, ChargeDetection, TurningPoint), BBP (Bbp, BbpAnalytics).</li>
+    <li><strong>driver</strong> — подключение к оборудованию: интерфейс RoastDataSource (и RoastControl для управления), реализации: MODBUS (modbus.core, besca, diedrich), симулятор (SimulatorSource, AlogReplaySource), ErrorDataSource при ошибках.</li>
+  </ul>
+  <p><strong>Типичный сценарий:</strong> пользователь выбирает тип машины и подключается → MainController вызывает DataSourceFactory.create(config) → RoastRecorder.connect() → при Start начинается сбор сэмплов через SamplingEngine в RoastProfile → данные отображаются на CurveChartFx (JFreeChart).</p>
+
+  <h2 id="refactoring">2. Для рефакторинга</h2>
+  <p><strong>Границы модулей:</strong></p>
+  <ul>
+    <li><strong>driver</strong> не должен зависеть от app/ui/domain (только от domain.TemperatureSample и своих интерфейсов). Соблюдается: app создаёт RoastDataSource через DataSourceFactory по MachineConfig.</li>
+    <li><strong>domain</strong> — чистый: только данные и расчёты (кривые, метрики). Не зависит от app/driver/ui. Зависимости из app/ui к domain — норма.</li>
+    <li><strong>app</strong> — оркестрация: настройки, конфиг, API, запись. Зависит от domain и driver. Сильная связка: RoastRecorder ↔ SamplingEngine ↔ BbpService.</li>
+    <li><strong>ui</strong> — единственный потребитель app и части domain/driver для отображения. MainController — «жирный» класс: много ответственности (подключение, запись, графики, слайдеры, BBP, Reference, настройки). Кандидат на разбиение по сценариям или подконтроллерам.</li>
+  </ul>
+  <p><strong>Риски при изменениях:</strong></p>
+  <ul>
+    <li>Изменение <span class="file-ref">RoastDataSource</span> / <span class="file-ref">MachineConfig</span> затрагивает DataSourceFactory, все реализации driver и MainController.</li>
+    <li>Изменение <span class="file-ref">RoastProfile</span> / событий domain — RoastRecorder, BbpService, CurveChartFx, MainController.</li>
+    <li>Добавление нового типа машины: новый класс в driver + ветка в DataSourceFactory.create() + при необходимости настройки в AppSettings/SettingsController.</li>
+  </ul>
+
+  <h2 id="product">3. Документация продукта</h2>
+  <p><strong>Что делает приложение:</strong> RDR — десктопное приложение для записи профилей обжарки кофе. Подключается к ростеру (Besca, Diedrich, симулятор), снимает показания BT/ET по времени, позволяет отмечать события (Charge, First Crack, Drop и др.) и комментарии, при необходимости управляет газом/воздухом/барабаном (MODBUS). Поддерживается Between Batch Protocol (BBP), интеграция с сервером (ServerApi, BbpApi), референсные обжарки (ReferenceApi). Профили сохраняются локально (ProfileStorage), настраиваются порты и пресеты (SettingsManager, ConnectionPreset).</p>
+  <p><strong>Где в коде:</strong></p>
+  <ul>
+    <li>Подключение к ростеру: <span class="file-ref">DataSourceFactory</span>, <span class="file-ref">RoastRecorder.connect()</span>, <span class="file-ref">driver.*</span>.</li>
+    <li>Запись кривой: <span class="file-ref">RoastRecorder</span>, <span class="file-ref">SamplingEngine</span>, <span class="file-ref">RoastProfile.addSample()</span>.</li>
+    <li>Отображение графика: <span class="file-ref">ChartPanelFx</span>, <span class="file-ref">CurveChartFx</span> (JFreeChart), привязка к RoastProfile и CurveModel.</li>
+    <li>События и комментарии: <span class="file-ref">RoastProfile</span> (events, comments), <span class="file-ref">ChartEventPopup</span>, MainController.</li>
+    <li>Управление (слайдеры): <span class="file-ref">RoastControl</span>, <span class="file-ref">ControlSliderPanel</span>, <span class="file-ref">ModbusCommandExecutor</span> (write register/coil).</li>
+    <li>Настройки и пресеты: <span class="file-ref">AppSettings</span>, <span class="file-ref">SettingsController</span>, <span class="file-ref">SettingsManager</span>, <span class="file-ref">MachineConfig</span>.</li>
+  </ul>
+
+  <h2 id="level1"><span class="level-badge">Уровень 1</span> Пакеты и связи</h2>
+  <p>Четыре основных пакета: <strong>app</strong>, <strong>ui</strong>, <strong>domain</strong>, <strong>driver</strong>. Направление зависимостей: ui → app, domain; app → domain, driver; domain независим.</p>
+  <ul>
+    <li><strong>com.rdr.roast</strong> — только App.kt (точка входа).</li>
+    <li><strong>app</strong> — DataSourceFactory, RoastRecorder, SamplingEngine, BbpService, ProfileStorage, SettingsManager, AppSettings (в т.ч. MachineConfig), ServerApi, BbpApi, ReferenceApi, CatalogApi, ConnectionTester, RoasterDiscovery, ThemeSupport, AppearanceSupport и др.</li>
+    <li><strong>ui</strong> — MainController; ui.chart: ChartPanelFx, CurveChartFx, ControlChartFx, ChartEventPopup; ui.control: ControlSliderPanel, DetachableSliderWindow; контроллеры настроек/портов/осей/событий/финиша/логина.</li>
+    <li><strong>domain</strong> — Model.kt (RoastProfile, EventType, TemperatureSample, ControlEvent, RoastEvent, ProtocolComment, PhaseDuration и т.д.); domain.curves: CurveModel, AbstractCurveModel, StandardCurveModel, RorCurveModel, MovingAverageCurveModel; domain.metrics: Phases, ChargeDetection, TurningPoint; Bbp, BbpAnalytics.</li>
+    <li><strong>driver</strong> — RoastDataSource, ConnectionState, RoastControl, ControlSpec, MachinePresets; modbus.core: ModbusConnectionCore, ModbusCommandExecutor, AbstractModbusRoasterSource; besca: BescaModbusSource, BescaModbusTcpSource; diedrich: DiedrichSource; simulator: SimulatorSource, AlogReplaySource; ErrorDataSource.</li>
+  </ul>
+  <p>Диаграмма пакетов: см. <a href="#diagrams">раздел 9</a> (01-packages.puml / 01-packages.drawio).</p>
+
+  <h2 id="level2"><span class="level-badge">Уровень 2</span> Классы и файлы (назначение)</h2>
+  <table>
+    <thead><tr><th>Файл / класс</th><th>Назначение</th></tr></thead>
+    <tbody>
+      <tr><td>App.kt / RoastApp</td><td>Точка входа; загрузка темы, MainView.fxml, сцен, отображение окна.</td></tr>
+      <tr><td>MainController</td><td>Главный контроллер: подключение, Start/Stop, запись, графики, слайдеры, BBP, Reference, настройки, горячие клавиши.</td></tr>
+      <tr><td>DataSourceFactory</td><td>Создание RoastDataSource по MachineConfig (Simulator, Besca TCP/Serial, Diedrich Modbus/Phidget).</td></tr>
+      <tr><td>RoastRecorder</td><td>Состояние записи (DISCONNECTED/MONITORING/RECORDING/STOPPED/BBP), текущий RoastProfile, connect/disconnect, start/stop записи, делегирование BBP в BbpService.</td></tr>
+      <tr><td>SamplingEngine</td><td>Подписка на dataSource.sampleFlow(), передача сэмплов в callback (profile.addSample).</td></tr>
+      <tr><td>BbpService</td><td>Between Batch Protocol: сессия между Stop и следующим Start, запись BT/ET в BBP-лог.</td></tr>
+      <tr><td>ProfileStorage</td><td>Сохранение/загрузка профилей (файлы), список недавних.</td></tr>
+      <tr><td>SettingsManager / AppSettings</td><td>Хранение настроек (MachineConfig, пресеты, темы, внешний вид, единицы, конфиг графика и т.д.).</td></tr>
+      <tr><td>RoastDataSource</td><td>Интерфейс: connect(), disconnect(), sampleFlow(), connectionState().</td></tr>
+      <tr><td>RoastControl</td><td>Опциональный интерфейс: controlSpecs(), setControl() — управление газ/воздух/барабан.</td></tr>
+      <tr><td>AbstractModbusRoasterSource</td><td>Базовая реализация MODBUS: опрос регистров BT/ET, semaphore, connectionState.</td></tr>
+      <tr><td>BescaModbusSource / BescaModbusTcpSource</td><td>Реализация для Besca (Serial / TCP).</td></tr>
+      <tr><td>DiedrichSource</td><td>Реализация для Diedrich (MODBUS); опционально DiedrichPhidget1048Source.</td></tr>
+      <tr><td>SimulatorSource / AlogReplaySource</td><td>Симулятор и воспроизведение .alog.</td></tr>
+      <tr><td>RoastProfile</td><td>Модель профиля: timex, temp1, temp2, events, comments, controlEvents; addSample/addEvent/addComment.</td></tr>
+      <tr><td>CurveModel / StandardCurveModel / RorCurveModel</td><td>Временные ряды для графика (BT, ET, RoR и т.д.), уведомления CurveModelListener.</td></tr>
+      <tr><td>ChartPanelFx / CurveChartFx</td><td>Обёртка JFreeChart (ChartViewer), привязка к RoastProfile и кривым, попап событий/комментариев.</td></tr>
+      <tr><td>ControlChartFx</td><td>График управления (gas/air/drum) при наличии RoastControl.</td></tr>
+      <tr><td>ControlSliderPanel / DetachableSliderWindow</td><td>Слайдеры и кнопки управления, отображаются по controlSpecs().</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="level3"><span class="level-badge">Уровень 3</span> Зависимости между классами</h2>
+  <p><strong>Импорты и вызовы (ключевые):</strong></p>
+  <ul>
+    <li>MainController импортирует и использует: DataSourceFactory, RoastRecorder, ProfileStorage, ConnectionTester, MachineConfig, RoasterDiscovery, ReferenceApi, ServerApi, SettingsManager, EventQuantifiersConfig, domain (ControlEventType, EventType, RoastProfile, TemperatureSample, curves, metrics), driver (ConnectionState, RoastControl, ModbusCommandExecutor, ControlSpec), ui.chart (ChartPanelFx, CurveChartFx, ControlChartFx), ui.control (ControlSliderPanel, DetachableSliderWindow).</li>
+    <li>RoastRecorder создаёт и держит SamplingEngine и BbpService; при смене dataSource пересоздаёт их. Подписывается на dataSource.connectionState(), при старте записи вызывает samplingEngine.start { profile.addSample(it) }.</li>
+    <li>DataSourceFactory.create(MachineConfig) возвращает SimulatorSource | BescaModbusSource | BescaModbusTcpSource | DiedrichSource | ErrorDataSource (при отсутствии Phidget).</li>
+    <li>AbstractModbusRoasterSource реализует RoastDataSource и опционально RoastControl; использует ModbusConnectionCore для read/write; sampleFlow() в цикле читает регистры и эмитит TemperatureSample.</li>
+    <li>CurveChartFx получает RoastProfile и строит CurveModel (StandardCurveModel, RorCurveModel, MovingAverageCurveModel); подписывается на обновления и обновляет JFreeChart.</li>
+    <li>SettingsController использует AppSettings, ChartConfig, ConnectionPreset, MachineConfig, SettingsManager, ConnectionTester, ThemeSupport, AppearanceSupport и др.</li>
+  </ul>
+  <p>Диаграмма классов: см. <a href="#diagrams">раздел 9</a> (02-classes-core.puml / 02-classes-core.drawio).</p>
+
+  <h2 id="aspects">7. Три аспекта</h2>
+
+  <h3>7.1 Структура кода (импорты, вызовы, наследование)</h3>
+  <p>Зависимости пакетов: ui → app, domain, driver; app → domain, driver; domain без зависимостей от app/ui/driver. Наследование: RoastDataSource реализуют AbstractModbusRoasterSource, BescaModbusSource, BescaModbusTcpSource, DiedrichSource, SimulatorSource, ErrorDataSource. RoastControl реализуют те же MODBUS-источники при поддержке управления. CurveModel реализуют StandardCurveModel, RorCurveModel, MovingAverageCurveModel (через AbstractCurveModel).</p>
+
+  <h3>7.2 Потоки данных</h3>
+  <p>Оборудование → RoastDataSource.sampleFlow() → SamplingEngine.collect() → RoastProfile.addSample() → StateFlow currentProfile → MainController подписан → CurveChartFx обновляет кривые и JFreeChart → отрисовка. Обратный поток управления: пользователь двигает слайдер → MainController (или ControlSliderPanel) → RoastControl.setControl() → ModbusCommandExecutor.writeSingle/writeCoil → устройство.</p>
+  <p>Диаграмма потока данных: см. <a href="#diagrams">раздел 9</a> (03-dataflow.puml / 03-dataflow.drawio).</p>
+
+  <h3>7.3 Конфигурация и запуск</h3>
+  <p>Последовательность: main() → RoastApp.start() → ThemeSupport, загрузка CSS → FXMLLoader.load(MainView.fxml) → создаётся MainController, инжект FXML → initialize(): загрузка SettingsManager/AppSettings, MachineConfig, DataSourceFactory.create(config) → RoastRecorder(dataSource), привязка stateFlow/currentProfile к UI, создание ChartPanelFx/CurveChartFx, загрузка списка профилей (ProfileStorage). При нажатии Connect: recorder.connect() → dataSource.connect() → connectionState обновляется → UI переходит в MONITORING.</p>
+  <p>Диаграмма запуска: см. <a href="#diagrams">раздел 9</a> (04-startup.puml / 04-startup.drawio).</p>
+
+  <h2 id="files">8. Справочник файлов (кратко)</h2>
+  <table>
+    <thead><tr><th>Путь (src/main/kotlin)</th><th>Назначение</th></tr></thead>
+    <tbody>
+      <tr><td>com/rdr/roast/App.kt</td><td>Точка входа</td></tr>
+      <tr><td>app/AppSettings.kt</td><td>Настройки, MachineConfig, ModbusInputConfig, enums (MachineType, Transport, RorSmoothing…)</td></tr>
+      <tr><td>app/DataSourceFactory.kt</td><td>Создание RoastDataSource по MachineConfig</td></tr>
+      <tr><td>app/RoastRecorder.kt</td><td>Состояние записи, connect/start/stop, профиль, BbpService</td></tr>
+      <tr><td>app/SamplingEngine.kt</td><td>Сбор sampleFlow() в callback</td></tr>
+      <tr><td>app/BbpService.kt</td><td>Between Batch Protocol</td></tr>
+      <tr><td>app/ProfileStorage.kt</td><td>Сохранение/загрузка профилей</td></tr>
+      <tr><td>app/ServerApi.kt, BbpApi.kt, ReferenceApi.kt, CatalogApi.kt</td><td>Внешние API</td></tr>
+      <tr><td>app/ConnectionTester.kt, RoasterDiscovery.kt</td><td>Проверка подключения, обнаружение</td></tr>
+      <tr><td>app/ThemeSupport.kt, AppearanceSupport.kt, ThemeSettings.kt</td><td>Темы и внешний вид</td></tr>
+      <tr><td>app/SettingsManager.kt, ConnectionRuntimeConfig.kt</td><td>Менеджер настроек, runtime-конфиг подключения</td></tr>
+      <tr><td>driver/RoastDataSource.kt</td><td>Интерфейс источника данных</td></tr>
+      <tr><td>driver/RoastControl.kt</td><td>Интерфейс управления, ControlSpec</td></tr>
+      <tr><td>driver/MachineConfig.kt</td><td>MachinePresets (объект с пресетами)</td></tr>
+      <tr><td>driver/modbus/core/ModbusConnectionCore.kt, ModbusCommandExecutor.kt</td><td>Ядро MODBUS</td></tr>
+      <tr><td>driver/modbus/core/AbstractModbusRoasterSource.kt</td><td>Базовая реализация MODBUS-ростер</td></tr>
+      <tr><td>driver/besca/BescaModbusSource.kt, BescaModbusTcpSource.kt</td><td>Besca</td></tr>
+      <tr><td>driver/diedrich/DiedrichSource.kt</td><td>Diedrich</td></tr>
+      <tr><td>driver/simulator/SimulatorSource.kt, AlogReplaySource.kt</td><td>Симулятор и .alog</td></tr>
+      <tr><td>driver/ErrorDataSource.kt</td><td>Источник-ошибка (сообщение пользователю)</td></tr>
+      <tr><td>domain/Model.kt</td><td>RoastProfile, TemperatureSample, EventType, RoastEvent, ProtocolComment, ControlEvent и др.</td></tr>
+      <tr><td>domain/curves/*.kt</td><td>CurveModel, StandardCurveModel, RorCurveModel, MovingAverageCurveModel</td></tr>
+      <tr><td>domain/metrics/*.kt</td><td>Phases, ChargeDetection, TurningPoint</td></tr>
+      <tr><td>domain/Bbp.kt, BbpAnalytics.kt</td><td>BBP-домен</td></tr>
+      <tr><td>ui/MainController.kt</td><td>Главный контроллер</td></tr>
+      <tr><td>ui/chart/ChartPanelFx.kt, CurveChartFx.kt, ControlChartFx.kt, ChartEventPopup.kt</td><td>Графики и попап</td></tr>
+      <tr><td>ui/control/ControlSliderPanel.kt, DetachableSliderWindow.kt</td><td>Слайдеры управления</td></tr>
+      <tr><td>ui/SettingsController.kt, LoginController.kt, PortsConfigController.kt, AxesConfigController.kt, EventButtonsController.kt, RoastPropertiesController.kt, FinishRoastController.kt</td><td>Контроллеры экранов</td></tr>
+    </tbody>
+  </table>
+  <p>FXML: MainView.fxml (MainController), SettingsView.fxml (SettingsController), LoginView.fxml, PortsConfigView.fxml, AxesConfigView.fxml, EventButtonsView.fxml, RoastPropertiesView.fxml, FinishRoastView.fxml.</p>
+
+  <h2 id="diagrams">9. Диаграммы (PlantUML и draw.io)</h2>
+  <p>В этой папке лежат диаграммы в двух форматах. Для визуального просмотра:</p>
+  <ul>
+    <li><strong>PlantUML</strong> — откройте <span class="file-ref">01-packages.puml</span>, <span class="file-ref">02-classes-core.puml</span>, <span class="file-ref">03-dataflow.puml</span>, <span class="file-ref">04-startup.puml</span> в <a href="https://www.plantuml.com/plantuml/uml/" target="_blank">PlantUML online</a> или в IDE с плагином PlantUML / экспортируйте в PNG/SVG.</li>
+    <li><strong>draw.io</strong> — откройте <span class="file-ref">01-packages.drawio</span>, <span class="file-ref">02-classes-core.drawio</span>, <span class="file-ref">03-dataflow.drawio</span>, <span class="file-ref">04-startup.drawio</span> в <a href="https://app.diagrams.net/" target="_blank">draw.io</a> (desktop или браузер).</li>
+  </ul>
+  <p><strong>Содержание диаграмм:</strong></p>
+  <ul>
+    <li><strong>01-packages</strong> — пакеты app, ui, domain, driver и связи между ними (уровень 1).</li>
+    <li><strong>02-classes-core</strong> — ключевые классы (RoastDataSource, RoastRecorder, MainController, ChartPanelFx, RoastProfile, CurveModel, реализации driver) и зависимости (уровень 2–3).</li>
+    <li><strong>03-dataflow</strong> — поток данных: User → MainController → RoastRecorder → SamplingEngine → RoastDataSource → RoastProfile → CurveChartFx → User; управление слайдерами.</li>
+    <li><strong>04-startup</strong> — последовательность запуска: JVM → App → JavaFX → MainView.fxml → MainController → SettingsManager, DataSourceFactory → RoastRecorder → RoastDataSource.</li>
+  </ul>
+
+  <div class="note">
+    <strong>Как получить PDF:</strong> откройте этот файл (RDR-Structure-Document.html) в браузере и выберите «Печать» → «Сохранить как PDF» или «Microsoft Print to PDF». Все разделы и таблицы настроены для печати (разрывы страниц, фон). Диаграммы в виде картинок можно добавить в PDF, предварительно сгенерировав PNG из .puml (PlantUML) или экспортировав из draw.io и вставив в этот HTML перед печатью.
+  </div>
+
+  <p style="margin-top:2rem;font-size:0.9rem;color:#64748b;">Документ сгенерирован для проекта RDR (Roast.Drop.Repeat). Версия артефакта: один общий документ для онбординга, рефакторинга и документации продукта; три уровня детализации; три аспекта (структура, потоки, конфигурация); диаграммы в форматах PlantUML и draw.io.</p>
+</body>
+</html>

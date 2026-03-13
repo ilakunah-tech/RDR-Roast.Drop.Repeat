@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.graph.GraphAxesTabController"
+      spacing="12">
+    <padding>
+        <Insets top="0" right="0" bottom="0" left="0"/>
+    </padding>
+
+    <Label text="Оси графика (по образцу Artisan Axes): время, температура, легенда, сетка, Δ ось." styleClass="secondary-hint-label" wrapText="true"/>
+
+    <!-- Time Axis -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Ось времени" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <Label text="Авто" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <CheckBox fx:id="chkTimeAxisAuto" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Режим" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+            <ComboBox fx:id="cmbTimeAxisMode" prefWidth="160" styleClass="secondary-combo" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+            <Label text="Заблокировать" styleClass="secondary-field-label" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+            <CheckBox fx:id="chkTimeAxisLock" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+
+            <Label text="Min" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <TextField fx:id="txtTimeAxisMin" prefWidth="80" promptText="-0:30" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <Label text="Max" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+            <TextField fx:id="txtTimeAxisMax" prefWidth="80" promptText="16:00" styleClass="secondary-input" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+            <Label text="Шаг" styleClass="secondary-field-label" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+            <ComboBox fx:id="cmbTimeAxisStep" prefWidth="140" styleClass="secondary-combo" GridPane.columnIndex="5" GridPane.rowIndex="1"/>
+
+            <Label text="RECORD Min" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <TextField fx:id="txtRecordMinSec" prefWidth="80" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+            <Label text="RECORD Max" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+            <TextField fx:id="txtRecordMaxSec" prefWidth="80" styleClass="secondary-input" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+            <Label text="Расширять" styleClass="secondary-field-label" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+            <CheckBox fx:id="chkTimeAxisExpand" GridPane.columnIndex="5" GridPane.rowIndex="2"/>
+        </GridPane>
+    </VBox>
+
+    <!-- Temperature Axis -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Ось температуры" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <Label text="Min" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <TextField fx:id="txtTempMin" prefWidth="80" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Max" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+            <TextField fx:id="txtTempMax" prefWidth="80" styleClass="secondary-input" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+            <Label text="Шаг" styleClass="secondary-field-label" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+            <TextField fx:id="txtTempStep" prefWidth="80" styleClass="secondary-input" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+
+            <Label text="100% Event Step" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <TextField fx:id="txtStep100Event" prefWidth="80" promptText="необязательно" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        </GridPane>
+    </VBox>
+
+    <!-- Legend Location -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Расположение легенды" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <Label text="Легенда" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <ComboBox fx:id="cmbLegendLocation" prefWidth="180" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="0"/>
+        </GridPane>
+    </VBox>
+
+    <!-- Grid -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Сетка" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <Label text="Стиль" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <ComboBox fx:id="cmbGridStyle" prefWidth="150" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Толщина" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+            <TextField fx:id="txtGridWidth" prefWidth="60" styleClass="secondary-input" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+            <Label text="Прозрачность" styleClass="secondary-field-label" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+            <TextField fx:id="txtGridOpaqueness" prefWidth="60" styleClass="secondary-input" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+
+            <CheckBox fx:id="chkGridTime" text="Сетка по времени" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="1"/>
+            <CheckBox fx:id="chkGridTemp" text="Сетка по температуре" GridPane.columnIndex="2" GridPane.columnSpan="2" GridPane.rowIndex="1"/>
+        </GridPane>
+    </VBox>
+
+    <!-- Δ Axis -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Δ ось (RoR)" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <Label text="Авто" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <CheckBox fx:id="chkDeltaAxisAuto" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <CheckBox fx:id="chkDeltaET" text="Δ ET" GridPane.columnIndex="2" GridPane.columnSpan="2" GridPane.rowIndex="0"/>
+            <CheckBox fx:id="chkDeltaBT" text="Δ BT" GridPane.columnIndex="4" GridPane.columnSpan="2" GridPane.rowIndex="0"/>
+
+            <Label text="Min" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <TextField fx:id="txtDeltaMin" prefWidth="80" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <Label text="Max" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+            <TextField fx:id="txtDeltaMax" prefWidth="80" styleClass="secondary-input" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+            <Label text="Шаг" styleClass="secondary-field-label" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+            <TextField fx:id="txtDeltaStep" prefWidth="80" styleClass="secondary-input" GridPane.columnIndex="5" GridPane.rowIndex="1"/>
+        </GridPane>
+    </VBox>
+
+</VBox>

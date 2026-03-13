@@ -2,22 +2,31 @@ package com.rdr.roast.ui
 
 import javafx.event.EventHandler
 import javafx.scene.Cursor
+import javafx.scene.Node
 import javafx.scene.Scene
+import javafx.scene.control.Control
 import javafx.scene.input.MouseEvent
 import javafx.stage.Stage
 
 /**
  * Attaches mouse handlers to a scene (or root node) to allow resizing an undecorated stage
  * by dragging edges and corners. Hit area is [RESIZE_MARGIN] px.
+ *
+ * Skips resize handling when the click target is an interactive Control (Button, ComboBox, etc.)
+ * so that title-bar buttons work reliably.
  */
 object ResizeHelper {
 
-    const val RESIZE_MARGIN = 4
+    const val RESIZE_MARGIN = 5
 
     fun enableResize(scene: Scene, stage: Stage) {
         val root = scene.root ?: return
         root.addEventFilter(MouseEvent.MOUSE_MOVED) { e ->
             if (stage.isMaximized) return@addEventFilter
+            if (isControl(e.target)) {
+                root.cursor = Cursor.DEFAULT
+                return@addEventFilter
+            }
             val edge = edgeAt(e.x, e.y, scene.width, scene.height)
             root.cursor = when (edge) {
                 Edge.N -> Cursor.N_RESIZE
@@ -33,12 +42,22 @@ object ResizeHelper {
         }
         root.addEventFilter(MouseEvent.MOUSE_PRESSED) { e ->
             if (stage.isMaximized) return@addEventFilter
+            if (isControl(e.target)) return@addEventFilter
             val edge = edgeAt(e.x, e.y, scene.width, scene.height)
             if (edge != Edge.NONE) {
                 e.consume()
                 startResize(stage, edge, e.screenX, e.screenY)
             }
         }
+    }
+
+    private fun isControl(target: Any?): Boolean {
+        var node = target as? Node
+        while (node != null) {
+            if (node is Control) return true
+            node = node.parent
+        }
+        return false
     }
 
     private enum class Edge { N, S, E, W, NE, NW, SE, SW, NONE }

@@ -307,6 +307,11 @@ fun buildAroastPayload(
             put("bbp_gas_changes", bbp.gasChanges)
             put("bbp_air_changes", bbp.airChanges)
         }
+        if (profile.extraTemp.isNotEmpty()) {
+            for ((ch, values) in profile.extraTemp) {
+                put("extratemp_$ch", values)
+            }
+        }
     }
 }
 

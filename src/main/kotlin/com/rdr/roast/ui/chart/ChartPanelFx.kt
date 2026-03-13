@@ -1,16 +1,10 @@
 package com.rdr.roast.ui.chart
 
-import javafx.geometry.Insets
-import javafx.scene.control.Label
-import javafx.scene.input.ContextMenuEvent
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.BorderPane
-import javafx.scene.layout.HBox
-import javafx.scene.layout.Priority
-import javafx.scene.layout.Region
 import org.jfree.chart.fx.ChartViewer
 import org.jfree.chart.ui.RectangleEdge
 
@@ -18,8 +12,7 @@ import org.jfree.chart.ui.RectangleEdge
  * JavaFX container for [CurveChartFx], modeled after Cropster's ChartWrapper.
  *
  * Layout:
- *   - Top:    toolbar (spacer · live mouse-coordinates label). Reset axes — по ПКМ по графику.
- *   - Center: ChartViewer (jfreechart-fx / fxgraphics2d bridge)
+ *   - Center: ChartViewer (jfreechart-fx / fxgraphics2d bridge). Reset axes — по ПКМ по графику.
  *
  * Mouse-click behaviour (Cropster "Comment at" card):
  *   A single primary-button click inside the chart data area opens a [ChartEventPopup]
@@ -47,18 +40,7 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
      */
     var lastDataTimeMs: Long? = null
 
-    private val lblCoords = Label("").apply {
-        style = "-fx-font-size: 10px; -fx-text-fill: #555;"
-    }
-
     init {
-        val spacer = Region().apply { HBox.setHgrow(this, Priority.ALWAYS) }
-        val toolbar = HBox(4.0, spacer, lblCoords).apply {
-            padding = Insets(4.0, 8.0, 4.0, 8.0)
-            style = "-fx-background-color: #f8f8f8;" +
-                    "-fx-border-color: #ddd; -fx-border-width: 0 0 1 0;"
-        }
-
         val chartAnchor = AnchorPane(chartViewer).apply {
             AnchorPane.setTopAnchor(chartViewer,    0.0)
             AnchorPane.setBottomAnchor(chartViewer, 0.0)
@@ -66,23 +48,7 @@ class ChartPanelFx(val curveChart: CurveChartFx) : BorderPane() {
             AnchorPane.setRightAnchor(chartViewer,  0.0)
         }
 
-        top    = toolbar
         center = chartAnchor
-
-        // ── Live mouse-coordinate display ─────────────────────────────────────
-        chartViewer.canvas.setOnMouseMoved { e ->
-            val dataArea = chartViewer.canvas.renderingInfo
-                ?.plotInfo?.dataArea ?: return@setOnMouseMoved
-            val xMs   = curveChart.plot.domainAxis.java2DToValue(
-                e.x, dataArea, RectangleEdge.BOTTOM)
-            val yTemp = curveChart.plot.getRangeAxis(0).java2DToValue(
-                e.y, dataArea, RectangleEdge.LEFT)
-            if (!xMs.isNaN() && !yTemp.isNaN()) {
-                val s = (xMs / 1000).toLong().coerceAtLeast(0)
-                lblCoords.text = "%02d:%02d  %.1f °C".format(s / 60, s % 60, yTemp)
-            }
-        }
-        chartViewer.canvas.setOnMouseExited { lblCoords.text = "" }
 
         // ПКМ по графику → reset axes (потребляем, чтобы не показывалось меню "Export As")
         chartViewer.canvas.setOnContextMenuRequested { e -> e.consume(); curveChart.resetAxes() }

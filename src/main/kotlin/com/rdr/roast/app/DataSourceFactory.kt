@@ -37,6 +37,19 @@ object DataSourceFactory {
             Transport.PHIDGET -> createDiedrichPhidgetSource(config)
             else -> DiedrichSource(config.copy(modbusTransportType = config.modbusTransportType))
         }
+        MachineType.MODBUS_GENERIC -> when (config.transport) {
+            Transport.TCP -> BescaModbusTcpSource(config.copy(modbusTransportType = ModbusTransportType.TCP))
+            else -> BescaModbusSource(config.copy(modbusTransportType = config.modbusTransportType))
+        }
+        MachineType.S7_GENERIC -> com.rdr.roast.driver.ErrorDataSource(
+            "S7 generic driver not yet implemented. Use Modbus or Simulator."
+        )
+        MachineType.SERIAL_GENERIC -> com.rdr.roast.driver.ErrorDataSource(
+            "Serial generic driver not yet implemented. Use Modbus or Simulator."
+        )
+        MachineType.WEBSOCKET_GENERIC -> com.rdr.roast.driver.ErrorDataSource(
+            "WebSocket generic driver not yet implemented. Use Modbus or Simulator."
+        )
     }
 
     private fun createDiedrichPhidgetSource(config: MachineConfig): RoastDataSource {

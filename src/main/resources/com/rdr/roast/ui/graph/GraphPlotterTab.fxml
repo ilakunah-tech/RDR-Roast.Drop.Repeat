@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.graph.GraphPlotterTabController"
+      styleClass="secondary-window-shell"
+      spacing="12"
+      prefWidth="520">
+    <padding>
+        <Insets top="12" right="12" bottom="12" left="12"/>
+    </padding>
+
+    <ScrollPane fitToWidth="true" fitToHeight="false" pannable="true" vbarPolicy="ALWAYS"
+                styleClass="secondary-scroll" VBox.vgrow="ALWAYS">
+        <VBox spacing="12">
+            <GridPane styleClass="secondary-grid" hgap="10" vgap="8">
+                <!-- P1 -->
+                <Label text="P1" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <TextField fx:id="txtP1" promptText="equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                <Button fx:id="btnColorP1" text="Color" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                <ColorPicker fx:id="colorP1" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+
+                <Label text="P2" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                <TextField fx:id="txtP2" promptText="equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                <Button fx:id="btnColorP2" text="Color" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                <ColorPicker fx:id="colorP2" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+
+                <Label text="P3" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                <TextField fx:id="txtP3" promptText="equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                <Button fx:id="btnColorP3" text="Color" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                <ColorPicker fx:id="colorP3" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+
+                <Label text="P4" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                <TextField fx:id="txtP4" promptText="equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                <Button fx:id="btnColorP4" text="Color" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                <ColorPicker fx:id="colorP4" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+
+                <Label text="P5" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                <TextField fx:id="txtP5" promptText="equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                <Button fx:id="btnColorP5" text="Color" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
+                <ColorPicker fx:id="colorP5" GridPane.columnIndex="3" GridPane.rowIndex="4"/>
+
+                <Label text="P6" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                <TextField fx:id="txtP6" promptText="equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                <Button fx:id="btnColorP6" text="Color" GridPane.columnIndex="2" GridPane.rowIndex="5"/>
+                <ColorPicker fx:id="colorP6" GridPane.columnIndex="3" GridPane.rowIndex="5"/>
+
+                <Label text="P7" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+                <TextField fx:id="txtP7" promptText="equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+                <Button fx:id="btnColorP7" text="Color" GridPane.columnIndex="2" GridPane.rowIndex="6"/>
+                <ColorPicker fx:id="colorP7" GridPane.columnIndex="3" GridPane.rowIndex="6"/>
+
+                <Label text="P8" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
+                <TextField fx:id="txtP8" promptText="equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
+                <Button fx:id="btnColorP8" text="Color" GridPane.columnIndex="2" GridPane.rowIndex="7"/>
+                <ColorPicker fx:id="colorP8" GridPane.columnIndex="3" GridPane.rowIndex="7"/>
+
+                <Label text="P9" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="8"/>
+                <TextField fx:id="txtP9" promptText="equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="8"/>
+                <Button fx:id="btnColorP9" text="Color" GridPane.columnIndex="2" GridPane.rowIndex="8"/>
+                <ColorPicker fx:id="colorP9" GridPane.columnIndex="3" GridPane.rowIndex="8"/>
+
+                <!-- Background and ET-BT row -->
+                <Label text="Background" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="9"/>
+                <TextField fx:id="txtBackgroundEqu" promptText="background equation" prefWidth="220" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="9"/>
+                <Label text="ET/BT color" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="9"/>
+                <ColorPicker fx:id="colorEtBt" GridPane.columnIndex="3" GridPane.rowIndex="9"/>
+            </GridPane>
+
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Button fx:id="btnPlot" text="Plot"/>
+                <Button fx:id="btnData" text="Data"/>
+                <Button fx:id="btnSaveImage" text="Save Image"/>
+                <Button fx:id="btnHelp" text="Help"/>
+            </HBox>
+        </VBox>
+    </ScrollPane>
+</VBox>

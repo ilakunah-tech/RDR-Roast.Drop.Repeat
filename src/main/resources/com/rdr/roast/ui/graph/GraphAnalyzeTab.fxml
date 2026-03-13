@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.graph.GraphAnalyzeTabController"
+      styleClass="settings-content-column"
+      spacing="12">
+    <padding>
+        <Insets top="4" right="4" bottom="4" left="4"/>
+    </padding>
+
+    <Label text="Analyze — окно кривой, интервал анализа, пороги (по образцу Artisan Curves)." styleClass="secondary-hint-label" wrapText="true"/>
+
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Curve Fit Options" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <Label text="Start of Curve Fit window" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <ComboBox fx:id="curveFitStartCombo" prefWidth="220" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label fx:id="curveFitOffsetLabel" text="Custom offset seconds from CHARGE" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <TextField fx:id="curveFitOffsetField" prefWidth="100" minWidth="55" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        </GridPane>
+    </VBox>
+
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Analyze interval of interest" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <Label text="Start of Analyze interval of interest" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <ComboBox fx:id="analysisStartCombo" prefWidth="220" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label fx:id="analysisOffsetLabel" text="Custom offset seconds from CHARGE" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <TextField fx:id="analysisOffsetField" prefWidth="100" minWidth="55" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        </GridPane>
+    </VBox>
+
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Thresholds" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <Label text="Number of samples considered significant" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <TextField fx:id="segmentSamplesThresholdField" prefWidth="100" minWidth="55" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Delta RoR Actual-to-Fit considered significant" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <TextField fx:id="segmentDeltaThresholdField" prefWidth="100" minWidth="55" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        </GridPane>
+    </VBox>
+</VBox>

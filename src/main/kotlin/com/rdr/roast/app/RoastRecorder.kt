@@ -189,7 +189,8 @@ class RoastRecorder(
                 comments = ArrayList(live.comments),
                 controlEvents = ArrayList(live.controlEvents),
                 mode = live.mode,
-                betweenBatchLog = live.betweenBatchLog
+                betweenBatchLog = live.betweenBatchLog,
+                extraTemp = live.extraTemp.mapValues { ArrayList(it.value) }
             )
         }
         _currentProfile.value = snapshot
@@ -213,6 +214,7 @@ class RoastRecorder(
         profile.timex.clear()
         profile.temp1.clear()
         profile.temp2.clear()
+        profile.extraTemp.clear()
         profile.events.clear()
         profile.comments.clear()
         profile.controlEvents.clear()

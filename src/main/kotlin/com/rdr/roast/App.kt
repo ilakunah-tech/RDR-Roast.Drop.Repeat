@@ -1,7 +1,7 @@
 package com.rdr.roast
 
-import com.rdr.roast.app.AppearanceSupport
-import com.rdr.roast.app.ThemeSupport
+import com.rdr.roast.app.SettingsManager
+import com.rdr.roast.app.ThemeService
 import javafx.application.Application
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
@@ -17,10 +17,18 @@ class RoastApp : Application() {
 
     override fun start(primaryStage: Stage) {
         primaryStage.initStyle(StageStyle.UNDECORATED)
-        ThemeSupport.applyTheme(ThemeSupport.loadThemeId())
+        var settings = SettingsManager.load()
+        val migratedTheme = ThemeService.migrateFromPreferences(settings.themeSettings)
+        if (migratedTheme != settings.themeSettings) {
+            settings = settings.copy(themeSettings = migratedTheme)
+            SettingsManager.save(settings)
+        }
+        ThemeService.applyTheme(settings.themeSettings, null)
         val loader = FXMLLoader(javaClass.getResource("/com/rdr/roast/ui/MainView.fxml"))
         val root = loader.load<javafx.scene.Parent>()
         primaryStage.title = "RDR - Roast.Drop.Repeat"
+        primaryStage.minWidth = 900.0
+        primaryStage.minHeight = 720.0
         javaClass.getResource("/com/rdr/roast/app-icon.png")?.toExternalForm()?.let { url ->
             primaryStage.icons.add(Image(url))
         }
@@ -33,7 +41,7 @@ class RoastApp : Application() {
             println("Warning: Optional stylesheet not found: /css/custom.css")
         }
         scene.stylesheets.add(loadStylesheet("/css/appearance.css"))
-        AppearanceSupport.applyToScene(scene)
+        ThemeService.applyTheme(settings.themeSettings, scene)
         primaryStage.scene = scene
         primaryStage.show()
     }

@@ -83,34 +83,9 @@ object AppearanceSupport {
     fun densityFromDisplay(display: String): String = densityEntries.find { it.second == display }?.first ?: DEFAULT_DENSITY
     fun displayFromDensity(value: String): String = densityEntries.find { it.first == value }?.second ?: "Обычный"
 
+    /** Applies theme from AppSettings.themeSettings (single source of truth). */
     fun applyToScene(scene: Scene) {
-        val root = scene.root ?: return
-        val scale = loadScale()
-        val fontSize = loadFontSize()
-        val density = loadDensity()
-        val accentHex = loadAccentColor()
-        val radius = loadRadius()
-
-        root.scaleX = scale
-        root.scaleY = scale
-
-        root.styleClass.removeAll("font-size-compact", "font-size-normal", "font-size-large")
-        root.styleClass.add("font-size-$fontSize")
-
-        root.styleClass.removeAll("density-compact", "density-normal")
-        root.styleClass.add("density-$density")
-
-        val panelBg = loadPanelBackground()
-        var style = (root.style ?: "").replace(Regex("\\s*-fx-accent-color:\\s*[^;]+;?"), "").trim()
-            .replace(Regex("\\s*-rdr-radius:\\s*[^;]+;?"), "").trim()
-            .replace(Regex("\\s*-rdr-accent:\\s*[^;]+;?"), "").trim()
-            .replace(Regex("\\s*-rdr-accent-hover:\\s*[^;]+;?"), "").trim()
-            .replace(Regex("\\s*-rdr-panel-bg:\\s*[^;]+;?"), "").trim()
-        style += " -rdr-radius: ${radius}px; -rdr-panel-bg: $panelBg;"
-        val accent = if (accentHex.isNotBlank()) accentHex else "#E8896A"
-        style += " -rdr-accent: $accent; -rdr-accent-hover: derive($accent, -15%);"
-        if (accentHex.isNotBlank()) style += " -fx-accent-color: $accentHex;"
-        root.style = style
+        ThemeService.applyTheme(SettingsManager.load().themeSettings, scene)
     }
 
     fun restoreDefaults() {

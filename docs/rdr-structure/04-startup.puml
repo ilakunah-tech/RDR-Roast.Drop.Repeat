@@ -1,0 +1,47 @@
+@startuml RDR Startup and Configuration
+!theme plain
+title RDR — Запуск и конфигурация
+
+participant "JVM" as jvm
+participant "App.kt\nRoastApp" as app
+participant "JavaFX" as jfx
+participant "MainView.fxml" as fxml
+participant "MainController" as mc
+participant "SettingsManager\nAppSettings" as settings
+participant "DataSourceFactory" as dsf
+participant "RoastRecorder" as rr
+participant "RoastDataSource" as ds
+
+jvm -> app : main()
+app -> app : ThemeSupport.applyTheme(loadThemeId())
+app -> jfx : Application.launch(RoastApp)
+jfx -> app : start(primaryStage)
+
+app -> app : loadStylesheet(main.css, custom.css, appearance.css)
+app -> app : AppearanceSupport.applyToScene(scene)
+app -> fxml : FXMLLoader.load(MainView.fxml)
+fxml -> mc : создание MainController (FXML inject)
+fxml --> app : root (BorderPane)
+app -> jfx : primaryStage.scene = scene; show()
+
+note over mc : initialize() вызывается FXML после загрузки
+
+mc -> settings : SettingsManager.load() / AppSettings
+mc -> settings : MachineConfig (текущий или preset)
+mc -> dsf : DataSourceFactory.create(config)
+dsf -> ds : BescaModbusSource | DiedrichSource | SimulatorSource | ...
+dsf --> mc : RoastDataSource
+
+mc -> rr : RoastRecorder(dataSource)
+mc -> mc : bind stateFlow, currentProfile, currentSample to UI
+mc -> mc : создание ChartPanelFx, CurveChartFx, ControlChartFx
+mc -> mc : ProfileStorage.loadRecent() — список профилей
+
+alt Пользователь нажимает Connect
+  mc -> rr : connect()
+  rr -> ds : connect()
+  ds --> rr : connectionState
+  rr --> mc : stateFlow = MONITORING
+end
+
+@enduml

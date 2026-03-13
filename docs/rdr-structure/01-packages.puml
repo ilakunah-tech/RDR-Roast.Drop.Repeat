@@ -1,0 +1,77 @@
+@startuml RDR Package Structure
+!theme plain
+title RDR — Структура пакетов (уровень 1)\ncom.rdr.roast
+
+skinparam packageStyle rectangle
+skinparam defaultFontSize 11
+
+package "com.rdr.roast" {
+  [App.kt\nТочка входа, RoastApp + main()] as App
+}
+
+package "app\n(приложение,\nнастройки,\nAPI)" as pkg_app {
+  [DataSourceFactory] as DSF
+  [RoastRecorder] as RR
+  [SamplingEngine] as SE
+  [BbpService] as BbpS
+  [ProfileStorage] as PS
+  [SettingsManager\nAppSettings\nMachineConfig] as SM
+  [ServerApi\nBbpApi\nReferenceApi\nCatalogApi] as APIs
+  [ConnectionTester\nRoasterDiscovery] as Conn
+  [ThemeSupport\nAppearanceSupport] as Theme
+}
+
+package "ui\n(JavaFX,\nэкраны)" as pkg_ui {
+  [MainController] as MC
+  package "ui.chart" {
+    [ChartPanelFx\nCurveChartFx\nControlChartFx] as Chart
+  }
+  package "ui.control" {
+    [ControlSliderPanel\nDetachableSliderWindow] as Sliders
+  }
+  [SettingsController\nLoginController\n...] as OtherCtrls
+}
+
+package "domain\n(модель,\nметрики)" as pkg_domain {
+  [Model.kt\nRoastProfile\nEventType\nTemperatureSample] as Model
+  package "domain.curves" {
+    [CurveModel\nStandardCurveModel\nRorCurveModel] as Curves
+  }
+  package "domain.metrics" {
+    [Phases\nChargeDetection\nTurningPoint] as Metrics
+  }
+  [Bbp\nBbpAnalytics] as BbpDomain
+}
+
+package "driver\n(источники данных,\nуправление)" as pkg_driver {
+  [RoastDataSource\nRoastControl\nConnectionState] as DriverIf
+  package "driver.modbus.core" {
+    [ModbusConnectionCore\nModbusCommandExecutor\nAbstractModbusRoasterSource] as ModbusCore
+  }
+  package "driver.besca" {
+    [BescaModbusSource\nBescaModbusTcpSource] as Besca
+  }
+  package "driver.diedrich" {
+    [DiedrichSource] as Diedrich
+  }
+  package "driver.simulator" {
+    [SimulatorSource\nAlogReplaySource] as Sim
+  }
+  [ErrorDataSource] as ErrDS
+}
+
+App --> pkg_ui : запускает\nMainView.fxml
+MC --> pkg_app : использует
+MC --> pkg_domain : использует
+MC --> pkg_driver : использует
+pkg_app --> pkg_domain : использует
+pkg_app --> pkg_driver : создаёт\nи использует
+pkg_ui --> pkg_app : настройки,\nконфиг
+pkg_ui --> pkg_domain : отображение
+
+DSF ..> DriverIf : создаёт RoastDataSource
+RR ..> SE : содержит
+RR ..> BbpS : содержит
+RR ..> DriverIf : использует
+
+@enduml

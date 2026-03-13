@@ -1,0 +1,73 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.1 Chrome/142.0.7444.265 Electron/39.8.0 Safari/537.36" version="29.6.1">
+  <diagram id="classes" name="RDR Core Classes">
+    <mxGraphModel dx="1140" dy="745" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="RoastDataSource" parent="1" style="shape=interface;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;" value="&lt;b&gt;RoastDataSource&lt;/b&gt;&lt;hr&gt;+ connect()&lt;br&gt;+ disconnect()&lt;br&gt;+ sampleFlow()&lt;br&gt;+ connectionState()" vertex="1">
+          <mxGeometry height="100" width="160" x="80" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="RoastRecorder" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;" value="&lt;b&gt;RoastRecorder&lt;/b&gt;&lt;hr&gt;- dataSource&lt;br&gt;- samplingEngine&lt;br&gt;- bbpService&lt;br&gt;+ stateFlow, currentProfile&lt;br&gt;+ connect(), startRecording()" vertex="1">
+          <mxGeometry height="120" width="180" x="320" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="SamplingEngine" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;" value="&lt;b&gt;SamplingEngine&lt;/b&gt;&lt;hr&gt;- dataSource&lt;br&gt;+ start(onSample)&lt;br&gt;+ stop()" vertex="1">
+          <mxGeometry height="80" width="140" x="320" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="DataSourceFactory" parent="1" style="shape=component;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;" value="&lt;b&gt;DataSourceFactory&lt;/b&gt;&lt;hr&gt;+ create(config): RoastDataSource" vertex="1">
+          <mxGeometry height="50" width="160" x="80" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="MainController" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;" value="&lt;b&gt;MainController&lt;/b&gt;&lt;hr&gt;- recorder, profileStorage&lt;br&gt;- chartPanel, curveChart&lt;br&gt;+ initialize()" vertex="1">
+          <mxGeometry height="100" width="180" x="560" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ChartPanelFx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;" value="&lt;b&gt;ChartPanelFx&lt;/b&gt;&lt;hr&gt;+ curveChart&lt;br&gt;+ chartViewer" vertex="1">
+          <mxGeometry height="60" width="140" x="560" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="CurveChartFx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;" value="&lt;b&gt;CurveChartFx&lt;/b&gt;&lt;hr&gt;+ chart (JFreeChart)&lt;br&gt;bind profile, curves" vertex="1">
+          <mxGeometry height="60" width="140" x="560" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="RoastProfile" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" value="&lt;b&gt;RoastProfile&lt;/b&gt;&lt;hr&gt;timex, temp1, temp2&lt;br&gt;events, comments&lt;br&gt;+ addSample(), addEvent()" vertex="1">
+          <mxGeometry height="90" width="160" x="320" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="CurveModel" parent="1" style="shape=interface;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" value="&lt;b&gt;CurveModel&lt;/b&gt;&lt;hr&gt;+ getValue(timeMs)&lt;br&gt;+ getValues(), addListener()" vertex="1">
+          <mxGeometry height="70" width="140" x="560" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="AbstractModbus" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#000000;" value="&lt;b&gt;AbstractModbusRoasterSource&lt;/b&gt;&lt;hr&gt;# core, config&lt;br&gt;+ sampleFlow(), connect()" vertex="1">
+          <mxGeometry height="70" width="200" x="80" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="Besca" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#000000;" value="BescaModbusSource&#xa;BescaModbusTcpSource" vertex="1">
+          <mxGeometry height="50" width="90" x="80" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="Simulator" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#000000;" value="SimulatorSource&#xa;ErrorDataSource" vertex="1">
+          <mxGeometry height="50" width="90" x="190" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ds_rr" edge="1" parent="1" source="RoastDataSource" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0.25;entryY=1;exitX=0.25;exitY=0;fontColor=#000000;" target="RoastRecorder">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="330" as="sourcePoint" />
+            <mxPoint x="365" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_se_rr" edge="1" parent="1" source="SamplingEngine" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontColor=#000000;" target="RoastRecorder">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_dsf_mc" edge="1" parent="1" source="DataSourceFactory" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;fontColor=#000000;" target="MainController">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rr_mc" edge="1" parent="1" source="RoastRecorder" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontColor=#000000;" target="MainController">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rp_chart" edge="1" parent="1" source="RoastProfile" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;fontColor=#000000;" target="CurveChartFx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_abs_modbus" edge="1" parent="1" source="RoastDataSource" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;fontColor=#000000;" target="AbstractModbus">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_besca" edge="1" parent="1" source="AbstractModbus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontColor=#000000;" target="Besca">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sim" edge="1" parent="1" source="AbstractModbus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.75;exitY=1;entryX=0.5;entryY=0;fontColor=#000000;" target="Simulator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -6,8 +6,6 @@ import javafx.scene.control.Label
 import javafx.scene.layout.ColumnConstraints
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.VBox
-import javafx.scene.text.Font
-import javafx.scene.text.FontWeight
 
 /**
  * In-app keyboard shortcuts reference (aligned with Cropster RI where applicable).
@@ -34,9 +32,10 @@ object HotkeysHelpView {
 
     fun createContent(): VBox {
         val title = Label("Клавиатурные сокращения").apply {
-            font = Font.font(null, FontWeight.BOLD, 16.0)
+            styleClass.add("drawer-sheet-title")
         }
         val grid = GridPane().apply {
+            styleClass.add("secondary-grid")
             hgap = 24.0
             vgap = 8.0
             padding = Insets(8.0, 16.0, 16.0, 16.0)
@@ -47,10 +46,11 @@ object HotkeysHelpView {
             )
         }
         rows().forEachIndexed { i, row ->
-            grid.add(Label(row.keys).apply { style = "-fx-font-family: monospace; -fx-font-weight: bold;" }, 0, i)
-            grid.add(Label(row.action), 1, i)
+            grid.add(Label(row.keys).apply { styleClass.add("shortcut-keys") }, 0, i)
+            grid.add(Label(row.action).apply { styleClass.add("secondary-hint-label") }, 1, i)
         }
         return VBox(12.0, title, grid).apply {
+            styleClass.add("secondary-window-shell")
             padding = Insets(16.0)
             alignment = Pos.TOP_LEFT
         }

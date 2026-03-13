@@ -21,117 +21,380 @@
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.rdr.roast.ui.PortsConfigController"
-      spacing="12" style="-fx-background-color: #ffffff; -fx-padding: 16; -fx-text-fill: #333333;">
+      spacing="6">
 
-    <Label text="Device Assignment (Artisan-style)"
-           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #555555;"/>
+    <Label text="Device Assignment (Artisan-style)" visible="false" managed="false"/>
 
     <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE">
         <!-- Tab 1: Comm Port -->
         <Tab text="ET/BT">
-            <VBox spacing="10" style="-fx-padding: 10;">
-                <HBox spacing="16" alignment="CENTER_LEFT">
-                    <CheckBox fx:id="chkEtCurve" text="ET curve"/>
-                    <CheckBox fx:id="chkBtCurve" text="BT curve"/>
-                    <CheckBox fx:id="chkEtLcd" text="ET LCD"/>
-                    <CheckBox fx:id="chkBtLcd" text="BT LCD"/>
-                    <CheckBox fx:id="chkSwapEtBt" text="Swap ET/BT"/>
-                    <CheckBox fx:id="chkDeviceLogging" text="Logging"/>
-                    <CheckBox fx:id="chkDeviceControl" text="Control"/>
-                </HBox>
-                <Label text="Settings for non-Modbus devices" style="-fx-text-fill: #555555; -fx-font-size: 12px;"/>
-                <GridPane hgap="12" vgap="8">
-                    <columnConstraints>
-                        <ColumnConstraints minWidth="100" prefWidth="120"/>
-                        <ColumnConstraints minWidth="180" prefWidth="220"/>
-                    </columnConstraints>
-                    <Label text="Comm Port" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbComPort" prefWidth="200" promptText="COM4" GridPane.columnIndex="1" GridPane.rowIndex="0"
-                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                    <Label text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbBaudRate" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"
-                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                    <Label text="Byte Size" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbByteSize" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2"
-                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                    <Label text="Parity" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbParity" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="3"
-                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                    <Label text="Stopbits" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-text-fill: #555555;"/>
-                    <ComboBox fx:id="cmbStopbits" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="4"
-                              style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                    <Label text="Timeout" GridPane.columnIndex="0" GridPane.rowIndex="5" style="-fx-text-fill: #555555;"/>
-                    <TextField fx:id="txtTimeout" prefWidth="200" promptText="0.5" GridPane.columnIndex="1" GridPane.rowIndex="5"
-                               style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 4;"/>
-                </GridPane>
+            <VBox spacing="8" style="-fx-padding: 6;">
+                <VBox fx:id="deviceEtBtPane" spacing="8">
+                    <HBox spacing="14" alignment="CENTER_LEFT">
+                        <Label text="Meter"/>
+                        <ComboBox fx:id="cmbEtBtMeter" prefWidth="180"/>
+                        <CheckBox fx:id="chkDeviceControl" text="Control"/>
+                    </HBox>
+                    <HBox spacing="12">
+                        <VBox spacing="8" HBox.hgrow="ALWAYS">
+                            <Label text="Curves / LCDs"/>
+                            <HBox spacing="14" alignment="CENTER_LEFT">
+                                <CheckBox fx:id="chkEtCurve" text="ET"/>
+                                <CheckBox fx:id="chkBtCurve" text="BT"/>
+                                <CheckBox fx:id="chkEtLcd" text="ET LCD"/>
+                                <CheckBox fx:id="chkBtLcd" text="BT LCD"/>
+                                <CheckBox fx:id="chkSwapEtBt" text="Swap"/>
+                            </HBox>
+                        </VBox>
+                    </HBox>
+                    <TitledPane text="PID" expanded="true">
+                        <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="120" prefWidth="130"/>
+                                <ColumnConstraints minWidth="140" prefWidth="170"/>
+                                <ColumnConstraints minWidth="120" prefWidth="130"/>
+                                <ColumnConstraints minWidth="140" prefWidth="170"/>
+                            </columnConstraints>
+                            <Label text="Control ET" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="cmbPidControlType" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="RS485 Unit ID" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="cmbPidControlUnitId" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                            <Label text="Read BT" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPidReadType" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="RS485 Unit ID" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPidReadUnitId" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkPidDutyPowerLcds" text="PID Duty/Power LCDs" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <CheckBox fx:id="chkPidUseModbusPort" text="Modbus Port" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                        </GridPane>
+                    </TitledPane>
+
+                    <TitledPane text="Arduino TC4" expanded="true">
+                        <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="120" prefWidth="130"/>
+                                <ColumnConstraints minWidth="140" prefWidth="170"/>
+                                <ColumnConstraints minWidth="120" prefWidth="130"/>
+                                <ColumnConstraints minWidth="140" prefWidth="170"/>
+                            </columnConstraints>
+                            <Label text="ET Channel" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="cmbTc4EtChannel" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="BT Channel" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="cmbTc4BtChannel" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                            <Label text="AT Channel" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbTc4AtChannel" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkTc4PidFirmware" text="PID Firmware" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                        </GridPane>
+                    </TitledPane>
+
+                    <TitledPane text="External Program" expanded="true">
+                        <GridPane hgap="10" vgap="8" style="-fx-padding: 8;">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="120" prefWidth="130"/>
+                                <ColumnConstraints minWidth="400" prefWidth="500"/>
+                                <ColumnConstraints minWidth="220" prefWidth="260"/>
+                            </columnConstraints>
+                            <Label text="Input" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtProgInputPath" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <HBox spacing="8" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                                <Button text="Help"/>
+                                <Button text="Select"/>
+                            </HBox>
+                            <CheckBox fx:id="chkProgOutputEnabled" text="Output" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <TextField fx:id="txtProgOutputPath" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Button text="Select" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                        </GridPane>
+                    </TitledPane>
+
+                    <HBox spacing="12" alignment="CENTER_LEFT">
+                        <CheckBox fx:id="chkDeviceLogging" text="Logging"/>
+                    </HBox>
+                </VBox>
+
+                <VBox fx:id="portEtBtPane" spacing="8" visible="false" managed="false">
+                    <Label text="Settings for non-Modbus devices"/>
+                    <GridPane hgap="10" vgap="6">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="90" prefWidth="110"/>
+                            <ColumnConstraints minWidth="220" prefWidth="300"/>
+                        </columnConstraints>
+                        <Label text="Comm Port" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <ComboBox fx:id="cmbComPort" prefWidth="220" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Label text="Baud Rate" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="cmbBaudRate" prefWidth="220" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <Label text="Byte Size" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <ComboBox fx:id="cmbByteSize" prefWidth="220" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        <Label text="Parity" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                        <ComboBox fx:id="cmbParity" prefWidth="220" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                        <Label text="Stopbits" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                        <ComboBox fx:id="cmbStopbits" prefWidth="220" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        <Label text="Timeout" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                        <TextField fx:id="txtTimeout" prefWidth="220" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                    </GridPane>
+                </VBox>
             </VBox>
         </Tab>
 
         <!-- Tab 2: Extra -->
         <Tab text="Extra Devices">
-            <VBox spacing="10" style="-fx-padding: 10;">
-                <TableView fx:id="extraDevicesTable" prefHeight="260">
-                    <columns>
-                        <TableColumn fx:id="colExtraDevice" text="Device" prefWidth="110"/>
-                        <TableColumn fx:id="colExtraCommPort" text="Comm Port" prefWidth="110"/>
-                        <TableColumn fx:id="colExtraBaudRate" text="Baud Rate" prefWidth="95"/>
-                        <TableColumn fx:id="colExtraByteSize" text="Byte Size" prefWidth="85"/>
-                        <TableColumn fx:id="colExtraParity" text="Parity" prefWidth="80"/>
-                        <TableColumn fx:id="colExtraStopbits" text="Stopbits" prefWidth="85"/>
-                        <TableColumn fx:id="colExtraTimeout" text="Timeout" prefWidth="85"/>
-                    </columns>
-                </TableView>
-                <HBox spacing="8" alignment="CENTER_LEFT">
-                    <Button fx:id="btnAddExtraDevice" text="Add"/>
-                    <Button fx:id="btnDeleteExtraDevice" text="Delete"/>
-                </HBox>
+            <VBox spacing="8" style="-fx-padding: 6;">
+                <VBox fx:id="deviceExtraPane" spacing="8">
+                    <TableView fx:id="extraDevicesTable" prefHeight="260">
+                        <columns>
+                            <TableColumn fx:id="colExtraDevice" text="Device" prefWidth="130"/>
+                            <TableColumn fx:id="colExtraColor1" text="Color 1" prefWidth="75"/>
+                            <TableColumn fx:id="colExtraColor2" text="Color 2" prefWidth="75"/>
+                            <TableColumn fx:id="colExtraLabel1" text="Label 1" prefWidth="90"/>
+                            <TableColumn fx:id="colExtraLabel2" text="Label 2" prefWidth="90"/>
+                            <TableColumn fx:id="colExtraY1" text="y1(x)" prefWidth="60"/>
+                            <TableColumn fx:id="colExtraY2" text="y2(x)" prefWidth="60"/>
+                            <TableColumn fx:id="colExtraLcd1" text="LCD 1" prefWidth="60"/>
+                            <TableColumn fx:id="colExtraLcd2" text="LCD 2" prefWidth="60"/>
+                            <TableColumn fx:id="colExtraCurve1" text="Curve 1" prefWidth="70"/>
+                            <TableColumn fx:id="colExtraCurve2" text="Curve 2" prefWidth="70"/>
+                            <TableColumn fx:id="colExtraDeltaAxis1" text="Δ Axis 1" prefWidth="70"/>
+                            <TableColumn fx:id="colExtraDeltaAxis2" text="Δ Axis 2" prefWidth="70"/>
+                            <TableColumn fx:id="colExtraFill1" text="Fill 1" prefWidth="60"/>
+                            <TableColumn fx:id="colExtraFill2" text="Fill 2" prefWidth="60"/>
+                        </columns>
+                    </TableView>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Button fx:id="btnAddExtraDevice" text="Add"/>
+                        <Button fx:id="btnDeleteExtraDevice" text="Delete"/>
+                        <Button fx:id="btnCopyExtraTable" text="Copy Table"/>
+                        <Separator orientation="VERTICAL"/>
+                        <Button fx:id="btnUpdateExtraProfile" text="Update Profile"/>
+                        <Separator orientation="VERTICAL"/>
+                        <Button fx:id="btnResetExtraDevices" text="Reset"/>
+                        <Button fx:id="btnHelpExtraDevices" text="Help"/>
+                    </HBox>
+                </VBox>
+
+                <VBox fx:id="portExtraPane" spacing="8" visible="false" managed="false">
+                    <TableView fx:id="portExtraTable" prefHeight="300">
+                        <columns>
+                            <TableColumn fx:id="colPortExtraDevice" text="Device" prefWidth="90"/>
+                            <TableColumn fx:id="colPortExtraCommPort" text="Comm Port" prefWidth="90"/>
+                            <TableColumn fx:id="colPortExtraBaudRate" text="Baud Rate" prefWidth="90"/>
+                            <TableColumn fx:id="colPortExtraByteSize" text="Byte Size" prefWidth="70"/>
+                            <TableColumn fx:id="colPortExtraParity" text="Parity" prefWidth="70"/>
+                            <TableColumn fx:id="colPortExtraStopbits" text="Stopbits" prefWidth="70"/>
+                            <TableColumn fx:id="colPortExtraTimeout" text="Timeout" prefWidth="90"/>
+                        </columns>
+                    </TableView>
+                </VBox>
             </VBox>
         </Tab>
 
         <Tab text="Symb ET/BT">
-            <VBox spacing="10" style="-fx-padding: 10;">
-                <Label text="Symbolic formulas for ET/BT override (Artisan style)." style="-fx-text-fill: #555555;"/>
+            <VBox spacing="8" style="-fx-padding: 6;">
+                <Label text="Symbolic Assignments" style="-fx-font-weight: bold;"/>
                 <GridPane hgap="12" vgap="8">
                     <columnConstraints>
                         <ColumnConstraints minWidth="120" prefWidth="140"/>
-                        <ColumnConstraints minWidth="260" prefWidth="420"/>
+                        <ColumnConstraints minWidth="420" prefWidth="620"/>
                     </columnConstraints>
-                    <Label text="ET expression" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                    <TextField fx:id="txtSymbEt" promptText="Example: Y1*1.02+0.5" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                    <Label text="BT expression" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                    <TextField fx:id="txtSymbBt" promptText="Example: Y2*0.98-0.3" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    <Label text="ET Y(x)" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <TextField fx:id="txtSymbEt" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="BT Y(x)" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <TextField fx:id="txtSymbBt" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
                 </GridPane>
+                <HBox alignment="CENTER_LEFT" spacing="8">
+                    <Button text="Update Profile" disable="true"/>
+                    <VBox HBox.hgrow="ALWAYS"/>
+                    <Button text="Help"/>
+                </HBox>
             </VBox>
         </Tab>
 
         <Tab text="Phidgets">
-            <VBox spacing="10" style="-fx-padding: 10;">
-                <HBox spacing="16" alignment="CENTER_LEFT">
-                    <CheckBox fx:id="chkPhidgetRemote" text="Remote"/>
-                    <CheckBox fx:id="chkPhidgetRemoteOnly" text="Remote only"/>
+            <VBox spacing="8" style="-fx-padding: 8;">
+                <HBox spacing="8">
+                    <TitledPane text="1048/1051/TMP1100/TMP1101 TC" expanded="true">
+                        <GridPane hgap="6" vgap="4" style="-fx-padding: 6;">
+                            <Label text="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="1" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                            <Label text="2" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                            <Label text="3" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+                            <Label text="Type" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidgetType0" prefWidth="62" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidgetType1" prefWidth="62" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidgetType2" prefWidth="62" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidgetType3" prefWidth="62" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+                            <Label text="Async" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <CheckBox fx:id="chkPhidgetAsync0" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <CheckBox fx:id="chkPhidgetAsync1" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                            <CheckBox fx:id="chkPhidgetAsync2" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                            <CheckBox fx:id="chkPhidgetAsync3" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+                            <Label text="Change" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetChange0" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetChange1" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetChange2" prefWidth="80" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetChange3" prefWidth="80" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
+                            <Label text="Rate" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidgetRate" prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        </GridPane>
+                    </TitledPane>
+
+                    <TitledPane text="TMP1200/1202 RTD" expanded="true">
+                        <VBox spacing="6" style="-fx-padding: 6;">
+                            <HBox spacing="8">
+                                <VBox spacing="4">
+                                    <Label text="A"/>
+                                    <ComboBox fx:id="cmbPhidget1200TypeA" prefWidth="120"/>
+                                    <ComboBox fx:id="cmbPhidget1200WireA" prefWidth="120"/>
+                                    <CheckBox fx:id="chkPhidget1200AsyncA" text="Async"/>
+                                    <ComboBox fx:id="cmbPhidget1200ChangeA" prefWidth="110"/>
+                                    <ComboBox fx:id="cmbPhidget1200RateA" prefWidth="100"/>
+                                </VBox>
+                                <VBox spacing="4">
+                                    <Label text="B"/>
+                                    <ComboBox fx:id="cmbPhidget1200TypeB" prefWidth="120"/>
+                                    <ComboBox fx:id="cmbPhidget1200WireB" prefWidth="120"/>
+                                    <CheckBox fx:id="chkPhidget1200AsyncB" text="Async"/>
+                                    <ComboBox fx:id="cmbPhidget1200ChangeB" prefWidth="110"/>
+                                    <ComboBox fx:id="cmbPhidget1200RateB" prefWidth="100"/>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+                    </TitledPane>
+
+                    <TitledPane text="DAQ1400 VI" expanded="true">
+                        <GridPane hgap="8" vgap="6" style="-fx-padding: 6;">
+                            <Label text="Power" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="cmbPhidget1400Power" prefWidth="90" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Mode" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidget1400Mode" prefWidth="90" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        </GridPane>
+                    </TitledPane>
+
+                    <TitledPane text="1046 RTD / DAQ1500" expanded="true">
+                        <GridPane hgap="5" vgap="4" style="-fx-padding: 6;">
+                            <Label text="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="1" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                            <Label text="2" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                            <Label text="3" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+                            <Label text="Gain" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidget1046Gain0" prefWidth="62" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidget1046Gain1" prefWidth="62" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidget1046Gain2" prefWidth="62" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidget1046Gain3" prefWidth="62" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+                            <Label text="Wiring" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidget1046Wiring0" prefWidth="62" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidget1046Wiring1" prefWidth="62" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidget1046Wiring2" prefWidth="62" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidget1046Wiring3" prefWidth="62" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+                            <Label text="Async" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                            <CheckBox fx:id="chkPhidget1046Async0" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                            <CheckBox fx:id="chkPhidget1046Async1" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                            <CheckBox fx:id="chkPhidget1046Async2" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                            <CheckBox fx:id="chkPhidget1046Async3" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
+                            <Label text="Rate" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidget1046Rate" prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                        </GridPane>
+                    </TitledPane>
                 </HBox>
-                <GridPane hgap="12" vgap="8">
-                    <columnConstraints>
-                        <ColumnConstraints minWidth="120" prefWidth="140"/>
-                        <ColumnConstraints minWidth="220" prefWidth="320"/>
-                    </columnConstraints>
-                    <Label text="Server ID" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                    <TextField fx:id="txtPhidgetServerId" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                    <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                    <TextField fx:id="txtPhidgetPort" promptText="5661" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                    <Label text="Password" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                    <PasswordField fx:id="txtPhidgetPassword" promptText="" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                    <Label text="ET channel" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                    <TextField fx:id="txtPhidgetEtChannel" promptText="1" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
-                    <Label text="BT channel" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
-                    <TextField fx:id="txtPhidgetBtChannel" promptText="2" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
-                </GridPane>
+
+                <HBox spacing="8">
+                    <TitledPane text="1045 IR" expanded="true">
+                        <GridPane hgap="8" vgap="4" style="-fx-padding: 6;">
+                            <Label text="Async" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <CheckBox fx:id="chkPhidgetIrAsync" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Change" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="cmbPhidgetIrChange" prefWidth="95" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="Rate" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidgetIrRate" prefWidth="95" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <Label text="Emissivity" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                            <TextField fx:id="txtPhidgetIrEmissivity" prefWidth="75" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                        </GridPane>
+                    </TitledPane>
+
+                    <TitledPane text="1010/1011/1013/1018/1019/HUB0000/SBC/DAQxxxx/VCP100x IO" expanded="true">
+                        <GridPane hgap="4" vgap="3" style="-fx-padding: 6;">
+                            <Label text="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="1" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                            <Label text="2" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                            <Label text="3" GridPane.columnIndex="4" GridPane.rowIndex="0"/>
+                            <Label text="4" GridPane.columnIndex="5" GridPane.rowIndex="0"/>
+                            <Label text="5" GridPane.columnIndex="6" GridPane.rowIndex="0"/>
+                            <Label text="6" GridPane.columnIndex="7" GridPane.rowIndex="0"/>
+                            <Label text="7" GridPane.columnIndex="8" GridPane.rowIndex="0"/>
+                            <Label text="Async" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkPhidgetIoAsync0" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkPhidgetIoAsync1" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkPhidgetIoAsync2" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkPhidgetIoAsync3" GridPane.columnIndex="4" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkPhidgetIoAsync4" GridPane.columnIndex="5" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkPhidgetIoAsync5" GridPane.columnIndex="6" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkPhidgetIoAsync6" GridPane.columnIndex="7" GridPane.rowIndex="1"/>
+                            <CheckBox fx:id="chkPhidgetIoAsync7" GridPane.columnIndex="8" GridPane.rowIndex="1"/>
+                            <Label text="Change" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidgetIoChange0" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidgetIoChange1" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidgetIoChange2" prefWidth="80" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidgetIoChange3" prefWidth="80" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidgetIoChange4" prefWidth="80" GridPane.columnIndex="5" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidgetIoChange5" prefWidth="80" GridPane.columnIndex="6" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidgetIoChange6" prefWidth="80" GridPane.columnIndex="7" GridPane.rowIndex="2"/>
+                            <ComboBox fx:id="cmbPhidgetIoChange7" prefWidth="80" GridPane.columnIndex="8" GridPane.rowIndex="2"/>
+                            <Label text="Rate" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetIoRate0" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetIoRate1" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetIoRate2" prefWidth="80" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetIoRate3" prefWidth="80" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetIoRate4" prefWidth="80" GridPane.columnIndex="5" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetIoRate5" prefWidth="80" GridPane.columnIndex="6" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetIoRate6" prefWidth="80" GridPane.columnIndex="7" GridPane.rowIndex="3"/>
+                            <ComboBox fx:id="cmbPhidgetIoRate7" prefWidth="80" GridPane.columnIndex="8" GridPane.rowIndex="3"/>
+                            <Label text="Range" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidgetIoRange0" prefWidth="80" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidgetIoRange1" prefWidth="80" GridPane.columnIndex="2" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidgetIoRange2" prefWidth="80" GridPane.columnIndex="3" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidgetIoRange3" prefWidth="80" GridPane.columnIndex="4" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidgetIoRange4" prefWidth="80" GridPane.columnIndex="5" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidgetIoRange5" prefWidth="80" GridPane.columnIndex="6" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidgetIoRange6" prefWidth="80" GridPane.columnIndex="7" GridPane.rowIndex="4"/>
+                            <ComboBox fx:id="cmbPhidgetIoRange7" prefWidth="80" GridPane.columnIndex="8" GridPane.rowIndex="4"/>
+                            <Label text="Ratio" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                            <CheckBox fx:id="chkPhidgetIoRatio0" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                            <CheckBox fx:id="chkPhidgetIoRatio1" GridPane.columnIndex="2" GridPane.rowIndex="5"/>
+                            <CheckBox fx:id="chkPhidgetIoRatio2" GridPane.columnIndex="3" GridPane.rowIndex="5"/>
+                            <CheckBox fx:id="chkPhidgetIoRatio3" GridPane.columnIndex="4" GridPane.rowIndex="5"/>
+                            <CheckBox fx:id="chkPhidgetIoRatio4" GridPane.columnIndex="5" GridPane.rowIndex="5"/>
+                            <CheckBox fx:id="chkPhidgetIoRatio5" GridPane.columnIndex="6" GridPane.rowIndex="5"/>
+                            <CheckBox fx:id="chkPhidgetIoRatio6" GridPane.columnIndex="7" GridPane.rowIndex="5"/>
+                            <CheckBox fx:id="chkPhidgetIoRatio7" GridPane.columnIndex="8" GridPane.rowIndex="5"/>
+                        </GridPane>
+                    </TitledPane>
+                </HBox>
+
+                <TitledPane text="Network" expanded="true">
+                    <HBox spacing="14" alignment="CENTER_LEFT" style="-fx-padding: 6;">
+                        <CheckBox fx:id="chkPhidgetRemote"/>
+                        <Label text="Host"/>
+                        <TextField fx:id="txtPhidgetServerId" prefWidth="170"/>
+                        <Label text="Port"/>
+                        <TextField fx:id="txtPhidgetPort" prefWidth="70"/>
+                        <Label text="Password"/>
+                        <PasswordField fx:id="txtPhidgetPassword" prefWidth="140"/>
+                        <CheckBox fx:id="chkPhidgetRemoteOnly" text="Remote Only"/>
+                    </HBox>
+                </TitledPane>
+
+                <HBox spacing="10" visible="false" managed="false">
+                    <TextField fx:id="txtPhidgetEtChannel"/>
+                    <TextField fx:id="txtPhidgetBtChannel"/>
+                    <TextField fx:id="txtPhidgetChange0"/>
+                    <TextField fx:id="txtPhidgetChange1"/>
+                    <TextField fx:id="txtPhidgetChange2"/>
+                    <TextField fx:id="txtPhidgetChange3"/>
+                    <TextField fx:id="txtPhidgetIrChange"/>
+                </HBox>
             </VBox>
         </Tab>
 
         <Tab text="Yoctopuce">
-            <VBox spacing="10" style="-fx-padding: 10;">
-                <CheckBox fx:id="chkYoctoRemote" text="Use remote VirtualHub"/>
+            <VBox spacing="8" style="-fx-padding: 6;">
+                <CheckBox fx:id="chkYoctoRemote" text=""/>
                 <GridPane hgap="12" vgap="8">
                     <columnConstraints>
                         <ColumnConstraints minWidth="120" prefWidth="140"/>
@@ -142,63 +405,221 @@
                     <Label text="IR emissivity" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                     <TextField fx:id="txtYoctoEmissivity" promptText="1.0" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
                 </GridPane>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <CheckBox fx:id="chkYoctoAsync" text="Async"/>
+                    <ComboBox fx:id="cmbYoctoAsyncRate" prefWidth="120"/>
+                </HBox>
             </VBox>
         </Tab>
 
         <Tab text="Ambient">
-            <VBox spacing="10" style="-fx-padding: 10;">
-                <Label text="Ambient sensors and source mapping." style="-fx-text-fill: #555555;"/>
+            <VBox spacing="8" style="-fx-padding: 6;">
                 <GridPane hgap="12" vgap="8">
                     <columnConstraints>
                         <ColumnConstraints minWidth="150" prefWidth="170"/>
                         <ColumnConstraints minWidth="220" prefWidth="260"/>
-                        <ColumnConstraints minWidth="150" prefWidth="170"/>
                         <ColumnConstraints minWidth="220" prefWidth="260"/>
                     </columnConstraints>
-                    <Label text="Temp device" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                    <ComboBox fx:id="cmbAmbientTempDevice" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                    <Label text="Temp source" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
-                    <ComboBox fx:id="cmbAmbientTempSource" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
-                    <Label text="Humidity device" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                    <ComboBox fx:id="cmbAmbientHumidityDevice" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                    <Label text="Humidity source" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
-                    <ComboBox fx:id="cmbAmbientHumiditySource" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
-                    <Label text="Pressure device" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                    <ComboBox fx:id="cmbAmbientPressureDevice" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                    <Label text="Pressure source" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
-                    <ComboBox fx:id="cmbAmbientPressureSource" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
-                    <Label text="Elevation (m)" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                    <TextField fx:id="txtAmbientElevation" promptText="0" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                    <Label text="Ambient Source" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                    <Label text="Temperature" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <ComboBox fx:id="cmbAmbientTempDevice" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    <ComboBox fx:id="cmbAmbientTempSource" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                    <Label text="Humidity" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <ComboBox fx:id="cmbAmbientHumidityDevice" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    <ComboBox fx:id="cmbAmbientHumiditySource" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                    <Label text="Pressure" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                    <ComboBox fx:id="cmbAmbientPressureDevice" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                    <ComboBox fx:id="cmbAmbientPressureSource" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                    <Label text="Elevation" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                    <TextField fx:id="txtAmbientElevation" promptText="0 MASL" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
                 </GridPane>
             </VBox>
         </Tab>
 
         <Tab text="Networks">
-            <VBox spacing="10" style="-fx-padding: 10;">
-                <GridPane hgap="12" vgap="8">
-                    <columnConstraints>
-                        <ColumnConstraints minWidth="120" prefWidth="140"/>
-                        <ColumnConstraints minWidth="220" prefWidth="260"/>
-                        <ColumnConstraints minWidth="90" prefWidth="110"/>
-                        <ColumnConstraints minWidth="120" prefWidth="140"/>
-                    </columnConstraints>
-                    <Label text="S7 host" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                    <TextField fx:id="txtNetS7Host" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                    <Label text="S7 port" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
-                    <TextField fx:id="txtNetS7Port" promptText="102" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
-                    <Label text="Santoker host" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                    <TextField fx:id="txtNetSantokerHost" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                    <Label text="Santoker port" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
-                    <TextField fx:id="txtNetSantokerPort" promptText="20001" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
-                    <Label text="Kaleido host" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                    <TextField fx:id="txtNetKaleidoHost" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                    <Label text="Kaleido port" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
-                    <TextField fx:id="txtNetKaleidoPort" promptText="20002" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
-                    <Label text="WebSocket host" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                    <TextField fx:id="txtNetWsHost" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
-                    <Label text="WebSocket port" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
-                    <TextField fx:id="txtNetWsPort" promptText="80" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
-                </GridPane>
+            <VBox spacing="8" style="-fx-padding: 6;">
+                <HBox spacing="12">
+                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                        <Label text="Santoker"/>
+                        <HBox spacing="16" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="chkNetSantokerBluetooth" text="Bluetooth"/>
+                            <CheckBox fx:id="chkNetSantokerSerial" text="Serial"/>
+                            <CheckBox fx:id="chkNetSantokerWifi" text="WiFi"/>
+                        </HBox>
+                        <GridPane hgap="10" vgap="8">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="70" prefWidth="80"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                                <ColumnConstraints minWidth="70" prefWidth="80"/>
+                                <ColumnConstraints minWidth="120" prefWidth="140"/>
+                            </columnConstraints>
+                            <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtNetSantokerHost" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Port" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtNetSantokerPort" promptText="20001" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                        </GridPane>
+                        <HBox spacing="12" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="chkNetSantokerCharge" text="CHARGE"/>
+                            <CheckBox fx:id="chkNetSantokerDry" text="DRY"/>
+                            <CheckBox fx:id="chkNetSantokerFcs" text="FCs"/>
+                            <CheckBox fx:id="chkNetSantokerFce" text="FCe"/>
+                            <CheckBox fx:id="chkNetSantokerScs" text="SCs"/>
+                            <CheckBox fx:id="chkNetSantokerSce" text="SCe"/>
+                            <CheckBox fx:id="chkNetSantokerDrop" text="DROP"/>
+                        </HBox>
+                    </VBox>
+                    <VBox spacing="8">
+                        <Label text="Mugma"/>
+                        <GridPane hgap="8" vgap="8">
+                            <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtNetMugmaHost" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <TextField fx:id="txtNetMugmaPort" promptText="1504" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        </GridPane>
+                    </VBox>
+                </HBox>
+                <HBox spacing="12">
+                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                        <Label text="Kaleido"/>
+                        <HBox spacing="16" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="chkNetKaleidoWifi" text="WiFi"/>
+                        </HBox>
+                        <GridPane hgap="10" vgap="8">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="70" prefWidth="80"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                                <ColumnConstraints minWidth="70" prefWidth="80"/>
+                                <ColumnConstraints minWidth="120" prefWidth="140"/>
+                            </columnConstraints>
+                            <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtNetKaleidoHost" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Port" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtNetKaleidoPort" promptText="80" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                        </GridPane>
+                        <HBox spacing="12" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="chkNetKaleidoCharge" text="CHARGE"/>
+                            <CheckBox fx:id="chkNetKaleidoDry" text="DRY"/>
+                            <CheckBox fx:id="chkNetKaleidoFcs" text="FCs"/>
+                            <CheckBox fx:id="chkNetKaleidoFce" text="FCe"/>
+                            <CheckBox fx:id="chkNetKaleidoScs" text="SCs"/>
+                            <CheckBox fx:id="chkNetKaleidoSce" text="SCe"/>
+                            <CheckBox fx:id="chkNetKaleidoDrop" text="DROP"/>
+                        </HBox>
+                    </VBox>
+                    <VBox spacing="8">
+                        <Label text="ColorTrack"/>
+                        <GridPane hgap="8" vgap="8">
+                            <Label text="Mean Filter" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtNetColorTrackMean" promptText="50" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Median Filter" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <TextField fx:id="txtNetColorTrackMedian" promptText="50" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        </GridPane>
+                    </VBox>
+                </HBox>
+                <HBox spacing="12">
+                    <VBox spacing="8">
+                        <Label text="Shelly 3EM Pro"/>
+                        <GridPane hgap="8" vgap="8">
+                            <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtNetShelly3emHost" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        </GridPane>
+                    </VBox>
+                    <VBox spacing="8">
+                        <Label text="Shelly Plus Plug"/>
+                        <GridPane hgap="8" vgap="8">
+                            <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtNetShellyPlusHost" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        </GridPane>
+                    </VBox>
+                    <VBox spacing="8" visible="false" managed="false">
+                        <Label text="S7 / WebSocket"/>
+                        <GridPane hgap="8" vgap="8">
+                            <Label text="S7 host" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField fx:id="txtNetS7Host" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="S7 port" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <TextField fx:id="txtNetS7Port" promptText="102" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                            <Label text="WS host" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <TextField fx:id="txtNetWsHost" promptText="127.0.0.1" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                            <Label text="WS port" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                            <TextField fx:id="txtNetWsPort" promptText="80" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                        </GridPane>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </Tab>
+
+        <Tab text="Batch Manager">
+            <VBox spacing="8" style="-fx-padding: 6;">
+                <HBox spacing="12">
+                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                        <Label text="Scale 1"/>
+                        <GridPane hgap="10" vgap="8">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="90" prefWidth="100"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                            </columnConstraints>
+                            <Label text="Model" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="cmbBatchScale1Model" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Name" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <HBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                <ComboBox fx:id="cmbBatchScale1Name" editable="true" prefWidth="140"/>
+                                <Button text="..."/>
+                                <Button text="Scan"/>
+                                <Button text="Tare"/>
+                            </HBox>
+                        </GridPane>
+                    </VBox>
+                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                        <Label text="Scale 2"/>
+                        <GridPane hgap="10" vgap="8">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="90" prefWidth="100"/>
+                                <ColumnConstraints minWidth="180" prefWidth="220"/>
+                            </columnConstraints>
+                            <Label text="Model" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="cmbBatchScale2Model" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Name" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <HBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                <ComboBox fx:id="cmbBatchScale2Name" editable="true" prefWidth="140"/>
+                                <Button text="..."/>
+                                <Button text="Scan"/>
+                                <Button text="Tare"/>
+                            </HBox>
+                        </GridPane>
+                    </VBox>
+                </HBox>
+
+                <HBox spacing="12">
+                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                        <Label text="Container Green"/>
+                        <ComboBox fx:id="cmbBatchContainerGreen" editable="true"/>
+                    </VBox>
+                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                        <Label text="Container Roasted"/>
+                        <ComboBox fx:id="cmbBatchContainerRoasted" editable="true"/>
+                    </VBox>
+                </HBox>
+
+                <HBox spacing="12">
+                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                        <Label text="Accuracy (%)"/>
+                        <TextField fx:id="txtBatchAccuracy" promptText="10.0"/>
+                    </VBox>
+                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                        <Label text="Task Display Green"/>
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="chkBatchGreenPort" text="Port"/>
+                            <TextField fx:id="txtBatchGreenPort" promptText="8081" prefWidth="100"/>
+                        </HBox>
+                    </VBox>
+                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                        <Label text="Task Display Roasted"/>
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="chkBatchRoastedPort" text="Port"/>
+                            <TextField fx:id="txtBatchRoastedPort" promptText="8082" prefWidth="100"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
             </VBox>
         </Tab>
 
@@ -427,10 +848,9 @@
         </Tab>
     </TabPane>
 
-    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 8 0 0 0;">
-        <Button fx:id="btnOk" text="OK" defaultButton="true"
-                style="-fx-background-color: #4A90D9; -fx-text-fill: white; -fx-padding: 6 16; -fx-background-radius: 4;"/>
-        <Button fx:id="btnCancel" text="Cancel" cancelButton="true"
-                style="-fx-background-color: #e8e8e8; -fx-text-fill: #333333; -fx-padding: 6 16; -fx-background-radius: 4;"/>
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="btnOk" text="OK" defaultButton="true"/>
+        <Button fx:id="btnCancel" text="Cancel" cancelButton="true"/>
+        <Button text="Help"/>
     </HBox>
 </VBox>

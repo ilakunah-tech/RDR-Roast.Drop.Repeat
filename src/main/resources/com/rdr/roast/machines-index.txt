@@ -1,0 +1,247 @@
+com/rdr/roast/machines/Aillio/Bullet_R1.aset
+com/rdr/roast/machines/Aillio/Bullet_R1_IBTS.aset
+com/rdr/roast/machines/Aillio/Bullet_R2.aset
+com/rdr/roast/machines/Ambex/YM.aset
+com/rdr/roast/machines/Arc/800.aset
+com/rdr/roast/machines/Arc/800_RTD.aset
+com/rdr/roast/machines/Arc/S.aset
+com/rdr/roast/machines/Arc/S_RTD.aset
+com/rdr/roast/machines/Atilla/GOLD_plus_7''.aset
+com/rdr/roast/machines/Atilla/GOLD_plus_7''_II.aset
+com/rdr/roast/machines/Atilla/GOLD_plus_7''_II_Control.aset
+com/rdr/roast/machines/Atilla/GOLD_plus_7''_II_Control_Auto.aset
+com/rdr/roast/machines/BC/Roaster.aset
+com/rdr/roast/machines/BeanGo Cube/X.aset
+com/rdr/roast/machines/Behmor/1kg.aset
+com/rdr/roast/machines/BellaTW/EVO.aset
+com/rdr/roast/machines/Berto/Autonics_Control.aset
+com/rdr/roast/machines/Berto/D.aset
+com/rdr/roast/machines/Berto/Essential.aset
+com/rdr/roast/machines/Berto/One.aset
+com/rdr/roast/machines/Berto/R.aset
+com/rdr/roast/machines/Besca/Bee.aset
+com/rdr/roast/machines/Besca/Bee_v2.aset
+com/rdr/roast/machines/Besca/BSC_automatic.aset
+com/rdr/roast/machines/Besca/BSC_full_automatic.aset
+com/rdr/roast/machines/Besca/BSC_manual_v1.aset
+com/rdr/roast/machines/Besca/BSC_manual_v2.aset
+com/rdr/roast/machines/Bideli/Roaster.aset
+com/rdr/roast/machines/BlueKing/BK.aset
+com/rdr/roast/machines/Brambati/PLC.aset
+com/rdr/roast/machines/Bühler/RM_20_Playone.aset
+com/rdr/roast/machines/Bühler/RM_20_Simatic.aset
+com/rdr/roast/machines/Bühler/RM_20_Simatic_Legacy.aset
+com/rdr/roast/machines/Bühler/RM_60-240.aset
+com/rdr/roast/machines/Caparao/Prime_Line.aset
+com/rdr/roast/machines/Carmomaq/Caloratto_2.0.aset
+com/rdr/roast/machines/Carmomaq/Caloratto-Materatto_Legacy.aset
+com/rdr/roast/machines/Carmomaq/Masteratto_2.0.aset
+com/rdr/roast/machines/Carmomaq/Speciatto_2.0.aset
+com/rdr/roast/machines/Carmomaq/Stratto_2.0.aset
+com/rdr/roast/machines/Carmomaq/Stratto_Lab.aset
+com/rdr/roast/machines/Coffed/SR15_automatic.aset
+com/rdr/roast/machines/Coffed/SR15_manual_delta.aset
+com/rdr/roast/machines/Coffed/SR25_automatic.aset
+com/rdr/roast/machines/Coffed/SR3_manual.aset
+com/rdr/roast/machines/Coffed/SR3_manual_delta.aset
+com/rdr/roast/machines/Coffed/SR3_manual_delta+_EBM-Papst.aset
+com/rdr/roast/machines/Coffed/SR3_manual_delta+_Honeywell.aset
+com/rdr/roast/machines/Coffed/SR5_automatic.aset
+com/rdr/roast/machines/Coffed/SR5_manual.aset
+com/rdr/roast/machines/Coffed/SR5_manual_delta.aset
+com/rdr/roast/machines/Coffed/SR5_manual_delta+_EBM-Papst.aset
+com/rdr/roast/machines/Coffed/SR5_manual_delta+_Honeywell.aset
+com/rdr/roast/machines/Coffed/SR60_automatic.aset
+com/rdr/roast/machines/Coffee Machines Sale/CMS-1.aset
+com/rdr/roast/machines/Coffee Machines Sale/CMS-6-30.aset
+com/rdr/roast/machines/Coffee-Tech/FZ94.aset
+com/rdr/roast/machines/Coffee-Tech/FZ94_EVO.aset
+com/rdr/roast/machines/Coffee-Tech/Ghibli_Touch.aset
+com/rdr/roast/machines/Coffee-Tech/Ghibli_USB.aset
+com/rdr/roast/machines/Coffee-Tech/Silon_Touch.aset
+com/rdr/roast/machines/Coffee-Tech/Silon_USB.aset
+com/rdr/roast/machines/Coffeetool/R.aset
+com/rdr/roast/machines/Cogen/Series_C.aset
+com/rdr/roast/machines/Cogen/Series_C_V2.aset
+com/rdr/roast/machines/Craftsmith/Craft.aset
+com/rdr/roast/machines/Craftsmith/Craft_air.aset
+com/rdr/roast/machines/Craftsmith/DIY.aset
+com/rdr/roast/machines/Daetgen/DR.aset
+com/rdr/roast/machines/Daetgen/DW.aset
+com/rdr/roast/machines/Diedrich/4_Sensor_Data_Logging.aset
+com/rdr/roast/machines/Diedrich/6_Sensor_Data_Logging.aset
+com/rdr/roast/machines/Diedrich/6_Sensor_Data_Logging_(Pre-2018).aset
+com/rdr/roast/machines/Diedrich/CR.aset
+com/rdr/roast/machines/Diedrich/DR.aset
+com/rdr/roast/machines/Dongyi/BR.aset
+com/rdr/roast/machines/Dongyi/BY.aset
+com/rdr/roast/machines/Dongyi/DY.aset
+com/rdr/roast/machines/Easyster/2Temp.aset
+com/rdr/roast/machines/Easyster/3Temp.aset
+com/rdr/roast/machines/Easyster/AirPressure.aset
+com/rdr/roast/machines/Easyster/Smart.aset
+com/rdr/roast/machines/Fabrica/Roasters.aset
+com/rdr/roast/machines/Froco/FRA_Advanced.aset
+com/rdr/roast/machines/Froco/FRA_Improved.aset
+com/rdr/roast/machines/Garanti/GKPX.aset
+com/rdr/roast/machines/Giesen/Sample_WPE.aset
+com/rdr/roast/machines/Giesen/Sample_WPG.aset
+com/rdr/roast/machines/Giesen/W140A_v1.aset
+com/rdr/roast/machines/Giesen/W140A_v2.aset
+com/rdr/roast/machines/Giesen/W15A.aset
+com/rdr/roast/machines/Giesen/W15E.aset
+com/rdr/roast/machines/Giesen/W1A.aset
+com/rdr/roast/machines/Giesen/W1E.aset
+com/rdr/roast/machines/Giesen/W30A.aset
+com/rdr/roast/machines/Giesen/W30A_PRO.aset
+com/rdr/roast/machines/Giesen/W45A.aset
+com/rdr/roast/machines/Giesen/W60A.aset
+com/rdr/roast/machines/Giesen/W6A.aset
+com/rdr/roast/machines/Giesen/W6A_PRO.aset
+com/rdr/roast/machines/Giesen/W6E.aset
+com/rdr/roast/machines/Giesen/WxA.aset
+com/rdr/roast/machines/Giesen/WxA_coarse.aset
+com/rdr/roast/machines/Giesen/WxA_IR.aset
+com/rdr/roast/machines/Giesen/WxA_IR_Env.aset
+com/rdr/roast/machines/Giesen/WxA+.aset
+com/rdr/roast/machines/Giesen/WxA+_IR.aset
+com/rdr/roast/machines/Giesen/WxA+_IR_Env.aset
+com/rdr/roast/machines/Golden Roasters/GR_2xEMKO.aset
+com/rdr/roast/machines/Golden Roasters/GR_Automatic.aset
+com/rdr/roast/machines/Golden Roasters/GR_Delta.aset
+com/rdr/roast/machines/Golden Roasters/GR_Legacy.aset
+com/rdr/roast/machines/Golden Roasters/GR_Manual.aset
+com/rdr/roast/machines/Has Garanti/HGS.aset
+com/rdr/roast/machines/Has Garanti/HSR.aset
+com/rdr/roast/machines/HB/Model_S.aset
+com/rdr/roast/machines/HB/Standard.aset
+com/rdr/roast/machines/Hive Roaster/Data_Dome.aset
+com/rdr/roast/machines/Hottop/KN-8828B-2K+.aset
+com/rdr/roast/machines/Hottop/TC4.aset
+com/rdr/roast/machines/IKAWA/HOME.aset
+com/rdr/roast/machines/IKAWA/PRO.aset
+com/rdr/roast/machines/IKAWA/PRO_X.aset
+com/rdr/roast/machines/IMF/RM.aset
+com/rdr/roast/machines/IMF/RM_control.aset
+com/rdr/roast/machines/IMF/RM_legacy.aset
+com/rdr/roast/machines/iRm Series/Mitsubishi_PLC.aset
+com/rdr/roast/machines/iRm Series/Omron_PLC.aset
+com/rdr/roast/machines/Joper/PLC.aset
+com/rdr/roast/machines/Kaldi/Fortis.aset
+com/rdr/roast/machines/Kaleido/Legacy.aset
+com/rdr/roast/machines/Kaleido/Network.aset
+com/rdr/roast/machines/Kaleido/Serial.aset
+com/rdr/roast/machines/KapoK/USB.aset
+com/rdr/roast/machines/KapoK/USB_Inlet.aset
+com/rdr/roast/machines/Kirsch+Mausser/PLC.aset
+com/rdr/roast/machines/Kirsch+Mausser/PLC_control.aset
+com/rdr/roast/machines/Kraffe/PLC.aset
+com/rdr/roast/machines/Kuban/Supreme_(Automatic).aset
+com/rdr/roast/machines/Kuban/Supreme_(Manual).aset
+com/rdr/roast/machines/Lilla/PLC.aset
+com/rdr/roast/machines/Loring/Smart_Roast.aset
+com/rdr/roast/machines/Loring/Smart_Roast_Auto.aset
+com/rdr/roast/machines/Mill City Roasters/Digital_Control_Panel_1000_C.aset
+com/rdr/roast/machines/Mill City Roasters/Digital_Control_Panel_1000_F.aset
+com/rdr/roast/machines/Mill City Roasters/Digital_Control_Panel_1200_C.aset
+com/rdr/roast/machines/Mill City Roasters/Digital_Control_Panel_1200_F.aset
+com/rdr/roast/machines/Mill City Roasters/Phidget.aset
+com/rdr/roast/machines/Mill City Roasters/Phidget_&_Delta_controls_(port_on_the_back).aset
+com/rdr/roast/machines/Mill City Roasters/Phidget_&_Delta_controls_(port_on_the_right)_C.aset
+com/rdr/roast/machines/Mill City Roasters/Phidget_&_Delta_controls_(port_on_the_right)_F.aset
+com/rdr/roast/machines/Mill City Roasters/Phidget_&_Shihlin_controls_(port_on_the_back).aset
+com/rdr/roast/machines/Mill City Roasters/Standard_Control_Panel_(Delta)_C.aset
+com/rdr/roast/machines/Mill City Roasters/Standard_Control_Panel_(Delta)_F.aset
+com/rdr/roast/machines/Mill City Roasters/Standard_Control_Panel_(Fotek)_C.aset
+com/rdr/roast/machines/Mill City Roasters/Standard_Control_Panel_(Fotek)_F.aset
+com/rdr/roast/machines/Mugma/1000.aset
+com/rdr/roast/machines/Mugma/2000.aset
+com/rdr/roast/machines/Neuhaus Neotec/PLC.aset
+com/rdr/roast/machines/NOR/A_Series.aset
+com/rdr/roast/machines/NOR/Extension_MODBUS.aset
+com/rdr/roast/machines/NOR/N_Series.aset
+com/rdr/roast/machines/Nordic/DeltaDTA.aset
+com/rdr/roast/machines/Nordic/DeltaDTK.aset
+com/rdr/roast/machines/Nordic/PLC.aset
+com/rdr/roast/machines/Opp/MR.aset
+com/rdr/roast/machines/OTesla/Roaster.aset
+com/rdr/roast/machines/Ozturk/OKS.aset
+com/rdr/roast/machines/Petroncini/TT_ASEM.aset
+com/rdr/roast/machines/Petroncini/TT_Maestro_Avantgarde.aset
+com/rdr/roast/machines/Petroncini/TT_Maestro_i06_Avantgarde.aset
+com/rdr/roast/machines/Petroncini/TT_Traditional.aset
+com/rdr/roast/machines/Phidget/USB_1048_Databridge_2xTC.aset
+com/rdr/roast/machines/Phidget/VINT_Ambient_Modules.aset
+com/rdr/roast/machines/Phidget/VINT_TMP1101_2xTC.aset
+com/rdr/roast/machines/Phidget/VINT_TMP1200_2xRTD.aset
+com/rdr/roast/machines/Phoenix/ORO.aset
+com/rdr/roast/machines/Phoenix/ORO_PXF.aset
+com/rdr/roast/machines/Plugin/Roast_2.0.aset
+com/rdr/roast/machines/Primo/Xr.aset
+com/rdr/roast/machines/Prisma/PLC.aset
+com/rdr/roast/machines/Prisma/USB.aset
+com/rdr/roast/machines/Proaster/2Temp.aset
+com/rdr/roast/machines/Proaster/3Temp.aset
+com/rdr/roast/machines/Proaster/AirPressure.aset
+com/rdr/roast/machines/Proaster/THCR-01A.aset
+com/rdr/roast/machines/Probat/G_UG.aset
+com/rdr/roast/machines/Probat/G_UG_control.aset
+com/rdr/roast/machines/Probat/P_Series_III.aset
+com/rdr/roast/machines/Probat/Probatone.aset
+com/rdr/roast/machines/Probat/Probatone_7''.aset
+com/rdr/roast/machines/Probat/Sample_Roaster.aset
+com/rdr/roast/machines/Prometheus/Ignis.aset
+com/rdr/roast/machines/R & R/Automatic.aset
+com/rdr/roast/machines/R & R/Manual.aset
+com/rdr/roast/machines/Rasco Mac/CRMA.aset
+com/rdr/roast/machines/Roastmax/Roasters.aset
+com/rdr/roast/machines/Rolltech/EL.aset
+com/rdr/roast/machines/San Franciscan/SF.aset
+com/rdr/roast/machines/San Franciscan/SF_Eurotherm.aset
+com/rdr/roast/machines/Santoker/1xPXR.aset
+com/rdr/roast/machines/Santoker/2xPXF.aset
+com/rdr/roast/machines/Santoker/2xPXR.aset
+com/rdr/roast/machines/Santoker/Cube_Bluetooth.aset
+com/rdr/roast/machines/Santoker/Cube_Bluetooth_PID.aset
+com/rdr/roast/machines/Santoker/Q_+_X_Series_Bluetooth.aset
+com/rdr/roast/machines/Santoker/Q_+_X_Series_WiFi.aset
+com/rdr/roast/machines/Santoker/R_Master_Series_Bluetooth.aset
+com/rdr/roast/machines/Santoker/R_Master_Series_WiFi.aset
+com/rdr/roast/machines/Santoker/R_Series_Bluetooth.aset
+com/rdr/roast/machines/Santoker/R_Series_USB.aset
+com/rdr/roast/machines/Sedona Elite/Roaster.aset
+com/rdr/roast/machines/Sedona Elite/Roaster_2in1.aset
+com/rdr/roast/machines/Sedona Elite/Roaster_PXF.aset
+com/rdr/roast/machines/Sivetz/SRM.aset
+com/rdr/roast/machines/Sivetz/SRM_legacy.aset
+com/rdr/roast/machines/Sweet Coffee Italia/Gemma_26-30IND.aset
+com/rdr/roast/machines/Sweet Coffee Italia/Gemma_2IND.aset
+com/rdr/roast/machines/Sweet Coffee Italia/Gemma_6-8IND.aset
+com/rdr/roast/machines/Titanium/TGX.aset
+com/rdr/roast/machines/Toper/PLC.aset
+com/rdr/roast/machines/Toper/PLC_Control.aset
+com/rdr/roast/machines/Toper/USB.aset
+com/rdr/roast/machines/Tostabar/Genius.aset
+com/rdr/roast/machines/TRINITAS/T2.aset
+com/rdr/roast/machines/TRINITAS/T2_air.aset
+com/rdr/roast/machines/TRINITAS/T2_legacy.aset
+com/rdr/roast/machines/TRINITAS/T7.aset
+com/rdr/roast/machines/TRINITAS/T7_gas.aset
+com/rdr/roast/machines/TRINITAS/T7_legacy.aset
+com/rdr/roast/machines/Twino/Ozstar.aset
+com/rdr/roast/machines/Typhoon/Hybrid.aset
+com/rdr/roast/machines/Typhoon/Shoproaster.aset
+com/rdr/roast/machines/US Roaster Corp/RTU.aset
+com/rdr/roast/machines/VNT/Phidget.aset
+com/rdr/roast/machines/VNT/PID.aset
+com/rdr/roast/machines/Vortecs/Pro.aset
+com/rdr/roast/machines/Wintop/WB.aset
+com/rdr/roast/machines/Wintop/WK.aset
+com/rdr/roast/machines/Wintop/WS_2in1.aset
+com/rdr/roast/machines/Wintop/WS_Fuji.aset
+com/rdr/roast/machines/Yangchia/8xxn.aset
+com/rdr/roast/machines/Yoshan/BR.aset
+com/rdr/roast/machines/Yoshan/BY.aset
+com/rdr/roast/machines/Yoshan/DY.aset
+com/rdr/roast/machines/Yoshan/EC-500.aset
+com/rdr/roast/machines/Yoshan/YS.aset

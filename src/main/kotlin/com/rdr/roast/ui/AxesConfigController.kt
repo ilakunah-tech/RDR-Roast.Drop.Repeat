@@ -6,8 +6,11 @@ import com.rdr.roast.app.LegendLocation
 import javafx.fxml.FXML
 import javafx.scene.control.Button
 import javafx.scene.control.CheckBox
+import javafx.scene.control.ColorPicker
 import javafx.scene.control.ComboBox
 import javafx.scene.control.TextField
+import javafx.scene.paint.Color
+import javafx.scene.text.Font
 import javafx.stage.Stage
 
 class AxesConfigController {
@@ -33,6 +36,27 @@ class AxesConfigController {
     @FXML lateinit var txtStep100Event: TextField
 
     @FXML lateinit var cmbLegendLocation: ComboBox<String>
+    @FXML lateinit var colorChartBackground: ColorPicker
+    @FXML lateinit var colorGridColor: ColorPicker
+    @FXML lateinit var colorAxisLabelColor: ColorPicker
+    @FXML lateinit var colorMarkerColor: ColorPicker
+    @FXML lateinit var colorMarkerBgColor: ColorPicker
+    @FXML lateinit var colorPhaseDryingColor: ColorPicker
+    @FXML lateinit var colorPhaseMaillardColor: ColorPicker
+    @FXML lateinit var colorPhaseDevelopmentColor: ColorPicker
+    @FXML lateinit var colorPhaseLabelColor: ColorPicker
+    @FXML lateinit var txtChartBackground: TextField
+    @FXML lateinit var txtGridColor: TextField
+    @FXML lateinit var txtAxisLabelColor: TextField
+    @FXML lateinit var txtMarkerColor: TextField
+    @FXML lateinit var txtMarkerBgColor: TextField
+    @FXML lateinit var txtPhaseDryingColor: TextField
+    @FXML lateinit var txtPhaseMaillardColor: TextField
+    @FXML lateinit var txtPhaseDevelopmentColor: TextField
+    @FXML lateinit var txtPhaseLabelColor: TextField
+    @FXML lateinit var cmbFontFamily: ComboBox<String>
+    @FXML lateinit var txtAxisFontSize: TextField
+    @FXML lateinit var txtMarkerFontSize: TextField
 
     @FXML lateinit var cmbGridStyle: ComboBox<String>
     @FXML lateinit var chkGridTime: CheckBox
@@ -58,6 +82,17 @@ class AxesConfigController {
             "Right", "Center left", "Center right", "Lower center", "Upper center", "Center"
         )
         cmbGridStyle.items.setAll("Solid", "Dashed", "Dashed-dot", "Dotted")
+        cmbFontFamily.items.setAll(Font.getFamilies())
+        cmbFontFamily.isEditable = true
+        bindColor(colorChartBackground, txtChartBackground)
+        bindColor(colorGridColor, txtGridColor)
+        bindColor(colorAxisLabelColor, txtAxisLabelColor)
+        bindColor(colorMarkerColor, txtMarkerColor)
+        bindColor(colorMarkerBgColor, txtMarkerBgColor)
+        bindColor(colorPhaseDryingColor, txtPhaseDryingColor)
+        bindColor(colorPhaseMaillardColor, txtPhaseMaillardColor)
+        bindColor(colorPhaseDevelopmentColor, txtPhaseDevelopmentColor)
+        bindColor(colorPhaseLabelColor, txtPhaseLabelColor)
 
         btnSave.setOnAction { applyAndClose() }
         btnCancel.setOnAction { closeWindow() }
@@ -81,6 +116,27 @@ class AxesConfigController {
         txtStep100Event.text = config.step100EventTemp?.toString() ?: ""
 
         cmbLegendLocation.selectionModel.select(config.legendLocation.index.coerceIn(0, 10))
+        txtChartBackground.text = config.backgroundColor
+        txtGridColor.text = config.gridColor
+        txtAxisLabelColor.text = config.axisLabelColor
+        txtMarkerColor.text = config.markerColor
+        txtMarkerBgColor.text = config.markerLabelBackgroundColor
+        txtPhaseDryingColor.text = config.phaseDryingColor
+        txtPhaseMaillardColor.text = config.phaseMaillardColor
+        txtPhaseDevelopmentColor.text = config.phaseDevelopmentColor
+        txtPhaseLabelColor.text = config.phaseLabelColor
+        setColor(colorChartBackground, config.backgroundColor)
+        setColor(colorGridColor, config.gridColor)
+        setColor(colorAxisLabelColor, config.axisLabelColor)
+        setColor(colorMarkerColor, config.markerColor)
+        setColor(colorMarkerBgColor, config.markerLabelBackgroundColor)
+        setColor(colorPhaseDryingColor, config.phaseDryingColor)
+        setColor(colorPhaseMaillardColor, config.phaseMaillardColor)
+        setColor(colorPhaseDevelopmentColor, config.phaseDevelopmentColor)
+        setColor(colorPhaseLabelColor, config.phaseLabelColor)
+        cmbFontFamily.value = config.fontFamily
+        txtAxisFontSize.text = config.axisFontSize.toString()
+        txtMarkerFontSize.text = config.markerFontSize.toString()
 
         cmbGridStyle.value = when (config.gridStyle) {
             GridStyle.SOLID -> "Solid"
@@ -133,6 +189,18 @@ class AxesConfigController {
             tempAxisStep = tempStep,
             step100EventTemp = txtStep100Event.text.trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull(),
             legendLocation = legendLocation,
+            backgroundColor = txtChartBackground.text.trim().ifBlank { baseConfig.backgroundColor },
+            gridColor = txtGridColor.text.trim().ifBlank { baseConfig.gridColor },
+            axisLabelColor = txtAxisLabelColor.text.trim().ifBlank { baseConfig.axisLabelColor },
+            markerColor = txtMarkerColor.text.trim().ifBlank { baseConfig.markerColor },
+            markerLabelBackgroundColor = txtMarkerBgColor.text.trim().ifBlank { baseConfig.markerLabelBackgroundColor },
+            phaseDryingColor = txtPhaseDryingColor.text.trim().ifBlank { baseConfig.phaseDryingColor },
+            phaseMaillardColor = txtPhaseMaillardColor.text.trim().ifBlank { baseConfig.phaseMaillardColor },
+            phaseDevelopmentColor = txtPhaseDevelopmentColor.text.trim().ifBlank { baseConfig.phaseDevelopmentColor },
+            phaseLabelColor = txtPhaseLabelColor.text.trim().ifBlank { baseConfig.phaseLabelColor },
+            fontFamily = (cmbFontFamily.value ?: cmbFontFamily.editor.text).trim(),
+            axisFontSize = txtAxisFontSize.text.toDoubleOrNull()?.coerceIn(8.0, 32.0) ?: baseConfig.axisFontSize,
+            markerFontSize = txtMarkerFontSize.text.toDoubleOrNull()?.coerceIn(8.0, 32.0) ?: baseConfig.markerFontSize,
             gridStyle = gridStyle,
             gridTime = chkGridTime.isSelected,
             gridTemp = chkGridTemp.isSelected,
@@ -153,4 +221,28 @@ class AxesConfigController {
     private fun closeWindow() {
         (btnSave.scene?.window as? Stage)?.close()
     }
+
+    private fun bindColor(picker: ColorPicker, field: TextField) {
+        picker.valueProperty().addListener { _, _, color -> field.text = colorToHex(color) }
+        field.focusedProperty().addListener { _, _, focused ->
+            if (!focused) setColor(picker, field.text)
+        }
+    }
+
+    private fun setColor(picker: ColorPicker, hex: String?) {
+        val raw = hex?.trim().orEmpty()
+        if (raw.isBlank()) return
+        try {
+            picker.value = Color.web(raw)
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun colorToHex(color: Color): String =
+        String.format(
+            "#%02x%02x%02x",
+            (color.red * 255).toInt().coerceIn(0, 255),
+            (color.green * 255).toInt().coerceIn(0, 255),
+            (color.blue * 255).toInt().coerceIn(0, 255)
+        )
 }

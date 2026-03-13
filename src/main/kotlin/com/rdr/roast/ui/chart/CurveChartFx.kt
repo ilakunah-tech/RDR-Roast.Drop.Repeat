@@ -2,8 +2,10 @@ package com.rdr.roast.ui.chart
 
 import com.rdr.roast.app.ChartConfig
 import com.rdr.roast.app.ChartColors
+import com.rdr.roast.app.ExtraSensorChannelConfig
 import com.rdr.roast.app.GridStyle
 import com.rdr.roast.app.SettingsManager
+import com.rdr.roast.app.ThemeSettings
 import com.rdr.roast.domain.BetweenBatchLog
 import com.rdr.roast.domain.ControlEvent
 import com.rdr.roast.domain.ControlEventType
@@ -15,7 +17,6 @@ import javafx.application.Platform
 import org.jfree.chart.JFreeChart
 import org.jfree.chart.annotations.AbstractXYAnnotation
 import org.jfree.chart.annotations.XYAnnotation
-import org.jfree.chart.annotations.XYShapeAnnotation
 import org.jfree.chart.axis.AxisLocation
 import org.jfree.chart.axis.ValueAxis
 import org.jfree.chart.plot.Plot
@@ -29,6 +30,7 @@ import org.jfree.chart.plot.Marker
 import org.jfree.chart.plot.ValueMarker
 import org.jfree.chart.plot.XYPlot
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer
+import org.jfree.chart.renderer.xy.XYStepRenderer
 import org.jfree.chart.title.TextTitle
 import org.jfree.chart.ui.Layer
 import org.jfree.chart.ui.RectangleAnchor
@@ -39,10 +41,10 @@ import org.jfree.data.xy.XYSeriesCollection
 import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.Color
-import java.awt.Composite
 import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.geom.Rectangle2D
+import java.awt.geom.RoundRectangle2D
 import java.text.DecimalFormat
 import java.text.FieldPosition
 import java.text.NumberFormat
@@ -103,12 +105,18 @@ class CurveChartFx : CurveModelListener {
 
         private val CHART_FONT = Font(null, Font.PLAIN, 11)
         /** Высота одной полосы фазы (в пикселях). */
-        private const val PHASE_STRIP_HEIGHT = 10
+        private const val PHASE_STRIP_HEIGHT = 16
         /** Вертикальный зазор между строками полос (в пикселях). */
         private const val PHASE_STRIP_GAP = 4
         private const val BACKGROUND_STRIP_ALPHA = 0.55f
+        /** Artisan eventpositionbars: 0% maps to tempMin, 100% maps to tempMin + EVENT_BAND_RANGE. */
+        private const val EVENT_BAND_RANGE_FRACTION = 0.20
+        private const val EVENT_BAND_STRIPE_COUNT = 10
+        private const val EVENT_BAND_STRIPE_ALPHA = 0.07f
         /** RoR window in seconds (Artisan-style). */
         private const val ROR_DELTA_SEC = 30
+        /** First JFreeChart dataset index used for extra sensor channels. */
+        private const val EXTRA_DATASET_BASE = 13
     }
 
     // ── Series ────────────────────────────────────────────────────────────────
@@ -122,17 +130,22 @@ class CurveChartFx : CurveModelListener {
     private val refRorEtSeries = XYSeries("Ref RoR ET", false, true)
     private val refBbpBtSeries = XYSeries("Ref BBP BT", false, true)
     private val refBbpEtSeries = XYSeries("Ref BBP ET", false, true)
+    private val gasSeries  = XYSeries("Gas",  false, true)
+    private val airSeries  = XYSeries("Air",  false, true)
+    private val drumSeries = XYSeries("Drum", false, true)
 
     private val seriesMap = mutableMapOf<CurveModel, XYSeries>()
     /** Reference profile markers (Charge, TP, DE, FC, Drop) — removed when reference is cleared. */
     private val refMarkers = mutableListOf<Marker>()
+
+    /** Extra sensor series keyed by channel index (0-based). Dataset indices start at EXTRA_DATASET_BASE. */
+    private val extraSensorSeries = mutableMapOf<Int, XYSeries>()
 
     // ── The single plot (exposed for ChartPanelFx toolbar/reset) ─────────────
     val plot: XYPlot
     val chart: JFreeChart
 
     // ── Marker label stagger offset ───────────────────────────────────────────
-    private var markerOffset = 20.0
     /** Stagger offset for reference event markers so labels don't overlap. */
     private var refMarkerOffset = 5.0
 
@@ -141,6 +154,14 @@ class CurveChartFx : CurveModelListener {
 
     /** Single-marker event types: adding the same type again removes the previous marker. */
     private val markersByType = mutableMapOf<String, ValueMarker>()
+
+    /**
+     * All live domain markers that use vertical stacking (Charge, TP, DE, FC, SC, Drop,
+     * Comment, Gas, Air, Drum, etc.). Offset for each new marker = base + size * step.
+     */
+    private val allStackedMarkers = mutableListOf<Marker>()
+    private val stackedMarkerOffsetBase = 20.0
+    private val stackedMarkerOffsetStep = 14.0
 
     /** Time of Charge in raw ms (from recording start). Display X = raw - chargeOffsetMs when rebased; when reference is set we do not rebase so this stays 0 and ref is shifted to this position. */
     private var chargeOffsetMs: Long = 0L
@@ -155,6 +176,32 @@ class CurveChartFx : CurveModelListener {
         val dropMs: Long?
     )
 
+    /** Event band zebra-stripe background annotation (Artisan-style alternating bars). */
+    private val eventBandAnnotations = mutableListOf<XYAnnotation>()
+
+    private fun decodeColor(hex: String?, fallback: Color): Color {
+        val value = hex?.trim().orEmpty()
+        return try {
+            Color.decode(if (value.startsWith("#")) value else "#$value")
+        } catch (_: Exception) {
+            fallback
+        }
+    }
+
+    private fun chartFont(config: ChartConfig, size: Double): Font {
+        val family = config.fontFamily.trim()
+        val px = size.toInt().coerceAtLeast(8)
+        return if (family.isBlank()) Font(null, Font.PLAIN, px) else Font(family, Font.PLAIN, px)
+    }
+
+    private fun axisFont(config: ChartConfig): Font = chartFont(config, config.axisFontSize)
+    private fun markerFont(config: ChartConfig): Font = chartFont(config, config.markerFontSize)
+    private fun markerPaint(config: ChartConfig): Color = decodeColor(config.markerColor, COLOR_REF_MARKER)
+    private fun markerLabelBackground(config: ChartConfig): Color =
+        decodeColor(config.markerLabelBackgroundColor, Color.WHITE)
+    private fun phaseLabelPaint(config: ChartConfig): Color =
+        decodeColor(config.phaseLabelColor, Color.BLACK)
+
     /** Convert display time (chart X) to raw time for profile/callbacks. */
     fun toRawTime(displayMs: Long): Long = displayMs + chargeOffsetMs
 
@@ -168,6 +215,8 @@ class CurveChartFx : CurveModelListener {
     private var referencePhaseLocked: Boolean = false
     /** Last live phase-strip state, used to re-layout when reference strip appears/disappears. */
     private var lastLivePhaseStripState: LivePhaseStripState? = null
+    /** True when gas/air/drum step lines have data. */
+    private var controlEventsActive: Boolean = false
 
     /** When true, chart shows BBP curves (time 0..15 min) instead of roast; live pipeline updates ignored. */
     @Volatile
@@ -206,8 +255,10 @@ class CurveChartFx : CurveModelListener {
             isAutoRange       = false
             setRange(0.0, timeRangeMs)
             standardTickUnits = buildTimeTickUnits()
-            tickLabelFont     = CHART_FONT
-            labelFont         = CHART_FONT
+            tickLabelFont     = axisFont(config)
+            labelFont         = axisFont(config)
+            tickLabelPaint    = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
+            labelPaint        = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
         }
 
         // ── Left Y axis — temperature ──────────────────────────────────────────
@@ -215,8 +266,10 @@ class CurveChartFx : CurveModelListener {
             isAxisLineVisible = false
             isAutoRange       = false
             setRange(config.tempMin, config.tempMax)
-            tickLabelFont     = CHART_FONT
-            labelFont         = CHART_FONT
+            tickLabelFont     = axisFont(config)
+            labelFont         = axisFont(config)
+            tickLabelPaint    = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
+            labelPaint        = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
         }
 
         // ── Right Y axis — RoR ────────────────────────────────────────────────
@@ -225,16 +278,18 @@ class CurveChartFx : CurveModelListener {
             isAutoRange       = false
             setRange(config.rorMin, config.rorMax)
             standardTickUnits = buildRorTickUnits()
-            tickLabelFont     = CHART_FONT
-            labelFont         = CHART_FONT
+            tickLabelFont     = axisFont(config)
+            labelFont         = axisFont(config)
+            tickLabelPaint    = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
+            labelPaint        = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
         }
 
         val strokeBt = BasicStroke(config.btLineWidth)
         val strokeEt = BasicStroke(config.etLineWidth)
         val strokeRor = BasicStroke(config.rorLineWidth)
         val strokeRef = BasicStroke(config.refLineWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f, floatArrayOf(8f, 4f), 0f)
-        val bgColor = Color.decode(config.backgroundColor)
-        val gridColor = Color.decode(config.gridColor)
+        val bgColor = decodeColor(config.backgroundColor, Color.WHITE)
+        val gridColor = decodeColor(config.gridColor, Color(211, 211, 211))
 
         // ── Renderers ─────────────────────────────────────────────────────────
         val btRenderer = XYLineAndShapeRenderer(true, false).also {
@@ -330,6 +385,35 @@ class CurveChartFx : CurveModelListener {
             setRenderer(9, refBbpEtRenderer)
             mapDatasetToRangeAxis(9, 0)
 
+            // datasets 10-12 → Gas / Air / Drum step lines → left (temp) axis
+            val gasColor = decodeColor(null, COLOR_EVENT)
+            val airColor = COLOR_ET
+            val drumColor = decodeColor(null, COLOR_DRYING)
+            val gasRenderer = XYStepRenderer().apply {
+                setSeriesPaint(0, Color(gasColor.red, gasColor.green, gasColor.blue, 200))
+                setSeriesStroke(0, BasicStroke(1.5f))
+                defaultShapesVisible = false
+            }
+            val airRenderer = XYStepRenderer().apply {
+                setSeriesPaint(0, Color(airColor.red, airColor.green, airColor.blue, 200))
+                setSeriesStroke(0, BasicStroke(1.5f))
+                defaultShapesVisible = false
+            }
+            val drumRenderer = XYStepRenderer().apply {
+                setSeriesPaint(0, Color(drumColor.red, drumColor.green, drumColor.blue, 200))
+                setSeriesStroke(0, BasicStroke(1.5f))
+                defaultShapesVisible = false
+            }
+            setDataset(10, XYSeriesCollection(gasSeries))
+            setRenderer(10, gasRenderer)
+            mapDatasetToRangeAxis(10, 0)
+            setDataset(11, XYSeriesCollection(airSeries))
+            setRenderer(11, airRenderer)
+            mapDatasetToRangeAxis(11, 0)
+            setDataset(12, XYSeriesCollection(drumSeries))
+            setRenderer(12, drumRenderer)
+            mapDatasetToRangeAxis(12, 0)
+
             isOutlineVisible = false
             setBackgroundPaint(bgColor)
             setDomainGridlinePaint(gridColor)
@@ -414,6 +498,7 @@ class CurveChartFx : CurveModelListener {
             }
             for ((key, marker) in markersByType.toList()) {
                 plot.removeDomainMarker(marker as Marker)
+                val idx = allStackedMarkers.indexOf(marker)
                 val newVal = marker.value - offsetMs
                 val m = ValueMarker(newVal).apply {
                     stroke = marker.stroke
@@ -428,6 +513,7 @@ class CurveChartFx : CurveModelListener {
                 }
                 plot.addDomainMarker(m)
                 markersByType[key] = m
+                if (idx >= 0) allStackedMarkers[idx] = m
             }
             val timeRangeMs = lastChartConfig?.timeRangeMin?.times(60)?.times(1000)?.toDouble() ?: TIME_RANGE_MS
             // Artisan/Cropster-style: X axis 0..timeRange with 0 = Charge; no pre-heat band to avoid "many 00:00" labels
@@ -566,22 +652,23 @@ class CurveChartFx : CurveModelListener {
             c.airflow?.let { parts += "Airflow ${it.toInt()}" }
             c.text.takeIf { it.isNotBlank() }?.let { parts += it }
             val suffix = parts.joinToString(" · ").ifBlank { "Comment" }
-            addBbpRefMarker(xMs, "Ref: $suffix", RectangleAnchor.TOP_RIGHT, TextAnchor.TOP_LEFT, refMarkerOffset)
+            addBbpRefMarker(xMs, "Ref: $suffix", RectangleAnchor.TOP_LEFT, TextAnchor.TOP_RIGHT, refMarkerOffset)
             refMarkerOffset += 14.0
         }
     }
 
     private fun addBbpRefMarker(xMs: Double, label: String, anchor: RectangleAnchor, textAnchor: TextAnchor, offset: Double) {
+        val config = lastChartConfig ?: ChartConfig()
         val marker = ValueMarker(xMs).apply {
             stroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(6f, 3f), 0f)
-            paint = COLOR_REF_MARKER
-            labelPaint = COLOR_REF_MARKER
-            labelBackgroundColor = COLOR_TRANSPARENT
+            paint = markerPaint(config)
+            labelPaint = markerPaint(config)
+            labelBackgroundColor = markerLabelBackground(config)
             this.label = label
             labelAnchor = anchor
             labelTextAnchor = textAnchor
             labelOffset = RectangleInsets(offset, 0.0, 0.0, 5.0)
-            labelFont = CHART_FONT
+            labelFont = markerFont(config)
         }
         plot.addDomainMarker(marker)
         bbpRefMarkers.add(marker)
@@ -604,14 +691,15 @@ class CurveChartFx : CurveModelListener {
             refBbpEtSeries.clear()
             refMarkers.forEach { plot.removeDomainMarker(it) }
             refMarkers.clear()
-            markersByType.values.forEach { plot.removeDomainMarker(it as Marker) }
+            markersByType.values.forEach { plot.removeDomainMarker(it as Marker); allStackedMarkers.remove(it) }
             markersByType.clear()
-            markerOffset = 20.0
             refMarkerOffset = 5.0
             phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             phaseStripAnnotations.clear()
             backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             backgroundPhaseStripAnnotations.clear()
+            clearControlLaneAnnotations()
+            clearControlEventAnnotations()
             referencePhaseActive = false
             referencePhaseLocked = false
             lastLivePhaseStripState = null
@@ -678,26 +766,34 @@ class CurveChartFx : CurveModelListener {
     /**
      * Add a vertical domain marker with a label.
      * For single-type events (Charge, TP, DE, FC, Drop), the previous marker of that type is removed.
+     * Each new marker is drawn lower than the previous so all markers (event + control) don't overlap.
      */
     fun addEventMarker(timeMs: Long, label: String, color: Color = COLOR_EVENT) {
         val key = eventTypeKey(label)
         val displayMs = timeMs - chargeOffsetMs
         Platform.runLater {
-            key?.let { markersByType[it]?.let { old -> plot.removeDomainMarker(old as Marker) } }
+            val config = lastChartConfig ?: ChartConfig()
+            key?.let { k ->
+                markersByType[k]?.let { old ->
+                    plot.removeDomainMarker(old as Marker)
+                    allStackedMarkers.remove(old)
+                }
+            }
+            val offsetY = stackedMarkerOffsetBase + allStackedMarkers.size * stackedMarkerOffsetStep
             val marker = ValueMarker(displayMs.toDouble()).apply {
                 stroke          = STROKE_MARKER
                 paint           = color
                 labelPaint      = color
-                labelBackgroundColor = COLOR_TRANSPARENT
+                labelBackgroundColor = markerLabelBackground(config)
                 this.label      = label
                 labelAnchor     = RectangleAnchor.TOP_RIGHT
                 labelTextAnchor = TextAnchor.TOP_LEFT
-                labelOffset     = RectangleInsets(markerOffset, 0.0, 0.0, 5.0)
-                labelFont       = CHART_FONT
+                labelOffset     = RectangleInsets(offsetY, 0.0, 0.0, 5.0)
+                labelFont       = markerFont(config)
             }
             plot.addDomainMarker(marker)
             key?.let { markersByType[it] = marker }
-            markerOffset += 14.0
+            allStackedMarkers.add(marker)
         }
     }
 
@@ -722,6 +818,171 @@ class CurveChartFx : CurveModelListener {
     fun setEndMarker(timeMs: Long, label: String = "Drop") =
         addEventMarker(timeMs, label, COLOR_MARKER)
 
+    // ── In-chart control events (Artisan-style step lines on main Y axis) ──────
+
+    /**
+     * Maps a control event value (0-100%) to the left Y-axis (temperature).
+     * Artisan uses `eventpositionbars`: value 0 → bottom of temp axis,
+     * value 100 → tempMin + 20% of the temperature range.
+     * Zebra-stripe background bands mark the 10% intervals.
+     */
+    private fun eventValueToTempY(value: Double): Double {
+        val config = lastChartConfig ?: ChartConfig()
+        val bot = config.tempMin
+        val range = (config.tempMax - config.tempMin) * EVENT_BAND_RANGE_FRACTION
+        return bot + (value / 100.0).coerceIn(0.0, 1.0) * range
+    }
+
+    private fun clearControlLaneAnnotations() {
+        gasSeries.clear()
+        airSeries.clear()
+        drumSeries.clear()
+        eventBandAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
+        eventBandAnnotations.clear()
+        controlEventsActive = false
+    }
+
+    private fun ensureEventBandStripes() {
+        if (eventBandAnnotations.isNotEmpty()) return
+        val config = lastChartConfig ?: ChartConfig()
+        val bot = config.tempMin
+        val range = (config.tempMax - config.tempMin) * EVENT_BAND_RANGE_FRACTION
+        val step = range / EVENT_BAND_STRIPE_COUNT
+        for (i in 0 until EVENT_BAND_STRIPE_COUNT) {
+            if (i % 2 != 0) continue
+            val y = bot + i * step
+            val stripe = EventBandStripeAnnotation(y, step)
+            plot.getRenderer(0).addAnnotation(stripe, Layer.BACKGROUND)
+            eventBandAnnotations.add(stripe)
+        }
+    }
+
+    /** Artisan-style alternating zebra bars behind the event step lines. */
+    private inner class EventBandStripeAnnotation(
+        private val yBottom: Double,
+        private val height: Double
+    ) : AbstractXYAnnotation() {
+        override fun draw(
+            g2: Graphics2D,
+            plot: XYPlot,
+            dataArea: Rectangle2D,
+            domainAxis: ValueAxis,
+            rangeAxis: ValueAxis,
+            rendererIndex: Int,
+            info: PlotRenderingInfo?
+        ) {
+            val rangeEdge = Plot.resolveRangeAxisLocation(plot.rangeAxisLocation, PlotOrientation.VERTICAL)
+            val py1 = rangeAxis.valueToJava2D(yBottom, dataArea, rangeEdge)
+            val py2 = rangeAxis.valueToJava2D(yBottom + height, dataArea, rangeEdge)
+            val top = minOf(py1, py2)
+            val h = kotlin.math.abs(py1 - py2)
+            val saved = g2.composite
+            g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, EVENT_BAND_STRIPE_ALPHA)
+            g2.paint = Color(140, 140, 140)
+            g2.fill(Rectangle2D.Double(dataArea.minX, top, dataArea.width, h))
+            g2.composite = saved
+        }
+    }
+
+    fun updateControlEvents(events: List<ControlEvent>, chargeOffsetSec: Double) {
+        Platform.runLater {
+            clearControlLaneAnnotations()
+            chart.isNotify = false
+
+            fun populateSeries(
+                series: XYSeries,
+                type: ControlEventType,
+                events: List<ControlEvent>,
+                chargeOffsetSec: Double
+            ) {
+                val sorted = events.filter { it.type == type }.sortedBy { it.timeSec }
+                if (sorted.isEmpty()) return
+                sorted.forEach { event ->
+                    val xMs = (event.timeSec - chargeOffsetSec) * 1000.0
+                    if (xMs >= 0.0) {
+                        series.add(xMs, eventValueToTempY(event.value))
+                    }
+                }
+            }
+
+            populateSeries(gasSeries, ControlEventType.GAS, events, chargeOffsetSec)
+            populateSeries(airSeries, ControlEventType.AIR, events, chargeOffsetSec)
+            populateSeries(drumSeries, ControlEventType.DRUM, events, chargeOffsetSec)
+
+            controlEventsActive = gasSeries.itemCount > 0 || airSeries.itemCount > 0 || drumSeries.itemCount > 0
+            if (controlEventsActive) {
+                ensureEventBandStripes()
+            }
+            chart.isNotify = true
+            chart.fireChartChanged()
+        }
+    }
+
+    /** Vertical domain markers for slider changes (same format as Charge/TP/DE/FC/Drop). */
+    private val controlEventMarkers = mutableListOf<Marker>()
+
+    /**
+     * Adds a vertical domain marker for a control event. Uses the same stacking as event markers
+     * (Charge, TP, Comment, etc.) so each subsequent marker is drawn lower and nothing overlaps.
+     */
+    fun addControlEventMarker(
+        timeMs: Long,
+        eventType: ControlEventType,
+        value: Double,
+        displayString: String?
+    ) {
+        val displayMs = (timeMs - chargeOffsetMs).toDouble()
+        if (displayMs < 0) return
+        val color = when (eventType) {
+            ControlEventType.GAS -> (plot.getRenderer(10)?.getSeriesPaint(0) as? Color) ?: COLOR_EVENT
+            ControlEventType.AIR -> (plot.getRenderer(11)?.getSeriesPaint(0) as? Color) ?: COLOR_ET
+            ControlEventType.DRUM -> (plot.getRenderer(12)?.getSeriesPaint(0) as? Color) ?: COLOR_DRYING
+            ControlEventType.DAMPER -> COLOR_EVENT
+            ControlEventType.BURNER -> Color(0xEA, 0x58, 0x0C)
+        }
+        val label = displayString?.takeIf { it.isNotBlank() }
+            ?: buildControlEventMarkerLabel(eventType, value)
+
+        Platform.runLater {
+            val config = lastChartConfig ?: ChartConfig()
+            val offsetY = stackedMarkerOffsetBase + allStackedMarkers.size * stackedMarkerOffsetStep
+            val marker = ValueMarker(displayMs).apply {
+                stroke          = STROKE_MARKER
+                paint           = color
+                labelPaint      = color
+                labelBackgroundColor = markerLabelBackground(config)
+                this.label      = label
+                labelAnchor     = RectangleAnchor.TOP_RIGHT
+                labelTextAnchor = TextAnchor.TOP_LEFT
+                labelOffset     = RectangleInsets(offsetY, 0.0, 0.0, 5.0)
+                labelFont       = markerFont(config)
+            }
+            plot.addDomainMarker(marker)
+            controlEventMarkers.add(marker)
+            allStackedMarkers.add(marker)
+        }
+    }
+
+    private fun buildControlEventMarkerLabel(type: ControlEventType, value: Double): String {
+        val v = if (kotlin.math.abs(value - value.toInt()) < 0.01) {
+            value.toInt().toString()
+        } else {
+            "%.1f".format(value)
+        }
+        return when (type) {
+            ControlEventType.GAS -> "Gas $v%"
+            ControlEventType.AIR -> "Air $v%"
+            ControlEventType.DRUM -> "Drum $v"
+            ControlEventType.DAMPER -> "Damper $v%"
+            ControlEventType.BURNER -> "Burner $v%"
+        }
+    }
+
+    private fun clearControlEventAnnotations() {
+        controlEventMarkers.forEach { plot.removeDomainMarker(it); allStackedMarkers.remove(it) }
+        controlEventMarkers.clear()
+    }
+
     // ── Phase strip (Cropster-style bar at bottom of chart) ─────────────────────
 
     private inner class PhaseStripAnnotation(
@@ -745,26 +1006,30 @@ class CurveChartFx : CurveModelListener {
             val j2dx1 = domainAxis.valueToJava2D(x1Ms, dataArea, edge)
             val j2dx2 = domainAxis.valueToJava2D(x2Ms, dataArea, edge)
 
-            // Две логически независимые полосы:
-            // rowIndex = 0 → reference: у оси времени (внизу, как в Cropster).
-            // rowIndex = 1 → live: в самом верху области данных, чтобы вообще не пересекаться по Y.
             val y = when (rowIndex) {
-                0 -> dataArea.maxY - PHASE_STRIP_HEIGHT
+                0 -> dataArea.maxY - PHASE_STRIP_HEIGHT - 4.0
                 else -> dataArea.minY + 5.0
             }
             val w = (j2dx2 - j2dx1).coerceAtLeast(1.0)
             val savedComposite = g2.composite
-            g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.85f)
+            val strip = RoundRectangle2D.Double(j2dx1, y, w, PHASE_STRIP_HEIGHT.toDouble(), 10.0, 10.0)
+            g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.92f)
             g2.paint = color
-            g2.fill(java.awt.geom.Rectangle2D.Double(j2dx1, y, w, PHASE_STRIP_HEIGHT.toDouble()))
+            g2.fill(strip)
+            g2.paint = Color(color.red, color.green, color.blue, 140)
+            g2.stroke = BasicStroke(1f)
+            g2.draw(strip)
             g2.composite = savedComposite
             if (!label.isNullOrBlank()) {
-                g2.color = Color.BLACK
-                g2.font = CHART_FONT
+                val config = lastChartConfig ?: ChartConfig()
+                g2.color = phaseLabelPaint(config)
+                g2.font = markerFont(config)
                 val fm = g2.fontMetrics
-                val tx = (j2dx1 + w / 2 - fm.stringWidth(label) / 2.0).toFloat()
-                val ty = (y + (PHASE_STRIP_HEIGHT + fm.ascent) / 2.0 - 1).toFloat()
-                g2.drawString(label, tx, ty)
+                if (w > fm.stringWidth(label) + 12) {
+                    val tx = (j2dx1 + w / 2 - fm.stringWidth(label) / 2.0).toFloat()
+                    val ty = (y + (PHASE_STRIP_HEIGHT + fm.ascent) / 2.0 - 1).toFloat()
+                    g2.drawString(label, tx, ty)
+                }
             }
         }
     }
@@ -787,6 +1052,7 @@ class CurveChartFx : CurveModelListener {
     }
 
     private fun redrawLivePhaseStripFromState(state: LivePhaseStripState) {
+        val config = lastChartConfig ?: ChartConfig()
         val end = (state.endMs - chargeOffsetMs).toDouble().coerceAtLeast(0.0)
         val drop = state.dropMs?.let { (it - chargeOffsetMs).toDouble().coerceAtLeast(0.0) }
         val phaseEnd = drop ?: end
@@ -801,7 +1067,7 @@ class CurveChartFx : CurveModelListener {
             val durSec = dryingEnd / 1000.0
             val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
             val label = "Drying ${formatPhaseDuration(durSec)} $pct%"
-            val a = PhaseStripAnnotation(0.0, dryingEnd, COLOR_DRYING, label, liveRow)
+            val a = PhaseStripAnnotation(0.0, dryingEnd, decodeColor(config.phaseDryingColor, COLOR_DRYING), label, liveRow)
             plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
             phaseStripAnnotations.add(a)
         }
@@ -812,7 +1078,7 @@ class CurveChartFx : CurveModelListener {
                 val durSec = (maillardEnd - maillardStart) / 1000.0
                 val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
                 val label = "Maillard ${formatPhaseDuration(durSec)} $pct%"
-                val a = PhaseStripAnnotation(maillardStart, maillardEnd, COLOR_MAILLARD, label, liveRow)
+                val a = PhaseStripAnnotation(maillardStart, maillardEnd, decodeColor(config.phaseMaillardColor, COLOR_MAILLARD), label, liveRow)
                 plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
                 phaseStripAnnotations.add(a)
             }
@@ -823,7 +1089,7 @@ class CurveChartFx : CurveModelListener {
             val durSec = (devEnd - fc) / 1000.0
             val pct = if (totalSec > 0) (durSec / totalSec * 100).toInt() else 0
             val label = "Development ${formatPhaseDuration(durSec)} $pct%"
-            val a = PhaseStripAnnotation(fc, devEnd, COLOR_DEVELOPMENT, label, liveRow)
+            val a = PhaseStripAnnotation(fc, devEnd, decodeColor(config.phaseDevelopmentColor, COLOR_DEVELOPMENT), label, liveRow)
             plot.getRenderer(0).addAnnotation(a, Layer.FOREGROUND)
             phaseStripAnnotations.add(a)
         }
@@ -987,6 +1253,7 @@ class CurveChartFx : CurveModelListener {
         ControlEventType.AIR -> "Air"
         ControlEventType.DRUM -> "Drum"
         ControlEventType.DAMPER -> "Damper"
+        ControlEventType.BURNER -> "Burner"
     }
 
     private fun refEventLabel(type: com.rdr.roast.domain.EventType, timeSec: Double, bt: Double?, et: Double?): String {
@@ -1003,16 +1270,17 @@ class CurveChartFx : CurveModelListener {
     }
 
     private fun addReferenceEventMarker(timeMs: Long, label: String) {
+        val config = lastChartConfig ?: ChartConfig()
         val marker = ValueMarker(timeMs.toDouble()).apply {
-            stroke = STROKE_MARKER
-            paint = COLOR_REF_MARKER
-            labelPaint = COLOR_REF_MARKER
-            labelBackgroundColor = COLOR_TRANSPARENT
+            stroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(6f, 3f), 0f)
+            paint = markerPaint(config)
+            labelPaint = markerPaint(config)
+            labelBackgroundColor = markerLabelBackground(config)
             this.label = label
-            labelAnchor = RectangleAnchor.TOP_RIGHT
-            labelTextAnchor = TextAnchor.TOP_LEFT
-            labelOffset = RectangleInsets(refMarkerOffset, 0.0, 0.0, 5.0)
-            labelFont = CHART_FONT
+            labelAnchor = RectangleAnchor.TOP_LEFT
+            labelTextAnchor = TextAnchor.TOP_RIGHT
+            labelOffset = RectangleInsets(refMarkerOffset, 5.0, 0.0, 0.0)
+            labelFont = markerFont(config)
         }
         plot.addDomainMarker(marker)
         refMarkers.add(marker)
@@ -1088,6 +1356,8 @@ class CurveChartFx : CurveModelListener {
             phaseStripAnnotations.clear()
             backgroundPhaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
             backgroundPhaseStripAnnotations.clear()
+            clearControlLaneAnnotations()
+            clearControlEventAnnotations()
             referencePhaseActive = false
             referencePhaseLocked = false
             referenceBbpLog = null
@@ -1095,8 +1365,92 @@ class CurveChartFx : CurveModelListener {
             bbpRefMarkers.clear()
             lastLivePhaseStripState = null
             markersByType.clear()
-            markerOffset = 20.0
+            allStackedMarkers.clear()
             refMarkerOffset = 5.0
+            extraSensorSeries.values.forEach { it.clear() }
+            chart.isNotify = true
+        }
+    }
+
+    /**
+     * Configure extra sensor curves from preset config. Removes previous extra sensor datasets
+     * and creates new ones with specified labels and colors.
+     * Each ExtraSensorChannelConfig has two channels (label1/color1, label2/color2).
+     * Channel indices: device 0 → ch 0,1; device 1 → ch 2,3; etc.
+     */
+    fun configureExtraSensors(configs: List<ExtraSensorChannelConfig>) {
+        Platform.runLater {
+            chart.isNotify = false
+            for ((_, series) in extraSensorSeries) {
+                series.clear()
+            }
+            extraSensorSeries.clear()
+            for (i in 0 until 20) {
+                val dsIdx = EXTRA_DATASET_BASE + i
+                if (plot.datasetCount > dsIdx) {
+                    plot.setDataset(dsIdx, null)
+                    plot.setRenderer(dsIdx, null)
+                }
+            }
+
+            var channelOffset = 0
+            for (cfg in configs) {
+                if (cfg.label1.isNotBlank() && cfg.curveVisible1) {
+                    val ch = channelOffset
+                    val series = XYSeries(cfg.label1, false, true)
+                    extraSensorSeries[ch] = series
+                    val dsIdx = EXTRA_DATASET_BASE + ch
+                    val renderer = XYLineAndShapeRenderer(true, false).also {
+                        it.setSeriesPaint(0, decodeColor(cfg.color1, Color.GRAY))
+                        it.setSeriesStroke(0, BasicStroke(1.5f))
+                    }
+                    plot.setDataset(dsIdx, XYSeriesCollection(series))
+                    plot.setRenderer(dsIdx, renderer)
+                    plot.mapDatasetToRangeAxis(dsIdx, 0)
+                }
+                if (cfg.label2.isNotBlank() && cfg.curveVisible2) {
+                    val ch = channelOffset + 1
+                    val series = XYSeries(cfg.label2, false, true)
+                    extraSensorSeries[ch] = series
+                    val dsIdx = EXTRA_DATASET_BASE + ch
+                    val renderer = XYLineAndShapeRenderer(true, false).also {
+                        it.setSeriesPaint(0, decodeColor(cfg.color2, Color.GRAY))
+                        it.setSeriesStroke(0, BasicStroke(1.5f))
+                    }
+                    plot.setDataset(dsIdx, XYSeriesCollection(series))
+                    plot.setRenderer(dsIdx, renderer)
+                    plot.mapDatasetToRangeAxis(dsIdx, 0)
+                }
+                channelOffset += 2
+            }
+            chart.isNotify = true
+        }
+    }
+
+    /** Add a data point for an extra sensor channel (called during live recording). */
+    fun addExtraSensorPoint(channelIndex: Int, timeMs: Long, value: Double) {
+        if (bbpMode) return
+        val series = extraSensorSeries[channelIndex] ?: return
+        val displayMs = (timeMs - chargeOffsetMs).toDouble()
+        Platform.runLater {
+            series.add(displayMs, value, true)
+        }
+    }
+
+    /** Bulk-update extra sensor series from profile data (e.g. when loading a profile). */
+    fun updateExtraSensors(extraTemp: Map<Int, List<Double>>, timex: List<Double>) {
+        Platform.runLater {
+            chart.isNotify = false
+            for ((ch, series) in extraSensorSeries) {
+                series.clear()
+                val values = extraTemp[ch] ?: continue
+                val n = minOf(timex.size, values.size)
+                for (i in 0 until n) {
+                    val displayMs = timex[i] * 1000.0 - chargeOffsetMs
+                    series.add(displayMs, values[i], false)
+                }
+                series.fireSeriesChanged()
+            }
             chart.isNotify = true
         }
     }
@@ -1122,22 +1476,90 @@ class CurveChartFx : CurveModelListener {
         }
     }
 
+    fun applyTheme(theme: ThemeSettings) {
+        Platform.runLater {
+            val config = lastChartConfig ?: ChartConfig()
+            val defaults = ChartConfig()
+            val axisPaint = decodeColor(theme.charts.axisLabelColor, Color.DARK_GRAY)
+            val bgPaint = decodeColor(theme.charts.backgroundColor, Color.WHITE)
+            val gridPaint = decodeColor(theme.charts.gridColor, Color(211, 211, 211))
+            val markerPaint = axisPaint
+            val markerLabelBg = Color(bgPaint.red, bgPaint.green, bgPaint.blue, 220)
+            if (config.axisLabelColor == defaults.axisLabelColor) {
+                plot.domainAxis.labelPaint = axisPaint
+                plot.domainAxis.tickLabelPaint = axisPaint
+                plot.rangeAxis.labelPaint = axisPaint
+                plot.rangeAxis.tickLabelPaint = axisPaint
+                plot.getRangeAxis(1)?.labelPaint = axisPaint
+                plot.getRangeAxis(1)?.tickLabelPaint = axisPaint
+            }
+            if (config.backgroundColor == defaults.backgroundColor) {
+                plot.setBackgroundPaint(bgPaint)
+                chart.setBackgroundPaint(bgPaint)
+            }
+            if (config.gridColor == defaults.gridColor) {
+                plot.setDomainGridlinePaint(gridPaint)
+                plot.setRangeGridlinePaint(gridPaint)
+            }
+            if (config.markerColor == defaults.markerColor || config.markerLabelBackgroundColor == defaults.markerLabelBackgroundColor) {
+                refMarkers.filterIsInstance<ValueMarker>().forEach { marker ->
+                    if (config.markerColor == defaults.markerColor) {
+                        marker.paint = markerPaint
+                        marker.labelPaint = markerPaint
+                    }
+                    if (config.markerLabelBackgroundColor == defaults.markerLabelBackgroundColor) {
+                        marker.labelBackgroundColor = markerLabelBg
+                    }
+                }
+                bbpRefMarkers.filterIsInstance<ValueMarker>().forEach { marker ->
+                    if (config.markerColor == defaults.markerColor) {
+                        marker.paint = markerPaint
+                        marker.labelPaint = markerPaint
+                    }
+                    if (config.markerLabelBackgroundColor == defaults.markerLabelBackgroundColor) {
+                        marker.labelBackgroundColor = markerLabelBg
+                    }
+                }
+                markersByType.values.filterIsInstance<ValueMarker>().forEach { marker ->
+                    if (config.markerLabelBackgroundColor == defaults.markerLabelBackgroundColor) {
+                        marker.labelBackgroundColor = markerLabelBg
+                    }
+                }
+            }
+            chart.fireChartChanged()
+        }
+    }
+
     /** Apply chart config (axes, grid, line widths). */
     fun applyChartConfig(config: ChartConfig) {
         Platform.runLater {
             lastChartConfig = config
+            val axisPaint = decodeColor(config.axisLabelColor, Color.DARK_GRAY)
+            val backgroundPaint = decodeColor(config.backgroundColor, Color.WHITE)
             val (timeMinMs, timeMaxMs) = if (config.timeAxisLock || !config.timeAxisAuto) {
                 config.timeAxisMin * 60.0 * 1000.0 to config.timeAxisMax * 60.0 * 1000.0
             } else {
                 0.0 to (config.timeRangeMin * 60 * 1000.0)
             }
             plot.domainAxis.setRange(timeMinMs, timeMaxMs)
+            plot.domainAxis.tickLabelFont = axisFont(config)
+            plot.domainAxis.labelFont = axisFont(config)
+            plot.domainAxis.tickLabelPaint = axisPaint
+            plot.domainAxis.labelPaint = axisPaint
             if (config.timeAxisStepSec > 0) {
                 (plot.domainAxis as? NumberAxis)?.setTickUnit(NumberTickUnit((config.timeAxisStepSec * 1000).toDouble(), MmSsFormat()))
             }
             plot.getRangeAxis(0).setRange(config.tempMin, config.tempMax)
+            plot.getRangeAxis(0).tickLabelFont = axisFont(config)
+            plot.getRangeAxis(0).labelFont = axisFont(config)
+            plot.getRangeAxis(0).tickLabelPaint = axisPaint
+            plot.getRangeAxis(0).labelPaint = axisPaint
             (plot.getRangeAxis(0) as? NumberAxis)?.setTickUnit(NumberTickUnit(config.tempAxisStep.coerceIn(1.0, 100.0)))
             plot.getRangeAxis(1).setRange(config.deltaMin, config.deltaMax)
+            plot.getRangeAxis(1).tickLabelFont = axisFont(config)
+            plot.getRangeAxis(1).labelFont = axisFont(config)
+            plot.getRangeAxis(1).tickLabelPaint = axisPaint
+            plot.getRangeAxis(1).labelPaint = axisPaint
             (plot.getRangeAxis(1) as? NumberAxis)?.setTickUnit(NumberTickUnit(config.deltaStep.coerceIn(0.5, 50.0)))
             (plot.getRenderer(0) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.btLineWidth))
             (plot.getRenderer(1) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, BasicStroke(config.etLineWidth))
@@ -1150,13 +1572,30 @@ class CurveChartFx : CurveModelListener {
             (plot.getRenderer(7) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
             (plot.getRenderer(8) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
             (plot.getRenderer(9) as? XYLineAndShapeRenderer)?.setSeriesStroke(0, refStroke)
-            plot.setBackgroundPaint(Color.decode(config.backgroundColor))
+            plot.setBackgroundPaint(backgroundPaint)
+            chart.setBackgroundPaint(backgroundPaint)
             val gridStroke = gridStrokeFromConfig(config)
             val gridPaint = gridPaintFromConfig(config)
             plot.setDomainGridlineStroke(gridStroke)
             plot.setRangeGridlineStroke(gridStroke)
             plot.setDomainGridlinePaint(gridPaint)
             plot.setRangeGridlinePaint(gridPaint)
+            refMarkers.filterIsInstance<ValueMarker>().forEach { marker ->
+                marker.paint = markerPaint(config)
+                marker.labelPaint = markerPaint(config)
+                marker.labelBackgroundColor = markerLabelBackground(config)
+                marker.labelFont = markerFont(config)
+            }
+            bbpRefMarkers.filterIsInstance<ValueMarker>().forEach { marker ->
+                marker.paint = markerPaint(config)
+                marker.labelPaint = markerPaint(config)
+                marker.labelBackgroundColor = markerLabelBackground(config)
+                marker.labelFont = markerFont(config)
+            }
+            markersByType.values.forEach { marker ->
+                marker.labelBackgroundColor = markerLabelBackground(config)
+                marker.labelFont = markerFont(config)
+            }
             plot.isDomainGridlinesVisible = config.showGrid && config.gridTime
             plot.isRangeGridlinesVisible = config.showGrid && config.gridTemp
             applySeriesVisibility(config)
@@ -1206,7 +1645,7 @@ class CurveChartFx : CurveModelListener {
     }
 
     private fun gridPaintFromConfig(config: ChartConfig): Color {
-        val base = Color.decode(config.gridColor)
+        val base = decodeColor(config.gridColor, Color(211, 211, 211))
         val alpha = (config.gridOpaqueness.coerceIn(0.1, 1.0) * 255.0).toInt().coerceIn(0, 255)
         return Color(
             base.red.coerceIn(0, 255),

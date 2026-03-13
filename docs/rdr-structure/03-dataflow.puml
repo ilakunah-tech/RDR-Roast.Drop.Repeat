@@ -1,0 +1,56 @@
+@startuml RDR Data Flow
+!theme plain
+title RDR — Поток данных: оборудование → запись → UI
+
+actor User as user
+participant "MainController\n(UI)" as MC
+participant "RoastRecorder" as RR
+participant "SamplingEngine" as SE
+participant "RoastDataSource\n(Besca/Diedrich/Simulator)" as DS
+participant "RoastProfile\n(domain)" as RP
+participant "CurveChartFx\n(JFreeChart)" as Chart
+
+== Подключение ==
+user -> MC : Connect (настройки из Settings)
+MC -> RR : connect()
+RR -> DS : connect()
+DS --> RR : connectionState() → Connected
+RR --> MC : stateFlow = MONITORING
+
+== Начало записи ==
+user -> MC : Start
+MC -> RR : startRecording()
+RR -> RR : new RoastProfile()
+RR -> SE : start { sample -> profile.addSample(sample) }
+SE -> DS : sampleFlow().collect()
+
+loop Каждый опрос (pollingIntervalMs)
+  DS -> DS : read BT/ET registers (MODBUS) or simulate
+  DS --> SE : emit TemperatureSample(timeSec, bt, et)
+  SE -> RP : addSample(sample)
+  RP --> RR : currentProfile updated
+  RR --> MC : currentProfile.asStateFlow()
+  MC -> Chart : обновить кривые (timex, temp1, temp2)
+  Chart --> user : отрисовка графика
+end
+
+== События и комментарии ==
+user -> MC : Event (Charge / FC / Drop) или Comment
+MC -> RR : profile.addEvent() / addComment()
+RR -> RP : append to events / comments
+MC -> Chart : fireCurveChanged()
+Chart --> user : маркеры на графике
+
+== Управление (gas/air/drum) ==
+user -> MC : Slider / Button
+MC -> DS : setControl(id, value)  [если RoastControl]
+note right of DS : MODBUS write register/coil
+
+== Остановка ==
+user -> MC : Stop
+MC -> RR : stopRecording()
+RR -> SE : stop()
+SE -> DS : cancel collect
+MC -> MC : Save profile (ProfileStorage) / Finish dialog
+
+@enduml

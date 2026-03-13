@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.rdr.roast.ui.graph.GraphRoRTabController"
+      spacing="12">
+    <padding>
+        <Insets top="0" right="0" bottom="0" left="0"/>
+    </padding>
+
+    <!-- Rate of Rise Curves -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Rate of Rise Curves" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <CheckBox fx:id="chkDeltaET" text="Δ ET" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <CheckBox fx:id="chkDeltaBT" text="Δ BT" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Delta Span" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <ComboBox fx:id="cmbDeltaETspan" prefWidth="80" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <ComboBox fx:id="cmbDeltaBTspan" prefWidth="80" styleClass="secondary-combo" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+            <CheckBox fx:id="chkETProject" text="ET Projection" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <CheckBox fx:id="chkBTProject" text="BT Projection" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+            <Label text="Projection" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+            <ComboBox fx:id="cmbProjectionMode" prefWidth="120" styleClass="secondary-combo" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+            <CheckBox fx:id="chkProjectDelta" text="Δ Projection" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+        </GridPane>
+    </VBox>
+
+    <!-- Rate of Rise LCDs -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Rate of Rise LCDs" styleClass="secondary-section-title"/>
+        <HBox spacing="15" alignment="CENTER_LEFT">
+            <CheckBox fx:id="chkDeltaETlcd" text="Δ ET LCD"/>
+            <CheckBox fx:id="chkDeltaBTlcd" text="Δ BT LCD"/>
+            <CheckBox fx:id="chkSwapDeltaLcds" text="Swap"/>
+        </HBox>
+    </VBox>
+
+    <!-- RoR Symbolic Assignments -->
+    <VBox spacing="10" styleClass="secondary-section-card">
+        <Label text="Rate of Rise Symbolic Assignments" styleClass="secondary-section-title"/>
+        <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
+            <Label text="Δ ET Y(x)" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <TextField fx:id="txtDeltaETfunction" prefWidth="200" promptText="e.g. ET" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Δ BT Y(x)" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <TextField fx:id="txtDeltaBTfunction" prefWidth="200" promptText="e.g. BT" styleClass="secondary-input" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        </GridPane>
+    </VBox>
+</VBox>

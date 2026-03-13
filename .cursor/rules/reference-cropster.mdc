@@ -9,7 +9,7 @@ alwaysApply: true
 
 1. **Сначала** изучить или взять логику/код из референсов:
    - **Cropster** → `C:\Users\ilaku\Downloads\1_extracted`
-   - **Artisan** → `D:\project\Projects\artisantest-master`
+   - **Artisan** → код: `D:\project\Projects\artisantest-master`; документация по функционалу: https://artisan-scope.org/docs/
 2. **Затем** применять обновления в RDR (`D:\project\Projects\RDR-roast.drop.repeat`): переписывать логику на Kotlin в структуре RDR, не копировать код дословно.
 
 Когда пользователь просит реализовать что-то **«как в Cropster»**, **«повтори как в Cropster»**, **«скопировать/перенести из Cropster»** — искать в указанных путях, понять реализацию, потом писать/менять код в RDR. Использовать маппинг **Cropster Help → 1_extracted** ниже.
@@ -52,6 +52,7 @@ When implementing or refining RDR features (RoR, chart, phases, drivers), use th
 ## Artisan reference location
 
 - **Path**: `D:\project\Projects\artisantest-master`
+- **Official docs**: https://artisan-scope.org/docs/ — Getting Started, Roasting (Properties, Background, Cup Profile), Configuration (Sampling, Curves, Events, Alarms, Phases, Statistics, Axes, Themes, etc.), Tools, Views, Reports, Tutorials. Использовать для понимания функционала и терминологии Artisan.
 - Use when the user asks how something is implemented **in Artisan**.
 
 ### Подключение ростера/логгера в Artisan

@@ -1,5 +1,6 @@
 package com.rdr.roast.ui.control
 
+import com.rdr.roast.app.AppearanceSupport
 import com.rdr.roast.app.AppSettings
 import com.rdr.roast.app.SettingsManager
 import com.rdr.roast.app.SliderPanelLayoutMode
@@ -37,9 +38,9 @@ class DetachableSliderWindow(
             stage = Stage().apply {
                 title = "Control sliders"
                 isResizable = true
-                minWidth = 260.0
+                minWidth = 380.0
                 minHeight = 320.0
-                width = 280.0
+                width = 400.0
                 height = 380.0
                 settings.sliderPanelDetachedX?.let { x = it }
                 settings.sliderPanelDetachedY?.let { y = it }
@@ -76,6 +77,12 @@ class DetachableSliderWindow(
             center = panel
         }
         stage!!.scene = javafx.scene.Scene(root, 280.0, 380.0)
+        owner?.scene?.stylesheets?.let { stage!!.scene.stylesheets.setAll(it) }
+        if (stage!!.scene.stylesheets.isEmpty()) {
+            DetachableSliderWindow::class.java.getResource("/com/rdr/roast/ui/main.css")?.toExternalForm()?.let { stage!!.scene.stylesheets.add(it) }
+            DetachableSliderWindow::class.java.getResource("/css/appearance.css")?.toExternalForm()?.let { stage!!.scene.stylesheets.add(it) }
+        }
+        AppearanceSupport.applyToScene(stage!!.scene)
         owner?.let { stage!!.initOwner(it) }
         ensureOnScreen(owner)
         stage!!.show()
@@ -135,6 +142,9 @@ class DetachableSliderWindow(
     }
 
     fun applyStylesheets(stylesheets: List<String>) {
-        stage?.scene?.stylesheets?.setAll(stylesheets)
+        stage?.scene?.let { scene ->
+            scene.stylesheets.setAll(stylesheets)
+            AppearanceSupport.applyToScene(scene)
+        }
     }
 }
