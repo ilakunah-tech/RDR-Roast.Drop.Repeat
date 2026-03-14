@@ -36,15 +36,14 @@ import com.rdr.roast.app.ThemeSettings
 import com.rdr.roast.app.Transport
 import com.rdr.roast.driver.ConnectionState
 import javafx.animation.Animation
-import javafx.animation.FadeTransition
 import javafx.animation.KeyFrame
 import javafx.animation.KeyValue
-import javafx.animation.ParallelTransition
 import javafx.animation.Timeline
 import javafx.application.Platform
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
+import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.Alert
@@ -65,7 +64,10 @@ import javafx.scene.control.TreeView
 import javafx.scene.control.ToggleGroup
 import javafx.scene.control.Tooltip
 import javafx.scene.layout.Region
+import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
+import javafx.scene.input.MouseButton
+import javafx.scene.input.MouseEvent
 import javafx.scene.paint.Color
 import javafx.stage.DirectoryChooser
 import javafx.stage.Modality
@@ -521,6 +523,14 @@ class SettingsController {
     lateinit var btnSidebarToggle: Button
 
     @FXML
+    lateinit var sectionsContainer: VBox
+
+    @FXML
+    lateinit var sectionContentScroll: ScrollPane
+
+    private var currentSectionScrollPane: ScrollPane? = null
+
+    @FXML
     lateinit var appearanceSection: ScrollPane
 
     @FXML
@@ -709,6 +719,8 @@ class SettingsController {
         decorateNavigationButtons()
         setupSidebarToggle()
         setupSectionNavigation()
+        buildSectionsStack()
+        setupCheckBoxClickForwarding()
         showSection(SettingsSection.APPEARANCE)
 
         val settings = SettingsManager.load()
@@ -1191,14 +1203,8 @@ class SettingsController {
     }
 
     private fun showSection(section: SettingsSection) {
-        val previous = activeSection
         val nextNode = nodeForSection(section)
-
-        if (previous == null) {
-            allSectionNodes().forEach { setSectionVisible(it, it == nextNode) }
-        } else if (previous != section) {
-            animateSectionSwitch(nodeForSection(previous), nextNode)
-        }
+        setSectionVisible(nextNode, true)
 
         btnNavAppearance.isSelected = section == SettingsSection.APPEARANCE
         btnNavConnection.isSelected = section == SettingsSection.CONNECTION
@@ -1213,11 +1219,167 @@ class SettingsController {
         activeSection = section
     }
 
+    /**
+     * Forwards mouse events to CheckBox/RadioButton so they toggle. Uses MOUSE_PRESSED on both
+     * ScrollPane and its content; fallback: find control under (sceneX, sceneY) by boundsInScene.
+     */
+    private fun setupCheckBoxClickForwarding() {
+        if (!::sectionContentScroll.isInitialized) return
+        fun tryToggleFrom(n: Node?): Boolean {
+            var node = n
+            while (node != null) {
+                when (node) {
+                    is CheckBox -> {
+                        node.isSelected = !node.isSelected
+                        return true
+                    }
+                    is RadioButton -> {
+                        if (!node.isSelected) node.isSelected = true
+                        return true
+                    }
+                    else -> node = node.parent
+                }
+            }
+            return false
+        }
+        /** Fallback: find CheckBox/RadioButton whose boundsInScene contain (sceneX, sceneY). */
+        fun findCheckBoxOrRadioAt(root: Node, sceneX: Double, sceneY: Double): Node? {
+            val list = mutableListOf<Node>()
+            fun collect(n: Node) {
+                when (n) {
+                    is CheckBox, is RadioButton -> list.add(n)
+                    is javafx.scene.control.TabPane -> n.tabs.forEach { it.content?.let { collect(it) } }
+                    is Parent -> n.childrenUnmodifiable.forEach { if (it.isVisible && !it.isMouseTransparent) collect(it) }
+                    else -> {}
+                }
+            }
+            collect(root)
+            for (c in list.asReversed()) {
+                val b = c.localToScene(c.layoutBounds)
+                if (sceneX >= b.minX && sceneX <= b.maxX && sceneY >= b.minY && sceneY <= b.maxY) return c
+            }
+            return null
+        }
+        fun installFilter(on: Node) {
+            on.addEventFilter(MouseEvent.MOUSE_PRESSED) { e ->
+                if (e.button != MouseButton.PRIMARY) return@addEventFilter
+                if (tryToggleFrom(e.pickResult.intersectedNode)) { e.consume(); return@addEventFilter }
+                if (tryToggleFrom(e.target as? Node)) { e.consume(); return@addEventFilter }
+                val content = sectionContentScroll.content as? Node ?: return@addEventFilter
+                val local = content.sceneToLocal(e.sceneX, e.sceneY)
+                if (tryToggleFrom(pickNodeAt(content, local.x, local.y))) { e.consume(); return@addEventFilter }
+                val hit = findCheckBoxOrRadioAt(content, e.sceneX, e.sceneY)
+                if (hit != null && tryToggleFrom(hit)) e.consume()
+            }
+        }
+        installFilter(sectionContentScroll)
+        (sectionContentScroll.content as? Node)?.let { installFilter(it) }
+    }
+
+    /** Finds the topmost node at (localX, localY) in parent's coordinate space. */
+    private fun pickNodeAt(parent: Node, localX: Double, localY: Double): Node? {
+        if (!parent.contains(localX, localY)) return null
+        if (parent is Parent) {
+            val scenePt = parent.localToScene(localX, localY)
+            for (child in parent.childrenUnmodifiable.reversed()) {
+                if (!child.isVisible || child.isMouseTransparent) continue
+                val inChild = child.sceneToLocal(scenePt.x, scenePt.y)
+                if (child.contains(inChild.x, inChild.y)) {
+                    pickNodeAt(child, inChild.x, inChild.y)?.let { return it }
+                }
+            }
+        }
+        return parent
+    }
+
+    /** Ensures CheckBox and RadioButton receive mouse events after content is moved into sectionContentScroll. */
+    private fun fixCheckBoxPickOnBounds(node: Node) {
+        when (node) {
+            is CheckBox, is RadioButton -> {
+                node.isMouseTransparent = false
+                node.isPickOnBounds = true
+            }
+            else -> {}
+        }
+        if (node is Parent) {
+            for (child in node.childrenUnmodifiable) fixCheckBoxPickOnBounds(child)
+        }
+    }
+
+    /** Attaches direct mouse click handlers to every CheckBox/RadioButton so they work inside ScrollPane content. */
+    private fun attachCheckBoxClickHandlers(node: Node?) {
+        if (node == null) return
+        when (node) {
+            is CheckBox -> {
+                node.isMouseTransparent = false
+                node.isPickOnBounds = true
+                node.setOnMouseClicked { e ->
+                    if (e.button == MouseButton.PRIMARY && e.clickCount == 1) {
+                        node.isSelected = !node.isSelected
+                        e.consume()
+                    }
+                }
+            }
+            is RadioButton -> {
+                node.isMouseTransparent = false
+                node.isPickOnBounds = true
+                node.setOnMouseClicked { e ->
+                    if (e.button == MouseButton.PRIMARY && e.clickCount == 1 && !node.isSelected) {
+                        node.isSelected = true
+                        e.consume()
+                    }
+                }
+            }
+            is javafx.scene.control.TabPane -> {
+                for (tab in node.tabs) tab.content?.let { attachCheckBoxClickHandlers(it) }
+            }
+            is Parent -> {
+                for (child in node.childrenUnmodifiable) attachCheckBoxClickHandlers(child)
+            }
+            else -> {}
+        }
+    }
+
+    /**
+     * Builds a single StackPane containing all section contents and sets it as the only content
+     * of sectionContentScroll. Sections are switched by visibility only — no content swapping —
+     * so mouse events reach CheckBox/RadioButton normally and they stay clickable.
+     */
+    private fun buildSectionsStack() {
+        if (!::sectionContentScroll.isInitialized) return
+        val stackPane = StackPane()
+        stackPane.styleClass.add("settings-content-column")
+        stackPane.isPickOnBounds = true
+        stackPane.isMouseTransparent = false
+        for (scroll in allSectionNodes()) {
+            (scroll.content as? Node)?.let { node ->
+                node.isMouseTransparent = false
+                node.isPickOnBounds = true
+                stackPane.children.add(node)
+            }
+            scroll.content = null
+        }
+        sectionContentScroll.content = stackPane
+        fixCheckBoxPickOnBounds(stackPane)
+        attachCheckBoxClickHandlers(stackPane)
+    }
+
     private fun setSectionVisible(sectionNode: ScrollPane, visible: Boolean) {
-        sectionNode.isVisible = visible
-        sectionNode.isManaged = visible
-        if (visible) {
-            sectionNode.vvalue = 0.0
+        if (!visible) return
+        if (!::sectionContentScroll.isInitialized) return
+        val stack = sectionContentScroll.content as? StackPane ?: return
+        val idx = allSectionNodes().indexOf(sectionNode)
+        if (idx < 0 || idx >= stack.children.size) return
+        for (i in stack.children.indices) {
+            val node = stack.children[i]
+            val show = (i == idx)
+            node.isVisible = show
+            node.isManaged = show
+        }
+        sectionContentScroll.vvalue = 0.0
+        currentSectionScrollPane = sectionNode
+        if (sectionNode == chartSection && ::chartCurvesTabPane.isInitialized) {
+            Platform.runLater { chartCurvesTabPane.requestLayout() }
         }
     }
 
@@ -1234,26 +1396,6 @@ class SettingsController {
 
     private fun allSectionNodes(): List<ScrollPane> {
         return listOf(appearanceSection, connectionSection, chartSection, roastPhasesSection, colorsSection, eventsSection)
-    }
-
-    private fun animateSectionSwitch(from: ScrollPane, to: ScrollPane) {
-        if (from == to) return
-        to.opacity = 0.0
-        setSectionVisible(to, true)
-
-        val fadeOut = FadeTransition(Duration.millis(140.0), from).apply {
-            fromValue = 1.0
-            toValue = 0.0
-        }
-        val fadeIn = FadeTransition(Duration.millis(220.0), to).apply {
-            fromValue = 0.0
-            toValue = 1.0
-        }
-        fadeOut.setOnFinished {
-            setSectionVisible(from, false)
-            from.opacity = 1.0
-        }
-        ParallelTransition(fadeOut, fadeIn).play()
     }
 
     private fun parseQuantifierRow(
@@ -1423,6 +1565,7 @@ class SettingsController {
                 refExtra2 = txtColorRefExtra2.text?.trim()?.takeIf { it.isNotBlank() } ?: def.refExtra2,
                 refAlpha = sldRefAlpha.value.toInt().coerceIn(0, 255)
             )
+            val ror = rorTabController?.getResult() ?: settings.curvesConfig.ror
             val baseConfig = axesTabController?.getResult() ?: axesConfigDraft ?: settings.chartConfig
             val chartConfig = baseConfig.copy(
                 backgroundColor = colorToHex(colorGraphBackground.value),
@@ -1434,7 +1577,15 @@ class SettingsController {
                 phaseMaillardColor = colorToHex(colorGraphMaillard.value),
                 phaseDevelopmentColor = colorToHex(colorGraphFinishing.value),
                 phaseCoolingColor = colorToHex(colorGraphCooling.value),
-                phaseLabelColor = colorToHex(colorGraphText.value)
+                phaseLabelColor = colorToHex(colorGraphText.value),
+                showRorBt = ror.deltaBT,
+                showRorEt = ror.deltaET,
+                btProjectionEnabled = ror.btProjectFlag,
+                etProjectionEnabled = ror.etProjectFlag,
+                deltaETspanSec = ror.deltaETspanSec.coerceIn(1, 30),
+                deltaBTspanSec = ror.deltaBTspanSec.coerceIn(1, 30),
+                projectionMode = ror.projectionMode.coerceIn(0, 1),
+                projectDeltaEnabled = ror.projectDeltaFlag
             )
 
             val pollingIntervalMs = (txtSamplingIntervalSec.text.toDoubleOrNull()?.times(1000)?.toLong()?.coerceIn(100L, 3000L)) ?: 1000L
@@ -1525,7 +1676,7 @@ class SettingsController {
                 extraSensors = appliedPresetSettings?.extraSensors ?: settings.extraSensors,
                 presetBrand = appliedPresetSettings?.presetBrand ?: settings.presetBrand,
                 presetModel = appliedPresetSettings?.presetModel ?: settings.presetModel,
-                rorSmoothing = settings.rorSmoothing
+                rorSmoothing = rorTabController?.getResult()?.rorSmoothing ?: settings.curvesConfig.ror.rorSmoothing ?: settings.rorSmoothing
             )
             savedSettings = newSettings
             SettingsManager.save(newSettings)
@@ -1721,6 +1872,9 @@ class SettingsController {
     /** Loads the 6 Curves tab FXMLs into chartCurvesTabPane and fills them from [settings].curvesConfig. On failure of a tab, it is skipped so settings still open. */
     private fun loadGraphCurvesTabs(settings: AppSettings) {
         if (!::chartCurvesTabPane.isInitialized || chartCurvesTabPane.tabs.size < 6) return
+        val curvesConfig = settings.curvesConfig.copy(
+            ror = settings.curvesConfig.ror.copy(rorSmoothing = settings.curvesConfig.ror.rorSmoothing ?: settings.rorSmoothing)
+        )
         val tabs = chartCurvesTabPane.tabs
         val prefix = "/com/rdr/roast/ui/graph/"
         fun loadTab(path: String): Pair<Parent, Any?>? {
@@ -1734,29 +1888,31 @@ class SettingsController {
                 null
             }
         }
+        fun setTabContent(index: Int, root: Parent, block: () -> Unit) {
+            root.isMouseTransparent = false
+            root.isPickOnBounds = true
+            tabs[index].content = root
+            fixCheckBoxPickOnBounds(root)
+            attachCheckBoxClickHandlers(root)
+            block()
+        }
         loadTab("${prefix}GraphRoRTab.fxml")?.let { (root, ctrl) ->
-            tabs[0].content = root
-            (ctrl as? GraphRoRTabController)?.let { rorTabController = it; it.loadFrom(settings.curvesConfig) }
+            setTabContent(0, root) { (ctrl as? GraphRoRTabController)?.let { rorTabController = it; it.loadFrom(curvesConfig) } }
         }
         loadTab("${prefix}GraphFiltersTab.fxml")?.let { (root, ctrl) ->
-            tabs[1].content = root
-            (ctrl as? GraphFiltersTabController)?.let { filtersTabController = it; it.loadFrom(settings.curvesConfig) }
+            setTabContent(1, root) { (ctrl as? GraphFiltersTabController)?.let { filtersTabController = it; it.loadFrom(curvesConfig) } }
         }
         loadTab("${prefix}GraphPlotterTab.fxml")?.let { (root, ctrl) ->
-            tabs[2].content = root
-            (ctrl as? GraphPlotterTabController)?.let { plotterTabController = it; it.loadFrom(settings.curvesConfig) }
+            setTabContent(2, root) { (ctrl as? GraphPlotterTabController)?.let { plotterTabController = it; it.loadFrom(curvesConfig) } }
         }
         loadTab("${prefix}GraphMathTab.fxml")?.let { (root, ctrl) ->
-            tabs[3].content = root
-            (ctrl as? GraphMathTabController)?.let { mathTabController = it; it.loadFrom(settings.curvesConfig) }
+            setTabContent(3, root) { (ctrl as? GraphMathTabController)?.let { mathTabController = it; it.loadFrom(curvesConfig) } }
         }
         loadTab("${prefix}GraphAnalyzeTab.fxml")?.let { (root, ctrl) ->
-            tabs[4].content = root
-            (ctrl as? GraphAnalyzeTabController)?.let { analyzeTabController = it; it.loadFrom(settings.curvesConfig) }
+            setTabContent(4, root) { (ctrl as? GraphAnalyzeTabController)?.let { analyzeTabController = it; it.loadFrom(curvesConfig) } }
         }
         loadTab("${prefix}GraphUiTab.fxml")?.let { (root, ctrl) ->
-            tabs[5].content = root
-            (ctrl as? GraphUiTabController)?.let { uiTabController = it; it.loadFrom(settings.curvesConfig) }
+            setTabContent(5, root) { (ctrl as? GraphUiTabController)?.let { uiTabController = it; it.loadFrom(curvesConfig) } }
         }
         // Axes tab (index 6) is loaded via fx:include in SettingsView; controller is set by FXML
         axesTabController?.loadFrom(settings)

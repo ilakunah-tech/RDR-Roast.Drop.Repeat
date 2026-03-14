@@ -113,10 +113,20 @@ class CurveChartFx : CurveModelListener {
         private const val EVENT_BAND_RANGE_FRACTION = 0.20
         private const val EVENT_BAND_STRIPE_COUNT = 10
         private const val EVENT_BAND_STRIPE_ALPHA = 0.07f
-        /** RoR window in seconds (Artisan-style). */
-        private const val ROR_DELTA_SEC = 30
+        /** Default RoR delta span in seconds when config not yet applied (Artisan CurvesRorConfig default). */
+        private const val DEFAULT_ROR_SPAN_SEC = 15
         /** First JFreeChart dataset index used for extra sensor channels. */
         private const val EXTRA_DATASET_BASE = 13
+        /** Dataset index for BT projection line (Artisan-style). */
+        private const val PROJ_BT_DATASET = 100
+        /** Dataset index for ET projection line (Artisan-style). */
+        private const val PROJ_ET_DATASET = 101
+        /** Dataset index for Delta (RoR) BT projection line (Artisan Δ Projection). */
+        private const val PROJ_DELTA_BT_DATASET = 102
+        /** Dataset index for Delta (RoR) ET projection line (Artisan Δ Projection). */
+        private const val PROJ_DELTA_ET_DATASET = 103
+        /** Artisan: quadratic projection only after this many ms from charge. */
+        private const val QUADRATIC_PROJECTION_AFTER_MS = 5 * 60 * 1000L
     }
 
     // ── Series ────────────────────────────────────────────────────────────────
@@ -133,8 +143,19 @@ class CurveChartFx : CurveModelListener {
     private val gasSeries  = XYSeries("Gas",  false, true)
     private val airSeries  = XYSeries("Air",  false, true)
     private val drumSeries = XYSeries("Drum", false, true)
+    private val btProjectionSeries = XYSeries("BT Projection", false, true)
+    private val etProjectionSeries = XYSeries("ET Projection", false, true)
+    private val deltaBtProjectionSeries = XYSeries("Delta BT Projection", false, true)
+    private val deltaEtProjectionSeries = XYSeries("Delta ET Projection", false, true)
 
     private val seriesMap = mutableMapOf<CurveModel, XYSeries>()
+    private var btModel: CurveModel? = null
+    private var etModel: CurveModel? = null
+
+    /** When true, BT projection line is drawn (Artisan-style). */
+    var btProjectionEnabled: Boolean = true
+    /** When true, ET projection line is drawn (Artisan-style). */
+    var etProjectionEnabled: Boolean = true
     /** Reference profile markers (Charge, TP, DE, FC, Drop) — removed when reference is cleared. */
     private val refMarkers = mutableListOf<Marker>()
 
@@ -232,6 +253,8 @@ class CurveChartFx : CurveModelListener {
         val colors = settings.chartColors
         val config = settings.chartConfig
         lastChartConfig = config
+        btProjectionEnabled = config.btProjectionEnabled
+        etProjectionEnabled = config.etProjectionEnabled
 
         val liveBtColor = Color.decode(colors.liveBt)
         val liveEtColor = Color.decode(colors.liveEt)
@@ -414,6 +437,44 @@ class CurveChartFx : CurveModelListener {
             setRenderer(12, drumRenderer)
             mapDatasetToRangeAxis(12, 0)
 
+            // datasets 100, 101 → BT/ET projection lines (Artisan-style) → left axis
+            val projStroke = BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f, floatArrayOf(8f, 5f), 0f)
+            val projBtColor = Color(COLOR_BT.red, COLOR_BT.green, COLOR_BT.blue, 180)
+            val projEtColor = Color(COLOR_ET.red, COLOR_ET.green, COLOR_ET.blue, 180)
+            val projBtRenderer = XYLineAndShapeRenderer(true, false).also {
+                it.setSeriesPaint(0, projBtColor)
+                it.setSeriesStroke(0, projStroke)
+            }
+            val projEtRenderer = XYLineAndShapeRenderer(true, false).also {
+                it.setSeriesPaint(0, projEtColor)
+                it.setSeriesStroke(0, projStroke)
+            }
+            setDataset(PROJ_BT_DATASET, XYSeriesCollection(btProjectionSeries))
+            setRenderer(PROJ_BT_DATASET, projBtRenderer)
+            mapDatasetToRangeAxis(PROJ_BT_DATASET, 0)
+            setDataset(PROJ_ET_DATASET, XYSeriesCollection(etProjectionSeries))
+            setRenderer(PROJ_ET_DATASET, projEtRenderer)
+            mapDatasetToRangeAxis(PROJ_ET_DATASET, 0)
+
+            // datasets 102, 103 → Delta (RoR) projection lines (Artisan Δ Projection) → right axis
+            val deltaProjStroke = BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f, floatArrayOf(6f, 4f), 0f)
+            val deltaProjBtColor = Color(COLOR_ROR_BT.red, COLOR_ROR_BT.green, COLOR_ROR_BT.blue, 180)
+            val deltaProjEtColor = Color(COLOR_ROR_ET.red, COLOR_ROR_ET.green, COLOR_ROR_ET.blue, 180)
+            val deltaProjBtRenderer = XYLineAndShapeRenderer(true, false).also {
+                it.setSeriesPaint(0, deltaProjBtColor)
+                it.setSeriesStroke(0, deltaProjStroke)
+            }
+            val deltaProjEtRenderer = XYLineAndShapeRenderer(true, false).also {
+                it.setSeriesPaint(0, deltaProjEtColor)
+                it.setSeriesStroke(0, deltaProjStroke)
+            }
+            setDataset(PROJ_DELTA_BT_DATASET, XYSeriesCollection(deltaBtProjectionSeries))
+            setRenderer(PROJ_DELTA_BT_DATASET, deltaProjBtRenderer)
+            mapDatasetToRangeAxis(PROJ_DELTA_BT_DATASET, 1)
+            setDataset(PROJ_DELTA_ET_DATASET, XYSeriesCollection(deltaEtProjectionSeries))
+            setRenderer(PROJ_DELTA_ET_DATASET, deltaProjEtRenderer)
+            mapDatasetToRangeAxis(PROJ_DELTA_ET_DATASET, 1)
+
             isOutlineVisible = false
             setBackgroundPaint(bgColor)
             setDomainGridlinePaint(gridColor)
@@ -436,6 +497,8 @@ class CurveChartFx : CurveModelListener {
 
     fun bindDefaultCurves(btModel: CurveModel, etModel: CurveModel,
                           rorBtModel: CurveModel, rorEtModel: CurveModel) {
+        this.btModel = btModel
+        this.etModel = etModel
         seriesMap[btModel]    = btSeries
         seriesMap[etModel]    = etSeries
         seriesMap[rorBtModel] = rorBtSeries
@@ -463,6 +526,7 @@ class CurveChartFx : CurveModelListener {
                 if (idx >= 0) series.remove(idx)
             }
             chart.isNotify = true
+            if (source == btModel || source == etModel) updateProjection()
         }
     }
 
@@ -477,7 +541,169 @@ class CurveChartFx : CurveModelListener {
                 series.addOrUpdate(adjustedMs as Number, v as Number)
             }
             chart.isNotify = true
+            if (source == btModel || source == etModel) updateProjection()
         }
+    }
+
+    /**
+     * Updates BT/ET projection lines (Artisan-style) and optionally Delta (RoR) projection on the right axis.
+     * Mode 0 = linear (temp + RoR * dt); mode 1 = quadratic after 5 min (RoR changes over time).
+     * Called on FX thread from notifyCurveChanged or rebaseAllSeries.
+     */
+    private fun updateProjection() {
+        if (bbpMode) return
+        val config = lastChartConfig
+        val projectionMode = config?.projectionMode?.coerceIn(0, 1) ?: 0
+        val projectDeltaEnabled = config?.projectDeltaEnabled ?: false
+        val endMs = plot.domainAxis.upperBound
+        val nPoints = 3
+        val deltaInterval = 10
+
+        fun linearRor(series: XYSeries): Double {
+            if (series.itemCount < 2) return 0.0
+            val last = series.itemCount - 1
+            val first = (last - (nPoints - 1)).coerceAtLeast(0)
+            val deltaMs = series.getX(last).toDouble() - series.getX(first).toDouble()
+            if (deltaMs <= 0) return 0.0
+            val deltaMin = deltaMs / 60_000.0
+            return ((series.getY(last).toDouble() - series.getY(first).toDouble()) / deltaMin)
+                .coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+        }
+
+        // BT temperature projection
+        if (btProjectionEnabled && btSeries.itemCount >= 2) {
+            val startMs = btSeries.getX(btSeries.itemCount - 1).toDouble()
+            val startTemp = btSeries.getY(btSeries.itemCount - 1).toDouble()
+            val timeFromStartMs = startMs
+            val useQuadratic = projectionMode == 1 && timeFromStartMs >= QUADRATIC_PROJECTION_AFTER_MS &&
+                rorBtSeries.itemCount > deltaInterval
+
+            if (useQuadratic) {
+                val last = rorBtSeries.itemCount - 1
+                val leftIdx = (last - deltaInterval).coerceAtLeast(0)
+                val rorLast = rorBtSeries.getY(last).toDouble().coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                val rorLeft = rorBtSeries.getY(leftIdx).toDouble().coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                val timeLeftMs = rorBtSeries.getX(leftIdx).toDouble()
+                val timeDiffSec = (startMs - timeLeftMs) / 1000.0
+                val deltadeltaSecsec = if (timeDiffSec > 0) {
+                    ((rorLast - rorLeft) / timeDiffSec / 60.0).coerceIn(-0.002, 0.002)
+                } else 0.0
+                val delaySec = 1.0
+                var tMs = startMs
+                var y = startTemp
+                var deltaSec = rorLast / 60.0
+                btProjectionSeries.clear()
+                btProjectionSeries.add(tMs, y)
+                while (tMs < endMs - 100) {
+                    tMs += delaySec * 1000
+                    y = (y + deltaSec * delaySec).coerceIn(TEMP_MIN.toDouble(), TEMP_MAX.toDouble())
+                    deltaSec = (deltaSec + deltadeltaSecsec * delaySec).coerceIn(-0.1, 0.5)
+                    btProjectionSeries.add(tMs, y)
+                }
+                if (btProjectionSeries.getX(btProjectionSeries.itemCount - 1).toDouble() < endMs) {
+                    btProjectionSeries.add(endMs, y)
+                }
+            } else {
+                val rorBt = linearRor(btSeries)
+                val endTemp = (startTemp + rorBt * ((endMs - startMs) / 60_000.0)).coerceIn(TEMP_MIN.toDouble(), TEMP_MAX.toDouble())
+                btProjectionSeries.clear()
+                btProjectionSeries.add(startMs, startTemp)
+                btProjectionSeries.add(endMs, endTemp)
+            }
+        } else {
+            btProjectionSeries.clear()
+        }
+
+        // ET temperature projection
+        if (etProjectionEnabled && etSeries.itemCount >= 2) {
+            val startMs = etSeries.getX(etSeries.itemCount - 1).toDouble()
+            val startTemp = etSeries.getY(etSeries.itemCount - 1).toDouble()
+            val timeFromStartMs = startMs
+            val useQuadratic = projectionMode == 1 && timeFromStartMs >= QUADRATIC_PROJECTION_AFTER_MS &&
+                rorEtSeries.itemCount > deltaInterval
+
+            if (useQuadratic) {
+                val last = rorEtSeries.itemCount - 1
+                val leftIdx = (last - deltaInterval).coerceAtLeast(0)
+                val rorLast = rorEtSeries.getY(last).toDouble().coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                val rorLeft = rorEtSeries.getY(leftIdx).toDouble().coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                val timeLeftMs = rorEtSeries.getX(leftIdx).toDouble()
+                val timeDiffSec = (startMs - timeLeftMs) / 1000.0
+                val deltadeltaSecsec = if (timeDiffSec > 0) {
+                    ((rorLast - rorLeft) / timeDiffSec / 60.0).coerceIn(-0.002, 0.002)
+                } else 0.0
+                val delaySec = 1.0
+                var tMs = startMs
+                var y = startTemp
+                var deltaSec = rorLast / 60.0
+                etProjectionSeries.clear()
+                etProjectionSeries.add(tMs, y)
+                while (tMs < endMs - 100) {
+                    tMs += delaySec * 1000
+                    y = (y + deltaSec * delaySec).coerceIn(TEMP_MIN.toDouble(), TEMP_MAX.toDouble())
+                    deltaSec = (deltaSec + deltadeltaSecsec * delaySec).coerceIn(-0.1, 0.5)
+                    etProjectionSeries.add(tMs, y)
+                }
+                if (etProjectionSeries.getX(etProjectionSeries.itemCount - 1).toDouble() < endMs) {
+                    etProjectionSeries.add(endMs, y)
+                }
+            } else {
+                val rorEt = linearRor(etSeries)
+                val endTemp = (startTemp + rorEt * ((endMs - startMs) / 60_000.0)).coerceIn(TEMP_MIN.toDouble(), TEMP_MAX.toDouble())
+                etProjectionSeries.clear()
+                etProjectionSeries.add(startMs, startTemp)
+                etProjectionSeries.add(endMs, endTemp)
+            }
+        } else {
+            etProjectionSeries.clear()
+        }
+
+        // Delta (RoR) projection on right axis (Artisan Δ Projection)
+        deltaBtProjectionSeries.clear()
+        deltaEtProjectionSeries.clear()
+        if (projectDeltaEnabled && config != null) {
+            val showRorBt = config.showRorBt
+            val showRorEt = config.showRorEt
+            if (showRorBt && rorBtSeries.itemCount > deltaInterval) {
+                val last = rorBtSeries.itemCount - 1
+                val leftIdx = (last - deltaInterval).coerceAtLeast(0)
+                val d2Last = rorBtSeries.getY(last).toDouble().coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                val d2Left = rorBtSeries.getY(leftIdx).toDouble().coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                val nowMs = rorBtSeries.getX(last).toDouble()
+                val leftMs = rorBtSeries.getX(leftIdx).toDouble()
+                val timeDiffSec = (nowMs - leftMs) / 1000.0
+                val deltadeltaSecsec = if (timeDiffSec > 0) ((d2Last - d2Left) / timeDiffSec) else 0.0
+                val rightMs = maxOf(nowMs, endMs)
+                val deltaProjection = (d2Last + deltadeltaSecsec * (rightMs - nowMs) / 1000.0)
+                    .coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                deltaBtProjectionSeries.add(nowMs, d2Last)
+                deltaBtProjectionSeries.add(rightMs, deltaProjection)
+            }
+            if (showRorEt && rorEtSeries.itemCount > deltaInterval) {
+                val last = rorEtSeries.itemCount - 1
+                val leftIdx = (last - deltaInterval).coerceAtLeast(0)
+                val d1Last = rorEtSeries.getY(last).toDouble().coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                val d1Left = rorEtSeries.getY(leftIdx).toDouble().coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                val nowMs = rorEtSeries.getX(last).toDouble()
+                val leftMs = rorEtSeries.getX(leftIdx).toDouble()
+                val timeDiffSec = (nowMs - leftMs) / 1000.0
+                val deltadeltaSecsec = if (timeDiffSec > 0) ((d1Last - d1Left) / timeDiffSec) else 0.0
+                val rightMs = maxOf(nowMs, endMs)
+                val deltaProjection = (d1Last + deltadeltaSecsec * (rightMs - nowMs) / 1000.0)
+                    .coerceIn(MIN_ROR.toDouble(), MAX_ROR.toDouble())
+                deltaEtProjectionSeries.add(nowMs, d1Last)
+                deltaEtProjectionSeries.add(rightMs, deltaProjection)
+            }
+        }
+
+        updateDeltaProjectionVisibility()
+    }
+
+    private fun updateDeltaProjectionVisibility() {
+        val config = lastChartConfig ?: return
+        val show = config.projectDeltaEnabled
+        (plot.getRenderer(PROJ_DELTA_BT_DATASET) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, show && config.showRorBt)
+        (plot.getRenderer(PROJ_DELTA_ET_DATASET) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, show && config.showRorEt)
     }
 
     /**
@@ -519,6 +745,7 @@ class CurveChartFx : CurveModelListener {
             // Artisan/Cropster-style: X axis 0..timeRange with 0 = Charge; no pre-heat band to avoid "many 00:00" labels
             plot.domainAxis.setRange(0.0, timeRangeMs)
             chart.isNotify = true
+            updateProjection()
         }
     }
 
@@ -683,6 +910,8 @@ class CurveChartFx : CurveModelListener {
             etSeries.clear()
             rorBtSeries.clear()
             rorEtSeries.clear()
+            btProjectionSeries.clear()
+            etProjectionSeries.clear()
             refBtSeries.clear()
             refEtSeries.clear()
             refRorBtSeries.clear()
@@ -1185,8 +1414,10 @@ class CurveChartFx : CurveModelListener {
                     refEtSeries.add(xMs.toDouble(), etFiltered[i])
                 }
                 if (adjustedTimex.size >= 2) {
-                    computeAndFillRorSeries(adjustedTimex, btFiltered, refRorBtSeries, ROR_DELTA_SEC, shiftMs)
-                    computeAndFillRorSeries(adjustedTimex, etFiltered, refRorEtSeries, ROR_DELTA_SEC, shiftMs)
+                    val deltaBTsec = lastChartConfig?.deltaBTspanSec?.coerceIn(1, 30) ?: DEFAULT_ROR_SPAN_SEC
+                    val deltaETsec = lastChartConfig?.deltaETspanSec?.coerceIn(1, 30) ?: DEFAULT_ROR_SPAN_SEC
+                    computeAndFillRorSeries(adjustedTimex, btFiltered, refRorBtSeries, deltaBTsec, shiftMs)
+                    computeAndFillRorSeries(adjustedTimex, etFiltered, refRorEtSeries, deltaETsec, shiftMs)
                 }
                 if (lastChartConfig?.showReferenceEvents != false) {
                     profile.events.forEach { event ->
@@ -1343,6 +1574,10 @@ class CurveChartFx : CurveModelListener {
             etSeries.clear()
             rorBtSeries.clear()
             rorEtSeries.clear()
+            btProjectionSeries.clear()
+            etProjectionSeries.clear()
+            deltaBtProjectionSeries.clear()
+            deltaEtProjectionSeries.clear()
             refBtSeries.clear()
             refEtSeries.clear()
             refRorBtSeries.clear()
@@ -1598,6 +1833,9 @@ class CurveChartFx : CurveModelListener {
             }
             plot.isDomainGridlinesVisible = config.showGrid && config.gridTime
             plot.isRangeGridlinesVisible = config.showGrid && config.gridTemp
+            btProjectionEnabled = config.btProjectionEnabled
+            etProjectionEnabled = config.etProjectionEnabled
+            updateProjection()
             applySeriesVisibility(config)
             if (!config.showPhaseStrips) {
                 phaseStripAnnotations.forEach { plot.getRenderer(0).removeAnnotation(it) }
@@ -1667,6 +1905,8 @@ class CurveChartFx : CurveModelListener {
         (plot.getRenderer(7) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, showRef)
         (plot.getRenderer(8) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, showRef)
         (plot.getRenderer(9) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, showRef)
+        (plot.getRenderer(PROJ_DELTA_BT_DATASET) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, config.projectDeltaEnabled && config.showRorBt)
+        (plot.getRenderer(PROJ_DELTA_ET_DATASET) as? XYLineAndShapeRenderer)?.setSeriesVisible(0, config.projectDeltaEnabled && config.showRorEt)
     }
 
     // ── Tick-unit builders ────────────────────────────────────────────────────

@@ -10,7 +10,7 @@
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.rdr.roast.ui.graph.GraphRoRTabController"
-      spacing="12">
+      spacing="12" minHeight="280">
     <padding>
         <Insets top="0" right="0" bottom="0" left="0"/>
     </padding>
@@ -24,11 +24,13 @@
             <Label text="Delta Span" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
             <ComboBox fx:id="cmbDeltaETspan" prefWidth="80" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
             <ComboBox fx:id="cmbDeltaBTspan" prefWidth="80" styleClass="secondary-combo" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
-            <CheckBox fx:id="chkETProject" text="ET Projection" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-            <CheckBox fx:id="chkBTProject" text="BT Projection" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-            <Label text="Projection" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
-            <ComboBox fx:id="cmbProjectionMode" prefWidth="120" styleClass="secondary-combo" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
-            <CheckBox fx:id="chkProjectDelta" text="Δ Projection" GridPane.columnIndex="4" GridPane.rowIndex="2"/>
+            <Label text="RoR smoothing" styleClass="secondary-field-label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <ComboBox fx:id="cmbRorSmoothing" prefWidth="160" styleClass="secondary-combo" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="2"/>
+            <CheckBox fx:id="chkETProject" text="ET Projection" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+            <CheckBox fx:id="chkBTProject" text="BT Projection" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+            <Label text="Projection" styleClass="secondary-field-label" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+            <ComboBox fx:id="cmbProjectionMode" prefWidth="120" styleClass="secondary-combo" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+            <CheckBox fx:id="chkProjectDelta" text="Δ Projection" GridPane.columnIndex="4" GridPane.rowIndex="3"/>
         </GridPane>
     </VBox>
 

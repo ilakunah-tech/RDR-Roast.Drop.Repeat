@@ -8,6 +8,7 @@ import com.rdr.roast.app.MachineConfig
 import com.rdr.roast.app.RoasterDiscovery
 import com.rdr.roast.app.RecorderState
 import com.rdr.roast.app.ReferenceApi
+import com.rdr.roast.app.CurvesRorConfig
 import com.rdr.roast.app.ErrorLogBuffer
 import com.rdr.roast.app.ServerApi
 import com.rdr.roast.app.ServerApiException
@@ -123,6 +124,8 @@ class MainController {
     @FXML lateinit var lblBTUnit: Label
     @FXML lateinit var lblRoRBTValue: Label
     @FXML lateinit var lblRoRBTUnit: Label
+    @FXML lateinit var rorRowBtCard: javafx.scene.layout.VBox
+    @FXML lateinit var rorRowEtCard: javafx.scene.layout.VBox
     @FXML lateinit var lblETValue: Label
     @FXML lateinit var lblETUnit: Label
     @FXML lateinit var lblRoRETValue: Label
@@ -220,11 +223,14 @@ class MainController {
     private val btRaw = StandardCurveModel("BT")
     private val etRaw = StandardCurveModel("ET")
 
-    private val initSmoothing = SettingsManager.load().rorSmoothing
+    private val initSettings = SettingsManager.load()
+    private val initSmoothing = initSettings.curvesConfig.ror.rorSmoothing ?: initSettings.rorSmoothing
     private var btSmooth = MovingAverageCurveModel(btRaw, windowSize = initSmoothing.movingAvgWindow)
     private var etSmooth = MovingAverageCurveModel(etRaw, windowSize = initSmoothing.movingAvgWindow)
-    private var rorBt = RorCurveModel(btSmooth, windowMs = initSmoothing.rorWindowMs)
-    private var rorEt = RorCurveModel(etSmooth, windowMs = initSmoothing.rorWindowMs)
+    private val rorSpanBtMs = (initSettings.curvesConfig.ror.deltaBTspanSec.coerceIn(1, 30) * 1000).toLong()
+    private val rorSpanEtMs = (initSettings.curvesConfig.ror.deltaETspanSec.coerceIn(1, 30) * 1000).toLong()
+    private var rorBt = RorCurveModel(btSmooth, windowMs = rorSpanBtMs)
+    private var rorEt = RorCurveModel(etSmooth, windowMs = rorSpanEtMs)
 
     // ── Chart ────────────────────────────────────────────────────────────────
     private val curveChart = CurveChartFx()
@@ -253,6 +259,7 @@ class MainController {
         ChartThemeAdapter.apply(curveChart, controlChart, settings)
         curveChart.configureExtraSensors(settings.extraSensors)
         configureExtraSensorReadouts(settings.extraSensors)
+        applyCurvesRorLcd(settings.curvesConfig.ror)
         refreshCustomButtonsPanel()
         updateControlPanel(ConnectionState.Disconnected, recorder.dataSource)
         updateRoasterConnectionIndicator(ConnectionState.Disconnected)
@@ -751,6 +758,15 @@ class MainController {
 
     // ── Sample handling ───────────────────────────────────────────────────────
 
+    /** Applies RoR LCD visibility from CurvesRorConfig (Artisan LCD4/LCD5, swap). */
+    fun applyCurvesRorLcd(ror: CurvesRorConfig) {
+        val swap = ror.swapdeltalcds
+        rorRowBtCard.isVisible = (ror.deltaBTlcd && !swap) || (ror.deltaETlcd && swap)
+        rorRowBtCard.isManaged = rorRowBtCard.isVisible
+        rorRowEtCard.isVisible = (ror.deltaETlcd && !swap) || (ror.deltaBTlcd && swap)
+        rorRowEtCard.isManaged = rorRowEtCard.isVisible
+    }
+
     private fun tempForDisplay(celsius: Double): Pair<Double, String> {
         val unit = SettingsManager.load().unit.uppercase()
         return if (unit == "F") (celsius * 9 / 5 + 32) to "°F" else celsius to "°C"
@@ -780,9 +796,15 @@ class MainController {
         lblBTUnit.text = " $u"
         lblETValue.text = "%.1f".format(etD)
         lblETUnit.text = " $u"
-        lblRoRBTValue.text = "%.1f".format(rorBtVal * rorMul)
+        val ror = SettingsManager.load().curvesConfig.ror
+        if (ror.swapdeltalcds) {
+            lblRoRBTValue.text = "%.1f".format(rorEtVal * rorMul)
+            lblRoRETValue.text = "%.1f".format(rorBtVal * rorMul)
+        } else {
+            lblRoRBTValue.text = "%.1f".format(rorBtVal * rorMul)
+            lblRoRETValue.text = "%.1f".format(rorEtVal * rorMul)
+        }
         lblRoRBTUnit.text = rorUnit
-        lblRoRETValue.text = "%.1f".format(rorEtVal * rorMul)
         lblRoRETUnit.text = rorUnit
         chartPanel.lastDataTimeMs = timeMs
 
@@ -2187,6 +2209,7 @@ class MainController {
             ChartThemeAdapter.apply(curveChart, controlChart, updated)
             curveChart.configureExtraSensors(updated.extraSensors)
             configureExtraSensorReadouts(updated.extraSensors)
+            applyCurvesRorLcd(updated.curvesConfig.ror)
             updateReadoutUnits()
             refreshCustomButtonsPanel()
             updateControlPanel(lastConnectionState ?: ConnectionState.Disconnected, recorder.dataSource)

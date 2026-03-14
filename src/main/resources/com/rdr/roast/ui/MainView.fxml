@@ -202,11 +202,13 @@
                                 <Label fx:id="lblBTUnit" text=" °C" styleClass="readout-unit-bt"/>
                             </HBox>
                             <Label text="Bean temp" styleClass="readout-label-bt"/>
-                            <HBox alignment="BASELINE_LEFT" spacing="2">
-                                <Label fx:id="lblRoRBTValue" text="--.-" styleClass="readout-ror-value-bt"/>
-                                <Label fx:id="lblRoRBTUnit" text=" °C/min" styleClass="readout-unit-bt"/>
-                            </HBox>
-                            <Label text="RoR" styleClass="readout-label-bt"/>
+                            <VBox fx:id="rorRowBtCard" spacing="2">
+                                <HBox alignment="BASELINE_LEFT" spacing="2">
+                                    <Label fx:id="lblRoRBTValue" text="--.-" styleClass="readout-ror-value-bt"/>
+                                    <Label fx:id="lblRoRBTUnit" text=" °C/min" styleClass="readout-unit-bt"/>
+                                </HBox>
+                                <Label text="RoR" styleClass="readout-label-bt"/>
+                            </VBox>
                         </VBox>
                         <!-- Exhaust (right) -->
                         <VBox spacing="2" minWidth="0" HBox.hgrow="ALWAYS" styleClass="metric-card, metric-card-et">
@@ -215,11 +217,13 @@
                                 <Label fx:id="lblETUnit" text=" °C" styleClass="readout-unit-et"/>
                             </HBox>
                             <Label text="Exhaust temp" styleClass="readout-label-et"/>
-                            <HBox alignment="BASELINE_LEFT" spacing="2">
-                                <Label fx:id="lblRoRETValue" text="--.-" styleClass="readout-ror-value-et"/>
-                                <Label fx:id="lblRoRETUnit" text=" °C/min" styleClass="readout-unit-et"/>
-                            </HBox>
-                            <Label text="RoR" styleClass="readout-label-et"/>
+                            <VBox fx:id="rorRowEtCard" spacing="2">
+                                <HBox alignment="BASELINE_LEFT" spacing="2">
+                                    <Label fx:id="lblRoRETValue" text="--.-" styleClass="readout-ror-value-et"/>
+                                    <Label fx:id="lblRoRETUnit" text=" °C/min" styleClass="readout-unit-et"/>
+                                </HBox>
+                                <Label text="RoR" styleClass="readout-label-et"/>
+                            </VBox>
                         </VBox>
                     </HBox>
                     <!-- Extra sensor readouts (dynamically populated) -->

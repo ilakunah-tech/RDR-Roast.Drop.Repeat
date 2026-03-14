@@ -2,6 +2,7 @@ package com.rdr.roast.ui.graph
 
 import com.rdr.roast.app.CurvesConfig
 import com.rdr.roast.app.CurvesRorConfig
+import com.rdr.roast.app.RorSmoothing
 import javafx.fxml.FXML
 import javafx.scene.control.CheckBox
 import javafx.scene.control.ComboBox
@@ -22,6 +23,7 @@ class GraphRoRTabController {
     @FXML lateinit var chkSwapDeltaLcds: CheckBox
     @FXML lateinit var txtDeltaETfunction: TextField
     @FXML lateinit var txtDeltaBTfunction: TextField
+    @FXML lateinit var cmbRorSmoothing: ComboBox<String>
 
     @FXML
     fun initialize() {
@@ -29,6 +31,7 @@ class GraphRoRTabController {
         cmbDeltaETspan.items.setAll(spanItems)
         cmbDeltaBTspan.items.setAll(spanItems)
         cmbProjectionMode.items.setAll("linear", "quadratic")
+        cmbRorSmoothing.items.setAll(RorSmoothing.entries.map { it.name.lowercase().replace('_', ' ').replaceFirstChar { c -> c.uppercase() } })
     }
 
     fun loadFrom(config: CurvesConfig) {
@@ -37,6 +40,9 @@ class GraphRoRTabController {
         chkDeltaBT.isSelected = ror.deltaBT
         cmbDeltaETspan.selectionModel.select(ror.deltaETspanSec.coerceIn(0, 30))
         cmbDeltaBTspan.selectionModel.select(ror.deltaBTspanSec.coerceIn(0, 30))
+        val smoothing = ror.rorSmoothing ?: RorSmoothing.RECOMMENDED
+        val smoothingIndex = RorSmoothing.entries.indexOf(smoothing).coerceAtLeast(0)
+        cmbRorSmoothing.selectionModel.select(smoothingIndex)
         chkETProject.isSelected = ror.etProjectFlag
         chkBTProject.isSelected = ror.btProjectFlag
         cmbProjectionMode.selectionModel.select(ror.projectionMode.coerceIn(0, 1))
@@ -52,6 +58,8 @@ class GraphRoRTabController {
         val etSpanIndex = cmbDeltaETspan.selectionModel.selectedIndex
         val btSpanIndex = cmbDeltaBTspan.selectionModel.selectedIndex
         val projectionIndex = cmbProjectionMode.selectionModel.selectedIndex
+        val smoothingIndex = cmbRorSmoothing.selectionModel.selectedIndex
+        val rorSmoothing = if (smoothingIndex in RorSmoothing.entries.indices) RorSmoothing.entries[smoothingIndex] else RorSmoothing.RECOMMENDED
         return CurvesRorConfig(
             deltaET = chkDeltaET.isSelected,
             deltaBT = chkDeltaBT.isSelected,
@@ -65,7 +73,8 @@ class GraphRoRTabController {
             etProjectFlag = chkETProject.isSelected,
             btProjectFlag = chkBTProject.isSelected,
             projectDeltaFlag = chkProjectDelta.isSelected,
-            projectionMode = if (projectionIndex >= 0) projectionIndex else 0
+            projectionMode = if (projectionIndex >= 0) projectionIndex else 0,
+            rorSmoothing = rorSmoothing
         )
     }
 }

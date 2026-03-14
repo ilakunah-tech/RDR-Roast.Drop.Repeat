@@ -73,7 +73,7 @@
     <!-- Rate of Rise Filter -->
     <VBox spacing="10" styleClass="secondary-section-card">
         <Label text="Rate of Rise Filter" styleClass="secondary-section-title"/>
-        <Label text="Delta span (Δ ET / Δ BT), smoothing, polyfit RoR, optimal smoothing, and RoR limits." styleClass="secondary-hint-label" wrapText="true"/>
+        <Label text="Delta span (Δ ET / Δ BT), polyfit RoR, optimal smoothing, and RoR limits. RoR smoothing is in the Graph → RoR tab." styleClass="secondary-hint-label" wrapText="true"/>
         <GridPane styleClass="secondary-grid" hgap="12" vgap="10">
             <columnConstraints>
                 <ColumnConstraints minWidth="160" prefWidth="200"/>

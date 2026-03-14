@@ -406,7 +406,7 @@ data class EventQuantifiersConfig(
     }
 }
 
-/** Artisan Curves RoR tab: delta ET/BT, LCDs, projection, symbolic formulas. Each subagent extends this. */
+/** Artisan Curves RoR tab: delta ET/BT, LCDs, projection, symbolic formulas, RoR smoothing. */
 data class CurvesRorConfig(
     val deltaET: Boolean = true,
     val deltaBT: Boolean = true,
@@ -420,7 +420,9 @@ data class CurvesRorConfig(
     val etProjectFlag: Boolean = false,
     val btProjectFlag: Boolean = false,
     val projectDeltaFlag: Boolean = false,
-    val projectionMode: Int = 0
+    val projectionMode: Int = 0,
+    /** RoR smoothing (moving average + window). Null = use top-level rorSmoothing (backward compat). */
+    val rorSmoothing: RorSmoothing? = null
 )
 
 /** Artisan Curves Filters tab: input filter, curve filter, display filter, RoR filter. */
@@ -734,6 +736,16 @@ data class ChartConfig(
     val showEt: Boolean = true,
     val showRorBt: Boolean = true,
     val showRorEt: Boolean = true,
+    /** BT/ET projection lines (Artisan RoR tab). */
+    val btProjectionEnabled: Boolean = false,
+    val etProjectionEnabled: Boolean = false,
+    /** RoR delta span in seconds for reference and live RoR (Artisan RoR tab; 1–30). */
+    val deltaETspanSec: Int = 15,
+    val deltaBTspanSec: Int = 15,
+    /** Projection mode: 0 = linear, 1 = quadratic (Artisan RoR tab). */
+    val projectionMode: Int = 0,
+    /** Draw RoR projection lines on delta axis (Artisan Δ Projection). */
+    val projectDeltaEnabled: Boolean = false,
     val showReferenceCurves: Boolean = true,
     val showReferenceEvents: Boolean = true,
     val showPhaseStrips: Boolean = true,

@@ -96,8 +96,9 @@
                 </VBox>
             </HBox>
 
-            <StackPane VBox.vgrow="ALWAYS">
-                <ScrollPane fx:id="appearanceSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll">
+            <VBox fx:id="sectionsContainer" VBox.vgrow="ALWAYS">
+                <ScrollPane fx:id="sectionContentScroll" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" VBox.vgrow="ALWAYS"/>
+                <ScrollPane fx:id="appearanceSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
                     <VBox spacing="16" styleClass="settings-content-column">
                         <padding>
                             <Insets top="4" right="4" bottom="4" left="4"/>
@@ -376,7 +377,7 @@
                     </VBox>
                 </ScrollPane>
 
-                <ScrollPane fx:id="roastPhasesSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
+                <ScrollPane fx:id="roastPhasesSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false" mouseTransparent="true">
                     <VBox spacing="16" styleClass="settings-content-column">
                         <padding>
                             <Insets top="4" right="4" bottom="4" left="4"/>
@@ -437,7 +438,7 @@
                     </VBox>
                 </ScrollPane>
 
-                <ScrollPane fx:id="chartSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
+                <ScrollPane fx:id="chartSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false" mouseTransparent="true">
                     <VBox spacing="16" styleClass="settings-content-column">
                         <padding>
                             <Insets top="4" right="4" bottom="4" left="4"/>
@@ -498,7 +499,7 @@
                     </VBox>
                 </ScrollPane>
 
-                <ScrollPane fx:id="colorsSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
+                <ScrollPane fx:id="colorsSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false" mouseTransparent="true">
                     <VBox spacing="16" styleClass="settings-content-column">
                         <padding>
                             <Insets top="4" right="4" bottom="4" left="4"/>
@@ -696,7 +697,7 @@
                     </VBox>
                 </ScrollPane>
 
-                <ScrollPane fx:id="eventsSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false">
+                <ScrollPane fx:id="eventsSection" fitToWidth="true" styleClass="secondary-scroll settings-content-scroll" visible="false" managed="false" mouseTransparent="true">
                     <VBox spacing="16" styleClass="settings-content-column">
                         <padding>
                             <Insets top="4" right="4" bottom="4" left="4"/>
@@ -877,7 +878,7 @@
                         </TabPane>
                     </VBox>
                 </ScrollPane>
-            </StackPane>
+            </VBox>
         </VBox>
     </HBox>
 
